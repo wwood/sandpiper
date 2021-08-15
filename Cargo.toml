@@ -8,3 +8,4 @@ edition = "2018"
 [dependencies]
 tar = "0.4.*"
 flate2 = "1.0.*"
+minidom = "0.13.*"
