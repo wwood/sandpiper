@@ -8,6 +8,4 @@ edition = "2018"
 [dependencies]
 tar = "0.4.*"
 flate2 = "1.0.*"
-minidom = "0.13.*"
-anyhow = "1.0.*"
-quick-xml = "0.22.*"
+xmltree = "0.10.*"
