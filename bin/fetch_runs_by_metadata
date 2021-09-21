@@ -67,23 +67,123 @@ if __name__ == '__main__':
 
     # esearch sra using usehistory for
     search_term = '"METAGENOMIC" NOT amplicon[All Fields] AND "platform illumina"[Properties] AND cluster_public[prop]'
-    retmax = 100 # TODO: Relax this
+    retmax = 100
     logging.info("Running esearch ..")
     res = requests.get(
         url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi", 
         params={
             "db": "sra",
             "term": search_term,
-            "usehistory": True,
+            "usehistory": 'y',
             "tool": "sandpiper", 
             "email": "wwood@github.com",
             "retmax": retmax,
+            # "rettype": "count", # when only returning the count, WebEnv etc is
+            # missing. So we must pointlessly download the list of IDs. But, we
+            # can iterate the efetch beyond the retmax, so it matters not. No
+            # chunking of esearch necessary.
             },
         )
+    if not res.ok:
+        raise Exception("HTTP Failure when requesting esearch")
 
-    # TODO: Ensure res.ok
     # TODO: Return null from esearch since results aren't used
     root = ET.fromstring(res.text)
-    import IPython; IPython.embed()
+
+    webenv = root.find('WebEnv')
+    if webenv is None:
+        raise Exception("Unexpectedly could not find WebEnv XML element")
+    webenv = webenv.text
+    logging.debug("Found webenv {}".format(webenv))
+
+    query_key = root.find('QueryKey')
+    if query_key is None:
+        raise Exception("Unexpectedly could not find QueryKey XML element")
+    query_key = query_key.text
+
+    esearch_count = root.find('Count')
+    if esearch_count is None:
+        raise Exception("Unexpectedly could not find Count XML element")
+    esearch_count = int(esearch_count.text)
+    logging.info("Found {} results through search".format(esearch_count))
+    if esearch_count <= 0:
+        raise Exception("Unexpectedly found {} count results through search".format(esearch_count))
 
     # efetch XML in batches of 1000 say. Log progress.
+    retstart = 1
+    batch_size = 100
+    retmax = batch_size
+    while retstart <= esearch_count:
+        logging.info("Fetching records starting at {} ..".format(retstart))
+        res = requests.get(
+            url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi", 
+            params={
+                "db": "sra",
+                "retstart": retstart,
+                "retmax": retmax,
+                "query_key": query_key,
+                "webenv": webenv,
+                "tool": "sandpiper", 
+                "email": "wwood@github.com",
+                "rettype": "xml",               
+                },
+            )
+        if not res.ok:
+            raise Exception("HTTP Failure when requesting efetch: {}".format(res))
+        retstart += batch_size
+
+        root = ET.fromstring(res.text)
+        packages = list(root)
+        for package in packages:
+            # d2 = d[Platform=='ILLUMINA' & LibrarySource=='METAGENOMIC' & LibrarySelection=='RANDOM'][bases>100e6 & bases<200e9]
+        
+            # bases
+            passable_run_ids = []
+            run_set = package.find('RUN_SET')
+            for child in run_set:
+                run_id = child.attrib['accession']
+                bases = int(child.attrib['total_bases'])
+                size = int(child.attrib['size'])
+                if bases < 100e6 or bases > 200e9:
+                    logging.debug("Num bases outside range for {}: {}".format(run_id, bases))
+                    continue
+                else:
+                    passable_run_ids.append((run_id, bases, size))
+            if len(passable_run_ids) == 0:
+                continue
+
+            # Platform = ILLUMINA means an ILLUMINA entry in <EXPERIMENT_SET><EXPERIMENT>:
+            #     <PLATFORM>
+            #       <ILLUMINA>
+            #         <INSTRUMENT_MODEL>Illumina HiSeq 2000</INSTRUMENT_MODEL>
+            #       </ILLUMINA>
+            #     </PLATFORM>
+            illumina = False
+            for platform in package.find('EXPERIMENT').find('PLATFORM'):
+                if platform.tag == 'ILLUMINA':
+                    illumina = True
+
+            # LibrarySource and Library selection in <EXPERIMENT_SET><EXPERIMENT>:
+            #       <LIBRARY_DESCRIPTOR>
+            #         <LIBRARY_NAME>C6s</LIBRARY_NAME>
+            #         <LIBRARY_STRATEGY>WGS</LIBRARY_STRATEGY>
+            #         <LIBRARY_SOURCE>METAGENOMIC</LIBRARY_SOURCE>
+            #         <LIBRARY_SELECTION>RANDOM</LIBRARY_SELECTION>
+            descriptor = package.find('EXPERIMENT').find('DESIGN').find('LIBRARY_DESCRIPTOR')
+            if descriptor.find('LIBRARY_SOURCE').text != 'METAGENOMIC':
+                logging.debug("Not metagenomic library source: {}".format(run_id))
+                continue
+            if descriptor.find('LIBRARY_SELECTION').text != 'RANDOM':
+                logging.debug("Not RANDOM library selection: {}".format(run_id))
+                continue
+
+            for ((run_id, bases, size)) in passable_run_ids:
+                print("\t".join([
+                    run_id,
+                    str(int(float(size)/1024/1024)),
+                    str(int(float(bases)/1000/1000/1000)),
+                ]))
+
+
+        
+        
