@@ -77,7 +77,7 @@ fn metadata(tar_path: &str) {
               if tag1.is_none() {continue}
               let tag_children = &tag1.unwrap().children;
               if tag_children.len() == 0 {
-                eprintln!("Bad tag_children: {:?}", tag_children);
+                eprintln!("{} Bad tag_children: {:?}", run_identifier, tag_children);
                 continue;
               }
               let tag = tag_children[0].as_text().unwrap();
@@ -86,7 +86,7 @@ fn metadata(tar_path: &str) {
               if value1.is_none() {continue}
               let value_children = &value1.unwrap().children;
               if value_children.len() == 0 {
-                eprintln!("Bad value_children: {:?}", value_children);
+                eprintln!("{} Bad value_children: {:?}", run_identifier, value_children);
                 continue;
               }
               let value = value_children[0].as_text().unwrap();
