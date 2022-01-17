@@ -1,44 +1,20 @@
 """
 api.py
-- provides the API endpoints for consuming and producing 
+- provides the API endpoints for consuming and producing
   REST requests and responses
 """
 
 from flask import Blueprint, jsonify, request
-from .models import db, Survey, Question, Choice
+from .models import db, Marker, Otu, Nucleotide
 
 api = Blueprint('api', __name__)
 
-@api.route('/surveys/', methods=('GET', 'POST'))
-def fetch_surveys():
-    if request.method == 'GET':
-        surveys = Survey.query.all()
-        return jsonify({ 'surveys': [s.to_dict() for s in surveys] })
-    elif request.method == 'POST':
-        data = request.get_json()
-        survey = Survey(name=data['name'])
-        questions = []
-        for q in data['questions']:
-            question = Question(text=q['text'])
-            question.choices = [Choice(text=c['text']) for c in q['choices']]
-            questions.append(question)
-        survey.questions = questions
-        db.session.add(survey)
-        db.session.commit()
-        return jsonify(survey.to_dict()), 201
+@api.route('/markers/', methods=('GET',))
+def fetch_markers():
+    markers = Marker.query.all()
+    return jsonify({ 'markers': [s.to_dict() for s in markers] })
 
-
-  
-@api.route('/surveys/<int:id>/', methods=('GET', 'PUT'))
-def survey(id):
-    if request.method == 'GET':
-        survey = Survey.query.get(id)
-        return jsonify({ 'survey': survey.to_dict() })
-    elif request.method == 'PUT':
-        data = request.get_json()
-        for q in data['questions']:
-            choice = Choice.query.get(q['choice'])
-            choice.selected = choice.selected + 1
-        db.session.commit()
-        survey = Survey.query.get(data['id'])
-        return jsonify(survey.to_dict()), 201
+@api.route('/otus/<string:sample_name>/marker/<string:marker_name>', methods=('GET',))
+def fetch_otus(sample_name, marker_name):
+    otus = Otu.query.filter_by(sample_name=sample_name).join(Otu.marker, aliased=True).filter_by(marker=marker_name).all()
+    return jsonify({ 'otus': [s.to_dict() for s in otus] })
