@@ -6,3 +6,7 @@ dependencies:
   - python>=3.9
   - requests
   - ipython
+  - Flask
+  - Flask-SQLAlchemy
+  - Flask-Migrate
+  - Flask-Script
