@@ -4,6 +4,6 @@ appserver.py
 """
 
 if __name__ == '__main__':
-  from surveyapi.application import create_app
+  from api.application import create_app
   app = create_app()
   app.run()

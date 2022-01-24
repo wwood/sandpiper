@@ -1,0 +1,42 @@
+import Vue from 'vue'
+import Vuex from 'vuex'
+
+// imports of AJAX functions will go here
+import { fetchCondensed } from '../api'
+
+Vue.use(Vuex)
+
+const state = {
+  // single source of data
+  currentCondensed: {}
+}
+
+const actions = {
+  // asynchronous operations
+  loadCondensed (context, { id }) {
+    return fetchCondensed(id)
+      .then((response) => {
+        context.commit('setCondensed', { condensed: response.data })
+      })
+  }
+}
+
+const mutations = {
+  // isolated data mutations
+  setCondensed (state, payload) {
+    state.currentCondensed = payload.condensed
+  }
+}
+
+const getters = {
+  // reusable data accessors
+}
+
+const store = new Vuex.Store({
+  state,
+  actions,
+  mutations,
+  getters
+})
+
+export default store

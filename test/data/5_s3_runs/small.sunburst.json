@@ -1,0 +1,20 @@
+{
+  "name": "Root",
+  "size": 4.07,
+  "children": [
+    {
+      "name": "d__Archaea",
+      "size": 1.07,
+      "children": [
+        {
+          "name": "p__Methanobacteriota",
+          "size": 0.05
+        }
+      ]
+    },
+    {
+      "name": "d__Bacteria",
+      "size": 3.0
+    }
+  ]
+}

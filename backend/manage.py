@@ -7,8 +7,8 @@ manage.py
 from flask_script import Manager
 from flask_migrate import Migrate, MigrateCommand
 
-from surveyapi.application import create_app
-from surveyapi.models import db, Survey, Question, Choice
+from api.application import create_app
+from api.models import db, Survey, Question, Choice
 
 app = create_app()
 
