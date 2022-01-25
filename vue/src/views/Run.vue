@@ -3,16 +3,18 @@
     <!-- <img alt="Vue logo" src="../assets/logo.png"> -->
     run
     <hr>
-    <!-- acc: FIXME {{ accession }} -->
+    acc: {{ condensed.sample_name }}
     <hr>
-    <Sunburst :json_tree="condensed" />
-    <!-- <Sunburst :json_tree="getSampleJson()" /> -->
+    <Sunburst :json_tree="condensed.condensed" />
+    <hr>
   </div>
 </template>
 
 <script>
+/* eslint-disable vue/no-unused-components */
 import Sunburst from '@/components/Sunburst.vue'
 import SampleJson from '@/sample.json'
+/* eslint-disable no-unused-vars */
 import { mapState } from 'vuex'
 
 export default {
@@ -20,22 +22,19 @@ export default {
   components: {
     Sunburst
   },
-  // computed: {
-  //   accession () {
-  //     return this.$route.params.runId
-  //   }
-  // },
-  // computed: mapState(['currentCondensed']),
-  // computed: {
-  //   currentCondensed () {
-  //     return store.state.currentCondensed
-  //   }
-  // },
-  computed: mapState({
-    condensed: state => state.currentCondensed
-  }),
+  computed: {
+    condensed () {
+      console.log('condensing')
+      return this.$store.state.currentCondensed
+    }
+  },
+  // computed: mapState({
+  //   condensed: state => state.currentCondensed.condensed
+  // }),
   beforeMount () {
+    console.log('Run beforeMount: ' + this.$route.params.runId)
     this.$store.dispatch('loadCondensed', this.$route.params.runId)
+    console.log('end of beforeMount' + this.$store)
   },
   methods: {
     getSampleJson () {

@@ -8,7 +8,7 @@ Vue.use(Vuex)
 
 const state = {
   // single source of data
-  currentCondensed: {}
+  currentCondensed: null // set this to null rather than {} fixed some loading issues where sunburst didn't show up
 }
 
 const actions = {
@@ -17,6 +17,7 @@ const actions = {
     console.log('loadCondensed for accession: ' + id)
     return fetchCondensed(id)
       .then((response) => {
+        console.log('response: ' + response.data)
         context.commit('setCondensed', { condensed: response.data })
       })
   }
