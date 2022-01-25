@@ -13,7 +13,8 @@ const state = {
 
 const actions = {
   // asynchronous operations
-  loadCondensed (context, { id }) {
+  loadCondensed (context: { commit: (arg0: string, arg1: { condensed: any }) => void }, id: string) {
+    console.log('loadCondensed for accession: ' + id)
     return fetchCondensed(id)
       .then((response) => {
         context.commit('setCondensed', { condensed: response.data })
@@ -23,7 +24,7 @@ const actions = {
 
 const mutations = {
   // isolated data mutations
-  setCondensed (state, payload) {
+  setCondensed (state: { currentCondensed: any }, payload: { condensed: any }): void {
     state.currentCondensed = payload.condensed
   }
 }
