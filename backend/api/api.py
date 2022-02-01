@@ -44,13 +44,17 @@ def fetch_condensed(sample_name):
             last_taxon = taxons_to_wordnode[tax]
         wn.coverage = entry.coverage
 
-    return jsonify({ 'condensed': wordnode_json(root), 'sample_name': sample_name })
+    return jsonify({ 'condensed': wordnode_json(root, 0, 0), 'sample_name': sample_name })
 
-def wordnode_json(wordnode):
+def wordnode_json(wordnode, order, depth):
     j = {
         'name': wordnode.word,
-        'size': wordnode.coverage
+        'size': wordnode.coverage,
+        'order': order,
+        'depth': depth,
     }
+    # Sort children descending by coverage so more abundance lineages are first
+    sorted_children = sorted(wordnode.children.values(), key=lambda x: x.get_full_coverage(), reverse=True)
     if len(wordnode.children.values()) > 0:
-        j['children'] = [wordnode_json(child) for child in wordnode.children.values()]
+        j['children'] = [wordnode_json(child, order+i, depth+1) for i, child in enumerate(sorted_children)]
     return j

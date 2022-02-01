@@ -1,5 +1,5 @@
 <template>
-  <sunburst :data="tree" :showLabels=true :max-label-text=null :centralCircleRelativeSize=15 >
+  <sunburst :data="tree" :showLabels=true :max-label-text=null :centralCircleRelativeSize=15 :colorScale=phylogenyColor :getCategoryForColor=phylogenyDataForColor>
 
   <!-- Add behaviors -->
   <template slot-scope="{ on, actions }">
@@ -33,6 +33,8 @@ import {
 } from 'vue-d3-sunburst'
 import 'vue-d3-sunburst/dist/vue-d3-sunburst.css'
 
+import { scaleLinear } from 'd3-scale'
+
 export default {
   name: 'Sunburst',
   props: ['json_tree'],
@@ -44,44 +46,31 @@ export default {
     popUpOnHover,
     zoomOnClick
   },
+  methods: {
+    phylogenyColor (d) {
+      const order = d[0]
+      const depth = d[1]
+      const baseColors = ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00', '#cab2d6', '#6a3d9a']
+
+      const base = baseColors[order]
+      const colorScale = scaleLinear()
+        .domain([1, 12])
+        .range([base, 'white'])
+
+      return colorScale(depth)
+    },
+    phylogenyDataForColor (d) {
+      return [d.order, d.depth]
+    }
+
+    // myShowLabels (d) {
+    //   console.log(d)
+    //   return d.depth < 2
+    // }
+  },
   data () {
     return {
       tree: this.json_tree
-      // tree: {
-      //   name: 'flare',
-      //   children: [
-      //     {
-      //       name: 'analytics',
-      //       children: [
-      //         {
-      //           name: 'cluster',
-      //           children: [
-      //             { name: 'AgglomerativeCluster', size: 3938 },
-      //             { name: 'CommunityStructure', size: 3812 },
-      //             { name: 'HierarchicalCluster', size: 6714 },
-      //             { name: 'MergeEdge', size: 743 }
-      //           ]
-      //         },
-      //         {
-      //           name: 'graph',
-      //           children: [
-      //             { name: 'BetweennessCentrality', size: 3534 },
-      //             { name: 'LinkDistance', size: 5731 },
-      //             { name: 'MaxFlowMinCut', size: 7840 },
-      //             { name: 'ShortestPaths', size: 5914 },
-      //             { name: 'SpanningTree', size: 3416 }
-      //           ]
-      //         },
-      //         {
-      //           name: 'optimization',
-      //           children: [
-      //             { name: 'AspectRatioBanker', size: 7074 }
-      //           ]
-      //         }
-      //       ]
-      //     }
-      //   ]
-      // }
     }
   }
 }

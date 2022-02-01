@@ -7,17 +7,16 @@ import { fetchCondensed } from '../api'
 Vue.use(Vuex)
 
 const state = {
-  // single source of data
-  currentCondensed: null // set this to null rather than {} fixed some loading issues where sunburst didn't show up
+  // set this to null rather than {} fixed some loading issues where sunburst
+  // didn't show up on refresh/hard refresh. Was easy to reproduce
+  currentCondensed: null
 }
 
 const actions = {
   // asynchronous operations
   loadCondensed (context: { commit: (arg0: string, arg1: { condensed: any }) => void }, id: string) {
-    console.log('loadCondensed for accession: ' + id)
     return fetchCondensed(id)
       .then((response) => {
-        console.log('response: ' + response.data)
         context.commit('setCondensed', { condensed: response.data })
       })
   }
