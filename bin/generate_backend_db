@@ -69,45 +69,107 @@ if __name__ == '__main__':
     # Add new condensed OTU table table
     logging.info("Loading condensed data")
     extern.run('sqlite3 {}'.format(sqlite_db_path), stdin= \
-    "CREATE TABLE condensed_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT,"
-        " sample_name text, coverage float, taxonomy text);\n")
+        "CREATE TABLE taxonomies (id INTEGER PRIMARY KEY, taxonomy_level TEXT, parent_id INTEGER, name TEXT); \n"
+        "CREATE TABLE condensed_profiles (id INTEGER PRIMARY KEY,"
+        " sample_name text, coverage float, taxonomy_id INTEGER);\n")
     
-
+    taxonomy_name_to_id = {}
+    next_taxonomy_id = 0
 
     count = 0
     with open(args.condensed_otu_table, 'r') as csvfile_in:
         reader = csv.reader(csvfile_in, delimiter="\t")
 
-        # Couldn't get this to work with named pipes, guess it must be possible somehow.
-        with tempfile.NamedTemporaryFile() as tf:
-            first = True
-            for row in reader:
-                if first:
-                    first = False
-                    continue
-                tf.write(("\t".join([str(count+1),row[0],row[1],row[2]])+"\n").encode())
-                count += 1
-            logging.info("Wrote {} rows to temp file".format(count))
-            tf.flush()
+        with tempfile.NamedTemporaryFile() as taxonomy_input_tf:
+            # Couldn't get this to work with named pipes, guess it must be possible somehow.
+            with tempfile.NamedTemporaryFile() as tf:
+                first = True
+                for row in reader:
+                    if first:
+                        first = False
+                        continue
 
+                    # Get the taxonomy id, creating a new entry if necessary
+                    taxonomies = row[2]
+                    taxons_split = taxonomies.split('; ')
+                    species_aware_taxonomy = None
+                    for (i, taxonomies_split) in enumerate(taxons_split):
+                        # Store species as species+genus since species aren't unique
+                        if i == 7:
+                            species_aware_taxonomy = "; ".join([taxons_split[i-1],taxons_split[i]])
+                        else:
+                            species_aware_taxonomy = taxonomies_split.strip()
+
+                        if species_aware_taxonomy not in taxonomy_name_to_id:
+                            if taxonomies_split == 'Root':
+                                level = 'root'
+                                parent_id = 'NULL'
+                            else:
+                                prefix = taxonomies_split.split('__')[0]
+                                level_id = ['d','p','c','o','f','g','s'].index(prefix)
+                                level = ['domain','phylum','class','order','family','genus','species'][level_id]
+                                # Will throw KeyError if something is amiss
+
+                                parent_id = taxonomy_name_to_id[taxons_split[i-1]]
+
+                            taxonomy_input_tf.write(("\t".join([str(next_taxonomy_id), level, str(parent_id), taxonomies_split]) + "\n").encode())
+
+                            taxonomy_name_to_id[species_aware_taxonomy] = next_taxonomy_id
+                            next_taxonomy_id += 1
+
+                    tf.write(("\t".join([str(count+1),row[0],row[1],str(taxonomy_name_to_id[species_aware_taxonomy])])+"\n").encode())
+                    count += 1
+                logging.info("Wrote {} rows to temp file".format(count))
+                tf.flush()
+
+
+
+                logging.info("Writing condensed OTU table to DB.. ")
+                proc = subprocess.Popen(['bash','-c','sqlite3 {}'.format(sqlite_db_path)],
+                    stdin=subprocess.PIPE,
+                    stdout=None,
+                    stderr=subprocess.PIPE,
+                    universal_newlines=True)
+                
+                print('.separator "\\t"\n', file=proc.stdin)
+                print('.import {} condensed_profiles\n'.format(tf.name), file=proc.stdin)
+                
+                proc.stdin.close()
+                proc.wait()
+                if proc.returncode != 0:
+                    raise Exception("condensed profiles import command returned non-zero exit status %i.\n"\
+                        "STDERR was: %s" % (
+                            proc.returncode, proc.stderr.read()))      
+                logging.info("Imported {} condensed lines".format(count))
+
+
+
+            logging.info("Writing taxonomies to DB.. ")
+            taxonomy_input_tf.flush()
             proc = subprocess.Popen(['bash','-c','sqlite3 {}'.format(sqlite_db_path)],
                 stdin=subprocess.PIPE,
                 stdout=None,
                 stderr=subprocess.PIPE,
                 universal_newlines=True)
-
+            
             print('.separator "\\t"\n', file=proc.stdin)
-            print('.import {} condensed_profiles\n'.format(tf.name), file=proc.stdin)
-
-            import IPython; IPython.embed()
+            print('.import {} taxonomies\n'.format(taxonomy_input_tf.name), file=proc.stdin)
             
             proc.stdin.close()
             proc.wait()
             if proc.returncode != 0:
-                raise Exception("condensed profiles import command returned non-zero exit status %i.\n"\
+                raise Exception("taxonomies import command returned non-zero exit status %i.\n"\
                     "STDERR was: %s" % (
                         proc.returncode, proc.stderr.read()))      
-            logging.info("Imported {} condensed lines".format(count))
+            logging.info("Imported {} taxonomies".format(next_taxonomy_id))
+
+
+    # logging.info("Creating indexes ..")
+    # extern.run('sqlite3 {}'.format(sqlite_db_path), stdin= \
+    #     "CREATE TABLE taxonomies (id INTEGER PRIMARY KEY, taxonomy_level TEXT, parent_id INTEGER, name TEXT); \n"
+    #     "CREATE TABLE condensed_profiles (id INTEGER PRIMARY KEY,"
+    #     " sample_name text, coverage float, taxonomy_id INTEGER);\n")
+    #     extern.run('crea')
 
     logging.warn("TODO: Add indexes")
 
