@@ -1,0 +1,357 @@
+{"xlevel":"3","tax_id":"1825923","parent_id":"410656","sci_name":"sea anemone metagenome"}
+{"xlevel":"3","tax_id":"1642408","parent_id":"410656","sci_name":"parasite metagenome"}
+{"xlevel":"3","tax_id":"2721627","parent_id":"410656","sci_name":"urinary tract metagenome"}
+{"xlevel":"3","tax_id":"1300146","parent_id":"410656","sci_name":"algae metagenome"}
+{"xlevel":"3","tax_id":"1549733","parent_id":"410656","sci_name":"jellyfish metagenome"}
+{"xlevel":"3","tax_id":"1510822","parent_id":"410656","sci_name":"pig gut metagenome"}
+{"xlevel":"3","tax_id":"408170","parent_id":"410656","sci_name":"human gut metagenome"}
+{"xlevel":"3","tax_id":"1077529","parent_id":"410656","sci_name":"wasp metagenome"}
+{"xlevel":"3","tax_id":"1508044","parent_id":"410656","sci_name":"ctenophore metagenome"}
+{"xlevel":"3","tax_id":"1870980","parent_id":"410656","sci_name":"ear metagenome"}
+{"xlevel":"3","tax_id":"433733","parent_id":"410656","sci_name":"human lung metagenome"}
+{"xlevel":"3","tax_id":"1899496","parent_id":"410656","sci_name":"feline metagenome"}
+{"xlevel":"3","tax_id":"2259532","parent_id":"410656","sci_name":"granuloma metagenome"}
+{"xlevel":"3","tax_id":"1983761","parent_id":"410656","sci_name":"internal organ metagenome"}
+{"xlevel":"3","tax_id":"2083302","parent_id":"410656","sci_name":"amphibian metagenome"}
+{"xlevel":"3","tax_id":"2045359","parent_id":"410656","sci_name":"oral viral metagenome"}
+{"xlevel":"3","tax_id":"1861841","parent_id":"410656","sci_name":"feces metagenome"}
+{"xlevel":"3","tax_id":"662107","parent_id":"410656","sci_name":"phyllosphere metagenome"}
+{"xlevel":"3","tax_id":"1941281","parent_id":"410656","sci_name":"hydrozoan metagenome"}
+{"xlevel":"3","tax_id":"1892068","parent_id":"410656","sci_name":"human skeleton metagenome"}
+{"xlevel":"3","tax_id":"1504969","parent_id":"410656","sci_name":"human blood metagenome"}
+{"xlevel":"3","tax_id":"1595979","parent_id":"410656","sci_name":"tick metagenome"}
+{"xlevel":"3","tax_id":"1630596","parent_id":"410656","sci_name":"human bile metagenome"}
+{"xlevel":"3","tax_id":"530537","parent_id":"410656","sci_name":"psyllid metagenome"}
+{"xlevel":"3","tax_id":"447426","parent_id":"410656","sci_name":"human oral metagenome"}
+{"xlevel":"3","tax_id":"1681198","parent_id":"410656","sci_name":"crustacean metagenome"}
+{"xlevel":"3","tax_id":"2819232","parent_id":"410656","sci_name":"plant fiber metagenome"}
+{"xlevel":"3","tax_id":"2853533","parent_id":"410656","sci_name":"cyanobacteria bloom metagenome"}
+{"xlevel":"3","tax_id":"1675031","parent_id":"410656","sci_name":"oral-nasopharyngeal metagenome"}
+{"xlevel":"3","tax_id":"2315767","parent_id":"410656","sci_name":"eukaryotic plankton metagenome"}
+{"xlevel":"3","tax_id":"1519372","parent_id":"410656","sci_name":"spider metagenome"}
+{"xlevel":"3","tax_id":"1712573","parent_id":"410656","sci_name":"human tracheal metagenome"}
+{"xlevel":"3","tax_id":"2173186","parent_id":"410656","sci_name":"whole organism metagenome"}
+{"xlevel":"3","tax_id":"2689586","parent_id":"410656","sci_name":"wildlife metagenome"}
+{"xlevel":"3","tax_id":"2866621","parent_id":"410656","sci_name":"bacterioplankton metagenome"}
+{"xlevel":"3","tax_id":"1711999","parent_id":"410656","sci_name":"invertebrate metagenome"}
+{"xlevel":"3","tax_id":"2364087","parent_id":"410656","sci_name":"human hair metagenome"}
+{"xlevel":"3","tax_id":"1632839","parent_id":"410656","sci_name":"human vaginal metagenome"}
+{"xlevel":"3","tax_id":"2517771","parent_id":"410656","sci_name":"human sputum metagenome"}
+{"xlevel":"3","tax_id":"2901397","parent_id":"410656","sci_name":"peritoneum metagenome"}
+{"xlevel":"3","tax_id":"2489051","parent_id":"410656","sci_name":"human viral metagenome"}
+{"xlevel":"3","tax_id":"749906","parent_id":"410656","sci_name":"gut metagenome"}
+{"xlevel":"3","tax_id":"2705415","parent_id":"410656","sci_name":"human feces metagenome"}
+{"xlevel":"3","tax_id":"1549736","parent_id":"410656","sci_name":"vaginal metagenome"}
+{"xlevel":"3","tax_id":"496924","parent_id":"410656","sci_name":"fish metagenome"}
+{"xlevel":"3","tax_id":"1077528","parent_id":"410656","sci_name":"ant metagenome"}
+{"xlevel":"3","tax_id":"1130098","parent_id":"410656","sci_name":"nematode metagenome"}
+{"xlevel":"3","tax_id":"1441288","parent_id":"410656","sci_name":"primate metagenome"}
+{"xlevel":"3","tax_id":"1297885","parent_id":"410656","sci_name":"plant metagenome"}
+{"xlevel":"3","tax_id":"2900150","parent_id":"410656","sci_name":"sugarcane bagasse metagenome"}
+{"xlevel":"3","tax_id":"1006967","parent_id":"410656","sci_name":"shoot metagenome"}
+{"xlevel":"3","tax_id":"1704043","parent_id":"410656","sci_name":"ovine metagenome"}
+{"xlevel":"3","tax_id":"539654","parent_id":"410656","sci_name":"human brain metagenome"}
+{"xlevel":"3","tax_id":"1234904","parent_id":"410656","sci_name":"insect metagenome"}
+{"xlevel":"3","tax_id":"1118232","parent_id":"410656","sci_name":"root metagenome"}
+{"xlevel":"3","tax_id":"1676987","parent_id":"410656","sci_name":"blood metagenome"}
+{"xlevel":"3","tax_id":"2011160","parent_id":"410656","sci_name":"phycosphere metagenome"}
+{"xlevel":"3","tax_id":"2034148","parent_id":"410656","sci_name":"canine metagenome"}
+{"xlevel":"3","tax_id":"1904484","parent_id":"410656","sci_name":"seagrass metagenome"}
+{"xlevel":"3","tax_id":"1204294","parent_id":"410656","sci_name":"snake metagenome"}
+{"xlevel":"3","tax_id":"1729361","parent_id":"410656","sci_name":"lung metagenome"}
+{"xlevel":"3","tax_id":"1822005","parent_id":"410656","sci_name":"cetacean metagenome"}
+{"xlevel":"3","tax_id":"2798575","parent_id":"410656","sci_name":"sea cucumber metagenome"}
+{"xlevel":"3","tax_id":"483425","parent_id":"410656","sci_name":"endophyte metagenome"}
+{"xlevel":"3","tax_id":"1441287","parent_id":"410656","sci_name":"mouse metagenome"}
+{"xlevel":"3","tax_id":"1131769","parent_id":"410656","sci_name":"human nasopharyngeal metagenome"}
+{"xlevel":"3","tax_id":"1346744","parent_id":"410656","sci_name":"urine metagenome"}
+{"xlevel":"3","tax_id":"1385665","parent_id":"410656","sci_name":"flower metagenome"}
+{"xlevel":"3","tax_id":"2596910","parent_id":"410656","sci_name":"protist metagenome"}
+{"xlevel":"3","tax_id":"1218275","parent_id":"410656","sci_name":"bovine metagenome"}
+{"xlevel":"3","tax_id":"2126523","parent_id":"410656","sci_name":"shark metagenome"}
+{"xlevel":"3","tax_id":"496922","parent_id":"410656","sci_name":"coral metagenome"}
+{"xlevel":"3","tax_id":"1850221","parent_id":"410656","sci_name":"respiratory tract metagenome"}
+{"xlevel":"3","tax_id":"1115523","parent_id":"410656","sci_name":"upper respiratory tract metagenome"}
+{"xlevel":"3","tax_id":"1579005","parent_id":"410656","sci_name":"dinoflagellate metagenome"}
+{"xlevel":"3","tax_id":"2803947","parent_id":"410656","sci_name":"photosynthetic picoeukaryotic metagenome"}
+{"xlevel":"3","tax_id":"496923","parent_id":"410656","sci_name":"mosquito metagenome"}
+{"xlevel":"3","tax_id":"1435266","parent_id":"410656","sci_name":"human gut metagenome gcode 4"}
+{"xlevel":"3","tax_id":"1602388","parent_id":"410656","sci_name":"fish gut metagenome"}
+{"xlevel":"3","tax_id":"1670606","parent_id":"410656","sci_name":"fungus metagenome"}
+{"xlevel":"3","tax_id":"1070528","parent_id":"410656","sci_name":"viral metagenome"}
+{"xlevel":"3","tax_id":"1675540","parent_id":"410656","sci_name":"moss metagenome"}
+{"xlevel":"3","tax_id":"1335591","parent_id":"410656","sci_name":"seed metagenome"}
+{"xlevel":"3","tax_id":"1873886","parent_id":"410656","sci_name":"sea urchin metagenome"}
+{"xlevel":"3","tax_id":"506600","parent_id":"410656","sci_name":"chicken gut metagenome"}
+{"xlevel":"3","tax_id":"2516875","parent_id":"410656","sci_name":"human urinary tract metagenome"}
+{"xlevel":"3","tax_id":"2607062","parent_id":"410656","sci_name":"cellular supernatant metagenome"}
+{"xlevel":"3","tax_id":"1904483","parent_id":"410656","sci_name":"sheep gut metagenome"}
+{"xlevel":"3","tax_id":"1297858","parent_id":"410656","sci_name":"leaf metagenome"}
+{"xlevel":"3","tax_id":"2592667","parent_id":"410656","sci_name":"semen metagenome"}
+{"xlevel":"3","tax_id":"1202446","parent_id":"410656","sci_name":"insect gut metagenome"}
+{"xlevel":"3","tax_id":"1969832","parent_id":"410656","sci_name":"ciliate metagenome"}
+{"xlevel":"3","tax_id":"2805787","parent_id":"410656","sci_name":"aquatic eukaryotic metagenome"}
+{"xlevel":"3","tax_id":"1436733","parent_id":"410656","sci_name":"rat gut metagenome"}
+{"xlevel":"3","tax_id":"1580551","parent_id":"410656","sci_name":"annelid metagenome"}
+{"xlevel":"3","tax_id":"910258","parent_id":"410656","sci_name":"honeybee metagenome"}
+{"xlevel":"3","tax_id":"1660347","parent_id":"410656","sci_name":"phage metagenome"}
+{"xlevel":"3","tax_id":"1227552","parent_id":"410656","sci_name":"oral metagenome"}
+{"xlevel":"3","tax_id":"2809082","parent_id":"410656","sci_name":"goat gut metagenome"}
+{"xlevel":"3","tax_id":"1571227","parent_id":"410656","sci_name":"scorpion gut metagenome"}
+{"xlevel":"3","tax_id":"1842734","parent_id":"410656","sci_name":"human reproductive system metagenome"}
+{"xlevel":"3","tax_id":"2038140","parent_id":"410656","sci_name":"shrew metagenome"}
+{"xlevel":"3","tax_id":"2562286","parent_id":"410656","sci_name":"tree metagenome"}
+{"xlevel":"3","tax_id":"410662","parent_id":"410656","sci_name":"symbiont metagenome"}
+{"xlevel":"3","tax_id":"1685930","parent_id":"410656","sci_name":"liver metagenome"}
+{"xlevel":"3","tax_id":"1775950","parent_id":"410656","sci_name":"invertebrate gut metagenome"}
+{"xlevel":"3","tax_id":"2768320","parent_id":"410656","sci_name":"microeukaryotic metagenome"}
+{"xlevel":"3","tax_id":"1477400","parent_id":"410656","sci_name":"marsupial metagenome"}
+{"xlevel":"3","tax_id":"1338477","parent_id":"410656","sci_name":"skin metagenome"}
+{"xlevel":"3","tax_id":"540485","parent_id":"410656","sci_name":"mouse skin metagenome"}
+{"xlevel":"3","tax_id":"1427740","parent_id":"410656","sci_name":"rat metagenome"}
+{"xlevel":"3","tax_id":"1837932","parent_id":"410656","sci_name":"human semen metagenome"}
+{"xlevel":"3","tax_id":"1284369","parent_id":"410656","sci_name":"stomach metagenome"}
+{"xlevel":"3","tax_id":"444079","parent_id":"410656","sci_name":"fossil metagenome"}
+{"xlevel":"3","tax_id":"1411990","parent_id":"410656","sci_name":"echinoderm metagenome"}
+{"xlevel":"3","tax_id":"1685929","parent_id":"410656","sci_name":"gonad metagenome"}
+{"xlevel":"3","tax_id":"1163772","parent_id":"410656","sci_name":"sponge metagenome"}
+{"xlevel":"3","tax_id":"1077527","parent_id":"410656","sci_name":"beetle metagenome"}
+{"xlevel":"3","tax_id":"703336","parent_id":"410656","sci_name":"wallaby gut metagenome"}
+{"xlevel":"3","tax_id":"1830148","parent_id":"410656","sci_name":"eye metagenome"}
+{"xlevel":"3","tax_id":"506599","parent_id":"410656","sci_name":"bovine gut metagenome"}
+{"xlevel":"3","tax_id":"1076140","parent_id":"410656","sci_name":"termite metagenome"}
+{"xlevel":"3","tax_id":"1890690","parent_id":"410656","sci_name":"aquatic viral metagenome"}
+{"xlevel":"3","tax_id":"1213622","parent_id":"410656","sci_name":"bat metagenome"}
+{"xlevel":"3","tax_id":"2849098","parent_id":"410656","sci_name":"symbiotic algae metagenome"}
+{"xlevel":"3","tax_id":"433724","parent_id":"410656","sci_name":"termite gut metagenome"}
+{"xlevel":"3","tax_id":"1868704","parent_id":"410656","sci_name":"grain metagenome"}
+{"xlevel":"3","tax_id":"2592666","parent_id":"410656","sci_name":"horse metagenome"}
+{"xlevel":"3","tax_id":"2053188","parent_id":"410656","sci_name":"starfish metagenome"}
+{"xlevel":"3","tax_id":"1653169","parent_id":"410656","sci_name":"lichen metagenome"}
+{"xlevel":"3","tax_id":"1588881","parent_id":"410656","sci_name":"shrimp gut metagenome"}
+{"xlevel":"3","tax_id":"1712032","parent_id":"410656","sci_name":"bear gut metagenome"}
+{"xlevel":"3","tax_id":"646099","parent_id":"410656","sci_name":"human metagenome"}
+{"xlevel":"3","tax_id":"1455666","parent_id":"410656","sci_name":"gill metagenome"}
+{"xlevel":"3","tax_id":"1848041","parent_id":"410656","sci_name":"mite metagenome"}
+{"xlevel":"3","tax_id":"2713252","parent_id":"410656","sci_name":"microbial eukaryotic metagenome"}
+{"xlevel":"3","tax_id":"1541066","parent_id":"410656","sci_name":"oyster metagenome"}
+{"xlevel":"3","tax_id":"1914523","parent_id":"410656","sci_name":"urogenital metagenome"}
+{"xlevel":"3","tax_id":"408171","parent_id":"410656","sci_name":"epibiont metagenome"}
+{"xlevel":"3","tax_id":"1660082","parent_id":"410656","sci_name":"crab metagenome"}
+{"xlevel":"3","tax_id":"2769363","parent_id":"410656","sci_name":"microeukaryotic plankton metagenome"}
+{"xlevel":"3","tax_id":"1176744","parent_id":"410656","sci_name":"pig metagenome"}
+{"xlevel":"3","tax_id":"1327954","parent_id":"410656","sci_name":"placenta metagenome"}
+{"xlevel":"3","tax_id":"539655","parent_id":"410656","sci_name":"human skin metagenome"}
+{"xlevel":"3","tax_id":"2753603","parent_id":"410656","sci_name":"phytoplankton metagenome"}
+{"xlevel":"3","tax_id":"1417798","parent_id":"410656","sci_name":"mollusc metagenome"}
+{"xlevel":"3","tax_id":"1521111","parent_id":"410656","sci_name":"rodent metagenome"}
+{"xlevel":"3","tax_id":"1898966","parent_id":"410656","sci_name":"sheep metagenome"}
+{"xlevel":"3","tax_id":"410661","parent_id":"410656","sci_name":"mouse gut metagenome"}
+{"xlevel":"3","tax_id":"2771423","parent_id":"410656","sci_name":"marine picoeukaryotic metagenome"}
+{"xlevel":"3","tax_id":"1789662","parent_id":"410656","sci_name":"frog metagenome"}
+{"xlevel":"3","tax_id":"1774142","parent_id":"410656","sci_name":"human eye metagenome"}
+{"xlevel":"3","tax_id":"1679718","parent_id":"410656","sci_name":"human saliva metagenome"}
+{"xlevel":"3","tax_id":"1573835","parent_id":"410656","sci_name":"koala metagenome"}
+{"xlevel":"3","tax_id":"1041057","parent_id":"410656","sci_name":"sea squirt metagenome"}
+{"xlevel":"3","tax_id":"1628154","parent_id":"410656","sci_name":"pollen metagenome"}
+{"xlevel":"3","tax_id":"2682960","parent_id":"410656","sci_name":"eukaryotic metagenome"}
+{"xlevel":"3","tax_id":"1833763","parent_id":"410656","sci_name":"bird metagenome"}
+{"xlevel":"3","tax_id":"1331678","parent_id":"410656","sci_name":"zebrafish metagenome"}
+{"xlevel":"3","tax_id":"2015907","parent_id":"410656","sci_name":"macroalgae metagenome"}
+{"xlevel":"3","tax_id":"1633571","parent_id":"410656","sci_name":"human milk metagenome"}
+{"xlevel":"3","tax_id":"2890062","parent_id":"410656","sci_name":"root nodule metagenome"}
+{"xlevel":"3","tax_id":"2790308","parent_id":"410656","sci_name":"bat gut metagenome"}
+{"xlevel":"3","tax_id":"1966731","parent_id":"410656","sci_name":"reproductive system metagenome"}
+{"xlevel":"3","tax_id":"1348798","parent_id":"410657","sci_name":"terrestrial metagenome"}
+{"xlevel":"3","tax_id":"2202140","parent_id":"410657","sci_name":"egg metagenome"}
+{"xlevel":"3","tax_id":"1628828","parent_id":"410657","sci_name":"fuel tank metagenome"}
+{"xlevel":"3","tax_id":"1447863","parent_id":"410657","sci_name":"clinical metagenome"}
+{"xlevel":"3","tax_id":"885331","parent_id":"410657","sci_name":"oil production facility metagenome"}
+{"xlevel":"3","tax_id":"1325974","parent_id":"410657","sci_name":"wetland metagenome"}
+{"xlevel":"3","tax_id":"1699855","parent_id":"410657","sci_name":"food production metagenome"}
+{"xlevel":"3","tax_id":"1817679","parent_id":"410657","sci_name":"landfill metagenome"}
+{"xlevel":"3","tax_id":"2419775","parent_id":"410657","sci_name":"nutrient bag metagenome"}
+{"xlevel":"3","tax_id":"904678","parent_id":"410657","sci_name":"hypersaline lake metagenome"}
+{"xlevel":"3","tax_id":"1804163","parent_id":"410657","sci_name":"herbal medicine metagenome"}
+{"xlevel":"3","tax_id":"1874687","parent_id":"410657","sci_name":"marine plankton metagenome"}
+{"xlevel":"3","tax_id":"1649191","parent_id":"410657","sci_name":"estuary metagenome"}
+{"xlevel":"3","tax_id":"527640","parent_id":"410657","sci_name":"microbial mat metagenome"}
+{"xlevel":"3","tax_id":"1342751","parent_id":"410657","sci_name":"plastisphere metagenome"}
+{"xlevel":"3","tax_id":"1306859","parent_id":"410657","sci_name":"mixed culture metagenome"}
+{"xlevel":"3","tax_id":"2890057","parent_id":"410657","sci_name":"masonry metagenome"}
+{"xlevel":"3","tax_id":"1545499","parent_id":"410657","sci_name":"salt mine metagenome"}
+{"xlevel":"3","tax_id":"1798876","parent_id":"410657","sci_name":"tobacco metagenome"}
+{"xlevel":"3","tax_id":"1249455","parent_id":"410657","sci_name":"power plant metagenome"}
+{"xlevel":"3","tax_id":"1968542","parent_id":"410657","sci_name":"shale gas metagenome"}
+{"xlevel":"3","tax_id":"2773312","parent_id":"410657","sci_name":"Winogradsky column metagenome"}
+{"xlevel":"3","tax_id":"2854027","parent_id":"410657","sci_name":"winery metagenome"}
+{"xlevel":"3","tax_id":"2502012","parent_id":"410657","sci_name":"medical device metagenome"}
+{"xlevel":"3","tax_id":"1503069","parent_id":"410657","sci_name":"termite fungus garden metagenome"}
+{"xlevel":"3","tax_id":"1672641","parent_id":"410657","sci_name":"rice paddy metagenome"}
+{"xlevel":"3","tax_id":"2826927","parent_id":"410657","sci_name":"meat metagenome"}
+{"xlevel":"3","tax_id":"2607665","parent_id":"410657","sci_name":"painting metagenome"}
+{"xlevel":"3","tax_id":"1592332","parent_id":"410657","sci_name":"sludge metagenome"}
+{"xlevel":"3","tax_id":"1899497","parent_id":"410657","sci_name":"mine tailings metagenome"}
+{"xlevel":"3","tax_id":"1710357","parent_id":"410657","sci_name":"soil crust metagenome"}
+{"xlevel":"3","tax_id":"1561972","parent_id":"410657","sci_name":"seawater metagenome"}
+{"xlevel":"3","tax_id":"2493693","parent_id":"410657","sci_name":"clay metagenome"}
+{"xlevel":"3","tax_id":"1643811","parent_id":"410657","sci_name":"cloud metagenome"}
+{"xlevel":"3","tax_id":"2607973","parent_id":"410657","sci_name":"fishing equipment metagenome"}
+{"xlevel":"3","tax_id":"942017","parent_id":"410657","sci_name":"activated sludge metagenome"}
+{"xlevel":"3","tax_id":"1540818","parent_id":"410657","sci_name":"solid waste metagenome"}
+{"xlevel":"3","tax_id":"1859930","parent_id":"410657","sci_name":"anchialine metagenome"}
+{"xlevel":"3","tax_id":"870726","parent_id":"410657","sci_name":"food metagenome"}
+{"xlevel":"3","tax_id":"1169740","parent_id":"410657","sci_name":"aquatic metagenome"}
+{"xlevel":"3","tax_id":"652676","parent_id":"410657","sci_name":"hydrothermal vent metagenome"}
+{"xlevel":"3","tax_id":"1759406","parent_id":"410657","sci_name":"microbial fuel cell metagenome"}
+{"xlevel":"3","tax_id":"2651591","parent_id":"410657","sci_name":"drinking water metagenome"}
+{"xlevel":"3","tax_id":"1671699","parent_id":"410657","sci_name":"sand metagenome"}
+{"xlevel":"3","tax_id":"1269027","parent_id":"410657","sci_name":"tidal flat metagenome"}
+{"xlevel":"3","tax_id":"1851193","parent_id":"410657","sci_name":"pond metagenome"}
+{"xlevel":"3","tax_id":"1504975","parent_id":"410657","sci_name":"salt marsh metagenome"}
+{"xlevel":"3","tax_id":"1082480","parent_id":"410657","sci_name":"permafrost metagenome"}
+{"xlevel":"3","tax_id":"797283","parent_id":"410657","sci_name":"ant fungus garden metagenome"}
+{"xlevel":"3","tax_id":"1723648","parent_id":"410657","sci_name":"cave metagenome"}
+{"xlevel":"3","tax_id":"1804158","parent_id":"410657","sci_name":"silage metagenome"}
+{"xlevel":"3","tax_id":"1515737","parent_id":"410657","sci_name":"money metagenome"}
+{"xlevel":"3","tax_id":"433727","parent_id":"410657","sci_name":"hot springs metagenome"}
+{"xlevel":"3","tax_id":"527639","parent_id":"410657","sci_name":"wastewater metagenome"}
+{"xlevel":"3","tax_id":"1954208","parent_id":"410657","sci_name":"oil metagenome"}
+{"xlevel":"3","tax_id":"718289","parent_id":"410657","sci_name":"biogas fermenter metagenome"}
+{"xlevel":"3","tax_id":"410658","parent_id":"410657","sci_name":"soil metagenome"}
+{"xlevel":"3","tax_id":"1518171","parent_id":"410657","sci_name":"root associated fungus metagenome"}
+{"xlevel":"3","tax_id":"1243988","parent_id":"410657","sci_name":"tomb metagenome"}
+{"xlevel":"3","tax_id":"2681964","parent_id":"410657","sci_name":"book metagenome"}
+{"xlevel":"3","tax_id":"1775567","parent_id":"410657","sci_name":"lobster shelll metagenome"}
+{"xlevel":"3","tax_id":"1752603","parent_id":"410657","sci_name":"floral nectar metagenome"}
+{"xlevel":"3","tax_id":"1933216","parent_id":"410657","sci_name":"biofloc metagenome"}
+{"xlevel":"3","tax_id":"1651086","parent_id":"410657","sci_name":"saline spring metagenome"}
+{"xlevel":"3","tax_id":"2812732","parent_id":"410657","sci_name":"salt metagenome"}
+{"xlevel":"3","tax_id":"1661029","parent_id":"410657","sci_name":"museum specimen metagenome"}
+{"xlevel":"3","tax_id":"1642954","parent_id":"410657","sci_name":"leaf litter metagenome"}
+{"xlevel":"3","tax_id":"496920","parent_id":"410657","sci_name":"saltern metagenome"}
+{"xlevel":"3","tax_id":"1954210","parent_id":"410657","sci_name":"ballast water metagenome"}
+{"xlevel":"3","tax_id":"1960113","parent_id":"410657","sci_name":"neuston metagenome"}
+{"xlevel":"3","tax_id":"1799672","parent_id":"410657","sci_name":"peat metagenome"}
+{"xlevel":"3","tax_id":"1303196","parent_id":"410657","sci_name":"industrial waste metagenome"}
+{"xlevel":"3","tax_id":"2082402","parent_id":"410657","sci_name":"soda lime metagenome"}
+{"xlevel":"3","tax_id":"1382208","parent_id":"410657","sci_name":"interstitial water metagenome"}
+{"xlevel":"3","tax_id":"2881334","parent_id":"410657","sci_name":"spider web metagenome"}
+{"xlevel":"3","tax_id":"1708701","parent_id":"410657","sci_name":"aerosol metagenome"}
+{"xlevel":"3","tax_id":"412757","parent_id":"410657","sci_name":"beach sand metagenome"}
+{"xlevel":"3","tax_id":"2714341","parent_id":"410657","sci_name":"aquaculture metagenome"}
+{"xlevel":"3","tax_id":"1792145","parent_id":"410657","sci_name":"manure metagenome"}
+{"xlevel":"3","tax_id":"1931409","parent_id":"410657","sci_name":"rhizoplane metagenome"}
+{"xlevel":"3","tax_id":"1808295","parent_id":"410657","sci_name":"pitcher plant inquiline metagenome"}
+{"xlevel":"3","tax_id":"1768876","parent_id":"410657","sci_name":"oil field metagenome"}
+{"xlevel":"3","tax_id":"1705994","parent_id":"410657","sci_name":"tin mine metagenome"}
+{"xlevel":"3","tax_id":"1647806","parent_id":"410657","sci_name":"lake water metagenome"}
+{"xlevel":"3","tax_id":"1907576","parent_id":"410657","sci_name":"metal metagenome"}
+{"xlevel":"3","tax_id":"655179","parent_id":"410657","sci_name":"air metagenome"}
+{"xlevel":"3","tax_id":"2083488","parent_id":"410657","sci_name":"runoff metagenome"}
+{"xlevel":"3","tax_id":"702656","parent_id":"410657","sci_name":"compost metagenome"}
+{"xlevel":"3","tax_id":"2487694","parent_id":"410657","sci_name":"bentonite metagenome"}
+{"xlevel":"3","tax_id":"1715863","parent_id":"410657","sci_name":"termitarium metagenome"}
+{"xlevel":"3","tax_id":"496921","parent_id":"410657","sci_name":"stromatolite metagenome"}
+{"xlevel":"3","tax_id":"1319833","parent_id":"410657","sci_name":"halite metagenome"}
+{"xlevel":"3","tax_id":"1705991","parent_id":"410657","sci_name":"HVAC metagenome"}
+{"xlevel":"3","tax_id":"1236744","parent_id":"410657","sci_name":"dust metagenome"}
+{"xlevel":"3","tax_id":"1759405","parent_id":"410657","sci_name":"parchment metagenome"}
+{"xlevel":"3","tax_id":"449393","parent_id":"410657","sci_name":"freshwater metagenome"}
+{"xlevel":"3","tax_id":"1154581","parent_id":"410657","sci_name":"food fermentation metagenome"}
+{"xlevel":"3","tax_id":"1561020","parent_id":"410657","sci_name":"crude oil metagenome"}
+{"xlevel":"3","tax_id":"1658780","parent_id":"410657","sci_name":"wine metagenome"}
+{"xlevel":"3","tax_id":"412755","parent_id":"410657","sci_name":"marine sediment metagenome"}
+{"xlevel":"3","tax_id":"1620422","parent_id":"410657","sci_name":"oil sands metagenome"}
+{"xlevel":"3","tax_id":"1763544","parent_id":"410657","sci_name":"lagoon metagenome"}
+{"xlevel":"3","tax_id":"717931","parent_id":"410657","sci_name":"groundwater metagenome"}
+{"xlevel":"3","tax_id":"1616037","parent_id":"410657","sci_name":"milk metagenome"}
+{"xlevel":"3","tax_id":"1593443","parent_id":"410657","sci_name":"wood decay metagenome"}
+{"xlevel":"3","tax_id":"1604023","parent_id":"410657","sci_name":"electrolysis cell metagenome"}
+{"xlevel":"3","tax_id":"1256227","parent_id":"410657","sci_name":"indoor metagenome"}
+{"xlevel":"3","tax_id":"2747213","parent_id":"410657","sci_name":"tannin metagenome"}
+{"xlevel":"3","tax_id":"1659218","parent_id":"410657","sci_name":"probiotic metagenome"}
+{"xlevel":"3","tax_id":"1527414","parent_id":"410657","sci_name":"biocathode metagenome"}
+{"xlevel":"3","tax_id":"1311626","parent_id":"410657","sci_name":"rock metagenome"}
+{"xlevel":"3","tax_id":"1394888","parent_id":"410657","sci_name":"paper pulp metagenome"}
+{"xlevel":"3","tax_id":"1799687","parent_id":"410657","sci_name":"steel metagenome"}
+{"xlevel":"3","tax_id":"2048281","parent_id":"410657","sci_name":"bog metagenome"}
+{"xlevel":"3","tax_id":"556182","parent_id":"410657","sci_name":"freshwater sediment metagenome"}
+{"xlevel":"3","tax_id":"2028342","parent_id":"410657","sci_name":"insect nest metagenome"}
+{"xlevel":"3","tax_id":"1897733","parent_id":"410657","sci_name":"food contamination metagenome"}
+{"xlevel":"3","tax_id":"2775247","parent_id":"410657","sci_name":"bioretention column metagenome"}
+{"xlevel":"3","tax_id":"1664808","parent_id":"410657","sci_name":"musk metagenome"}
+{"xlevel":"3","tax_id":"1735564","parent_id":"410657","sci_name":"cow dung metagenome"}
+{"xlevel":"3","tax_id":"1263966","parent_id":"410657","sci_name":"snow metagenome"}
+{"xlevel":"3","tax_id":"1917397","parent_id":"410657","sci_name":"phytotelma metagenome"}
+{"xlevel":"3","tax_id":"1592514","parent_id":"410657","sci_name":"lichen crust metagenome"}
+{"xlevel":"3","tax_id":"1733563","parent_id":"410657","sci_name":"snowblower vent metagenome"}
+{"xlevel":"3","tax_id":"2810607","parent_id":"410657","sci_name":"straw metagenome"}
+{"xlevel":"3","tax_id":"1651087","parent_id":"410657","sci_name":"glacier metagenome"}
+{"xlevel":"3","tax_id":"1594593","parent_id":"410657","sci_name":"bioanode metagenome"}
+{"xlevel":"3","tax_id":"2338240","parent_id":"410657","sci_name":"mine metagenome"}
+{"xlevel":"3","tax_id":"1627878","parent_id":"410657","sci_name":"soda lake metagenome"}
+{"xlevel":"3","tax_id":"1564682","parent_id":"410657","sci_name":"subsurface metagenome"}
+{"xlevel":"3","tax_id":"1774230","parent_id":"410657","sci_name":"surface metagenome"}
+{"xlevel":"3","tax_id":"1897453","parent_id":"410657","sci_name":"tar pit metagenome"}
+{"xlevel":"3","tax_id":"1326787","parent_id":"410657","sci_name":"fermentation metagenome"}
+{"xlevel":"3","tax_id":"410659","parent_id":"410657","sci_name":"mine drainage metagenome"}
+{"xlevel":"3","tax_id":"1816089","parent_id":"410657","sci_name":"volcano metagenome"}
+{"xlevel":"3","tax_id":"1748545","parent_id":"410657","sci_name":"biosolids metagenome"}
+{"xlevel":"3","tax_id":"1981201","parent_id":"410657","sci_name":"brine metagenome"}
+{"xlevel":"3","tax_id":"2883122","parent_id":"410657","sci_name":"fairy ring metagenome"}
+{"xlevel":"3","tax_id":"1799666","parent_id":"410657","sci_name":"oasis metagenome"}
+{"xlevel":"3","tax_id":"1263854","parent_id":"410657","sci_name":"anaerobic digester metagenome"}
+{"xlevel":"3","tax_id":"2003122","parent_id":"410657","sci_name":"pipeline metagenome"}
+{"xlevel":"3","tax_id":"2834405","parent_id":"410657","sci_name":"ore metagenome"}
+{"xlevel":"3","tax_id":"938273","parent_id":"410657","sci_name":"hydrocarbon metagenome"}
+{"xlevel":"3","tax_id":"471232","parent_id":"410657","sci_name":"coral reef metagenome"}
+{"xlevel":"3","tax_id":"1825055","parent_id":"410657","sci_name":"periphyton metagenome"}
+{"xlevel":"3","tax_id":"1070537","parent_id":"410657","sci_name":"biofilter metagenome"}
+{"xlevel":"3","tax_id":"1898220","parent_id":"410657","sci_name":"glacier lake metagenome"}
+{"xlevel":"3","tax_id":"1602165","parent_id":"410657","sci_name":"flotsam metagenome"}
+{"xlevel":"3","tax_id":"1765030","parent_id":"410657","sci_name":"fertilizer metagenome"}
+{"xlevel":"3","tax_id":"1583376","parent_id":"410657","sci_name":"cold seep metagenome"}
+{"xlevel":"3","tax_id":"1755691","parent_id":"410657","sci_name":"hospital metagenome"}
+{"xlevel":"3","tax_id":"2899295","parent_id":"410657","sci_name":"cenote metagenome"}
+{"xlevel":"3","tax_id":"412756","parent_id":"410657","sci_name":"whale fall metagenome"}
+{"xlevel":"3","tax_id":"2047713","parent_id":"410657","sci_name":"mud metagenome"}
+{"xlevel":"3","tax_id":"2805829","parent_id":"410657","sci_name":"marsh metagenome"}
+{"xlevel":"3","tax_id":"2083785","parent_id":"410657","sci_name":"bioleaching metagenome"}
+{"xlevel":"3","tax_id":"1536899","parent_id":"410657","sci_name":"moonmilk metagenome"}
+{"xlevel":"3","tax_id":"903395","parent_id":"410657","sci_name":"salt lake metagenome"}
+{"xlevel":"3","tax_id":"1759404","parent_id":"410657","sci_name":"concrete metagenome"}
+{"xlevel":"3","tax_id":"1690257","parent_id":"410657","sci_name":"hypolithon metagenome"}
+{"xlevel":"3","tax_id":"412754","parent_id":"410657","sci_name":"bioreactor sludge metagenome"}
+{"xlevel":"3","tax_id":"2283235","parent_id":"410657","sci_name":"cold spring metagenome"}
+{"xlevel":"3","tax_id":"1983455","parent_id":"410657","sci_name":"desalination cell metagenome"}
+{"xlevel":"3","tax_id":"1292099","parent_id":"410657","sci_name":"retting metagenome"}
+{"xlevel":"3","tax_id":"1704045","parent_id":"410657","sci_name":"aquifer metagenome"}
+{"xlevel":"3","tax_id":"939928","parent_id":"410657","sci_name":"rhizosphere metagenome"}
+{"xlevel":"3","tax_id":"1646512","parent_id":"410657","sci_name":"riverine metagenome"}
+{"xlevel":"3","tax_id":"2081963","parent_id":"410657","sci_name":"iron metagenome"}
+{"xlevel":"3","tax_id":"408172","parent_id":"410657","sci_name":"marine metagenome"}
+{"xlevel":"3","tax_id":"1284368","parent_id":"410657","sci_name":"mangrove metagenome"}
+{"xlevel":"3","tax_id":"1670605","parent_id":"410657","sci_name":"poultry litter metagenome"}
+{"xlevel":"3","tax_id":"1214127","parent_id":"410657","sci_name":"activated carbon metagenome"}
+{"xlevel":"3","tax_id":"1698289","parent_id":"410657","sci_name":"dietary supplements metagenome"}
+{"xlevel":"3","tax_id":"2025951","parent_id":"410657","sci_name":"karst metagenome"}
+{"xlevel":"3","tax_id":"2768167","parent_id":"410657","sci_name":"shale fluid metagenome"}
+{"xlevel":"3","tax_id":"2014611","parent_id":"410657","sci_name":"factory metagenome"}
+{"xlevel":"3","tax_id":"2508887","parent_id":"410657","sci_name":"salt pan metagenome"}
+{"xlevel":"3","tax_id":"749907","parent_id":"410657","sci_name":"sediment metagenome"}
+{"xlevel":"3","tax_id":"1591089","parent_id":"410657","sci_name":"urban metagenome"}
+{"xlevel":"3","tax_id":"1778260","parent_id":"410657","sci_name":"gas well metagenome"}
+{"xlevel":"3","tax_id":"718308","parent_id":"410657","sci_name":"biofilm metagenome"}
+{"xlevel":"3","tax_id":"1929487","parent_id":"410657","sci_name":"hyphosphere metagenome"}
+{"xlevel":"3","tax_id":"1839947","parent_id":"410657","sci_name":"outdoor metagenome"}
+{"xlevel":"3","tax_id":"2014073","parent_id":"410657","sci_name":"plastic metagenome"}
+{"xlevel":"3","tax_id":"1680915","parent_id":"410657","sci_name":"alkali sediment metagenome"}
+{"xlevel":"3","tax_id":"452919","parent_id":"410657","sci_name":"ice metagenome"}
+{"xlevel":"3","tax_id":"1531857","parent_id":"410657","sci_name":"rock porewater metagenome"}
+{"xlevel":"3","tax_id":"1897463","parent_id":"410657","sci_name":"decomposition metagenome"}
+{"xlevel":"3","tax_id":"2495586","parent_id":"410657","sci_name":"chemical production metagenome"}
+{"xlevel":"3","tax_id":"1260732","parent_id":"410657","sci_name":"coal metagenome"}
+{"xlevel":"3","tax_id":"1076179","parent_id":"410657","sci_name":"bioreactor metagenome"}
+{"xlevel":"3","tax_id":"1561046","parent_id":"410657","sci_name":"honey metagenome"}
+{"xlevel":"3","tax_id":"2025496","parent_id":"410657","sci_name":"slag metagenome"}
