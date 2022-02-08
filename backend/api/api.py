@@ -5,7 +5,7 @@ api.py
 """
 
 from flask import Blueprint, jsonify, request
-from .models import db, Marker, Otu, Nucleotide, CondensedProfile
+from .models import db, Marker, Otu, CondensedProfile
 
 from singlem.condense import WordNode
 

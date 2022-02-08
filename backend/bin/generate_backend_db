@@ -1,0 +1,191 @@
+#!/usr/bin/env python3
+
+###############################################################################
+#
+#    Copyright (C) 2021 Ben Woodcroft
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+###############################################################################
+
+__author__ = "Ben Woodcroft"
+__copyright__ = "Copyright 2020"
+__credits__ = ["Ben Woodcroft"]
+__license__ = "GPL3"
+__maintainer__ = "Ben Woodcroft"
+__email__ = "benjwoodcroft near gmail.com"
+__status__ = "Development"
+
+import argparse
+import logging
+import sys
+import os
+import shutil
+import csv
+import subprocess
+import tempfile
+import json
+import datetime
+
+import extern
+
+sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
+from api.application import create_app
+
+# from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+
+from api.models import CondensedProfile, NcbiMetadata, Taxonomy, BiosampleAttribute
+
+
+if __name__ == '__main__':
+    parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser.add_argument('--debug', help='output debug information', action="store_true")
+    #parent_parser.add_argument('--version', help='output version information and quit',  action='version', version=repeatm.__version__)
+    parent_parser.add_argument('--quiet', help='only output errors', action="store_true")
+
+    parent_parser.add_argument('--singlem-db', help='sqlite file from a singlem db', required=True)
+    parent_parser.add_argument('--condensed-otu-table', help='condensed OTU table input', required=True)
+    parent_parser.add_argument('-o', help='sqlite3 file to generate', required=True)
+    parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files')
+
+    args = parent_parser.parse_args()
+
+    # Setup logging
+    if args.debug:
+        loglevel = logging.DEBUG
+    elif args.quiet:
+        loglevel = logging.ERROR
+    else:
+        loglevel = logging.INFO
+    logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+
+    # Copy file over
+    logging.info("Copying SQLite file")
+    sqlite_db_path = args.o
+    shutil.copy(args.singlem_db, sqlite_db_path)
+
+    # Create the app and create the tables
+    app = create_app()
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + sqlite_db_path
+    app.config['SQLALCHEMY_ECHO'] = args.debug is True
+    db = SQLAlchemy(app)
+    with app.app_context():
+        db.create_all()
+
+        # Create all the tables
+        Taxonomy.metadata.create_all(db.engine)
+        
+        taxonomy_name_to_id = {}
+        next_taxonomy_id = 0
+
+        count = 0
+        with open(args.condensed_otu_table, 'r') as csvfile_in:
+            reader = csv.reader(csvfile_in, delimiter="\t")
+
+            first = True
+            for row in reader:
+                if first:
+                    first = False
+                    continue
+
+                # Get the taxonomy id, creating a new entry if necessary
+                taxonomies = row[2]
+                taxons_split = taxonomies.split('; ')
+                species_aware_taxonomy = None
+                for (i, taxonomies_split) in enumerate(taxons_split):
+                    # Store species as species+genus since species aren't unique
+                    if i == 7:
+                        species_aware_taxonomy = "; ".join([taxons_split[i-1],taxons_split[i]])
+                    else:
+                        species_aware_taxonomy = taxonomies_split.strip()
+
+                    if species_aware_taxonomy not in taxonomy_name_to_id:
+                        if taxonomies_split == 'Root':
+                            level = 'root'
+                            parent_id = 'NULL'
+                        else:
+                            prefix = taxonomies_split.split('__')[0]
+                            level_id = ['d','p','c','o','f','g','s'].index(prefix)
+                            level = ['domain','phylum','class','order','family','genus','species'][level_id]
+                            # Will throw KeyError if something is amiss
+
+                            parent_id = taxonomy_name_to_id[taxons_split[i-1]]
+
+                        db.session.add(Taxonomy(id=next_taxonomy_id, taxonomy_level=level, parent_id=parent_id, name=taxonomies_split))
+                        # taxonomy_input_tf.write(("\t".join([str(next_taxonomy_id), level, str(parent_id), taxonomies_split]) + "\n").encode())
+
+                        taxonomy_name_to_id[species_aware_taxonomy] = next_taxonomy_id
+                        next_taxonomy_id += 1
+
+                # tf.write(("\t".join([str(count+1),row[0],row[1],str(taxonomy_name_to_id[species_aware_taxonomy])])+"\n").encode())
+                db.session.add(CondensedProfile(id=count+1, sample_name=row[0], coverage=row[1], taxonomy_id=taxonomy_name_to_id[species_aware_taxonomy]))
+                count += 1
+            logging.info("Wrote {} condensed profile rows to DB".format(count))
+            db.session.commit()
+
+        # Load metadata
+        # Only load metadata for samples that are in the DB
+        samples_of_interest = set([x[0] for x in CondensedProfile.query.with_entities(CondensedProfile.sample_name).distinct()])
+        logging.info("Finding metadata for {} samples".format(len(samples_of_interest)))
+        
+        metadata_count = 0
+        attribute_count = 0
+        for path in args.metadata_json_files:
+            with open(path) as f:
+                for line in f:
+                    j = json.loads(line)
+                    acc = j['acc']
+                    if acc not in samples_of_interest:
+                        logging.debug("Skipping {}".format(acc))
+                        continue
+                    attributes = j['attributes']
+
+                    del j['attributes']
+                    # Convert datetimes
+                    # releasedate = db.Column(db.DateTime, nullable=False)
+                    # loaddate = db.Column(db.DateTime, nullable=False)
+                    # collection_date_sam = db.Column(db.DateTime, nullable=False)
+                    for d in ['releasedate','loaddate']:
+                        if d in j:
+                            j[d] = datetime.datetime.strptime(j[d], '%Y-%m-%dT%H:%M:%S+00:00')
+                    for d in ['collection_date_sam']:
+                        if d in j:
+                            j[d] = datetime.datetime.strptime(j[d], '%Y-%m-%d')
+
+                    del j['biosamplemodel_sam'] #Assume it is defined in the associated sample metadata
+
+                    # Unclear to me why these exist as arrays rather than single values, but eh
+                    for d in ['geo_loc_name_sam','ena_first_public_run','ena_last_update_run','sample_name_sam']:
+                        if len(j[d]) > 1:
+                            raise Exception("Unexpectedly found a metadata array for {} in {}: {}".format(d, acc, j[d]))
+                        try:
+                            j[d] = j[d][0]
+                        except IndexError:
+                            del j[d]
+                    meta = NcbiMetadata(**j)
+                    db.session.add(meta)
+                    metadata_count += 1
+
+                    # Write biosample attributes
+                    for attribute in attributes:
+                        attribute['run_id'] = metadata_count
+                        db.session.add(BiosampleAttribute(**attribute))
+                        attribute_count += 1
+
+                    if metadata_count % 1000 == 0:
+                        db.session.commit()
+
+        db.session.commit()
+        logging.info("Wrote {} metadata and {} attribute rows to DB".format(metadata_count, attribute_count))
