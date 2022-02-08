@@ -76,6 +76,14 @@ class Taxonomy(db.Model):
                     parent_id=self.parent_id,
                     name=self.name)
 
+    def split_taxonomy(self):
+        taxons = []
+        current = self
+        while current.parent_id != 'NULL':
+            taxons.append(current.name)
+            current = Taxonomy.query.get(current.parent_id)
+        return list(reversed(taxons))
+
 class NcbiMetadata(db.Model):
     __tablename__ = 'ncbi_metadata'
     id = db.Column(db.Integer, primary_key=True)
@@ -137,6 +145,38 @@ class NcbiMetadata(db.Model):
 
     biosample_attributes = db.relationship('BiosampleAttribute', backref='ncbi_metadata')
 
+    def to_displayable_dict(self):
+        return dict(acc=self.acc,
+                    assay_type=self.assay_type,
+                    center_name=self.center_name,
+                    experiment=self.experiment,
+                    sample_name=self.sample_name,
+                    instrument=self.instrument,
+                    librarylayout=self.librarylayout,
+                    libraryselection=self.libraryselection,
+                    librarysource=self.librarysource,
+                    platform=self.platform,
+                    sample_acc=self.sample_acc,
+                    biosample=self.biosample,
+                    organism=self.organism,
+                    sra_study=self.sra_study,
+                    releasedate=self.releasedate,
+                    bioproject=self.bioproject,
+                    mbytes=self.mbytes,
+                    loaddate=self.loaddate,
+                    avgspotlen=self.avgspotlen,
+                    mbases=self.mbases,
+                    insertsize=self.insertsize,
+                    library_name=self.library_name,
+                    collection_date_sam=self.collection_date_sam,
+                    geo_loc_name_country_calc=self.geo_loc_name_country_calc,
+                    geo_loc_name_country_continent_calc=self.geo_loc_name_country_continent_calc,
+                    geo_loc_name_sam=self.geo_loc_name_sam,
+                    ena_first_public_run=self.ena_first_public_run,
+                    ena_last_update_run=self.ena_last_update_run,
+                    sample_name_sam=self.sample_name_sam,
+                    biosample_attributes=[{'k': x.k, 'v': x.v} for x in self.biosample_attributes if x.k != 'primary_search'])
+
 # ncbi_metadata_biosample_model_association_table = db.Table(
 #     'ncbi_metadata_biosample_model_association', 
 #     db.Model.metadata, 
@@ -157,3 +197,9 @@ class BiosampleAttribute(db.Model):
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False)
     k = db.Column(db.String, nullable=False)
     v = db.Column(db.String, nullable=False)
+    
+    def to_dict(self):
+        return dict(id=self.id,
+                    run_id=self.run_id,
+                    k=self.k,
+                    v=self.v)

@@ -9,3 +9,7 @@ export function fetchMarkers () {
 export function fetchCondensed (accession: String) {
   return axios.get(`${API_URL}/condensed/${accession}`)
 }
+
+export function fetchMetadata (accession: String) {
+  return axios.get(`${API_URL}/metadata/${accession}`)
+}

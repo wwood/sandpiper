@@ -5,7 +5,7 @@ api.py
 """
 
 from flask import Blueprint, jsonify, request
-from .models import db, Marker, Otu, CondensedProfile
+from .models import NcbiMetadata, db, Marker, Otu, CondensedProfile
 
 from singlem.condense import WordNode
 
@@ -30,7 +30,7 @@ def fetch_condensed(sample_name):
     if len(condensed) == 0:
         return jsonify({ sample_name: 'no condensed data found' })
     for entry in condensed:
-        taxons = entry.taxonomy.split('; ')
+        taxons = entry.taxonomy.split_taxonomy()
 
         last_taxon = root
         wn = None
@@ -58,3 +58,10 @@ def wordnode_json(wordnode, order, depth):
     if len(wordnode.children.values()) > 0:
         j['children'] = [wordnode_json(child, order+i, depth+1) for i, child in enumerate(sorted_children)]
     return j
+
+@api.route('/metadata/<string:sample_name>', methods=('GET',))
+def fetch_metadata(sample_name):
+    metadata = NcbiMetadata.query.filter_by(acc=sample_name).all()
+    if metadata == [] or metadata is None:
+        return jsonify({ sample_name: 'no metadata found for '+sample_name })
+    return jsonify({ 'metadata': metadata[0].to_displayable_dict() })
