@@ -18,9 +18,10 @@ const routes = [
     component: Search
   },
   {
-    path: '/run/:runId',
+    path: '/run/:accession',
     name: 'Run',
-    component: Run
+    component: Run,
+    props: true
   }
 ]
 

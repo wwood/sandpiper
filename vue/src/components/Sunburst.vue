@@ -1,5 +1,5 @@
 <template>
-  <sunburst :data="tree" :showLabels=true :max-label-text=null :centralCircleRelativeSize=15 :colorScale=phylogenyColor :getCategoryForColor=phylogenyDataForColor>
+  <sunburst :data="json_tree" :showLabels=true :max-label-text=null :centralCircleRelativeSize=15 :colorScale=phylogenyColor :getCategoryForColor=phylogenyDataForColor>
 
   <!-- Add behaviors -->
   <template slot-scope="{ on, actions }">
@@ -67,11 +67,6 @@ export default {
     //   console.log(d)
     //   return d.depth < 2
     // }
-  },
-  data () {
-    return {
-      tree: this.json_tree
-    }
   }
 }
 </script>
