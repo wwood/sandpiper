@@ -2,18 +2,44 @@
   <div id="app">
     <b-navbar :centered="true" type="is-light">
         <template #start>
-            <b-navbar-item>
-                <router-link to="/">Home</router-link>
-            </b-navbar-item>
-            <b-navbar-item>
-                <router-link to="/Search">Search</router-link>
-            </b-navbar-item>
-            <b-navbar-item>
-              <router-link to="/Run/ERR2000810">Neanderthal</router-link>
-            </b-navbar-item>
+            <b-navbar-item tag="router-link" :to="{ path: '/' }">Home</b-navbar-item>
+            <b-navbar-item tag="router-link" :to="{ path: '/Search' }">Search</b-navbar-item>
+
+            <!-- <b-navbar-item>
+            <b-navbar-dropdown label="Examples"> -->
+              <b-navbar-item tag="router-link" :to="{ path: '/Run/ERR2000810' }">Neanderthal</b-navbar-item>
+              <b-navbar-item tag="router-link" :to="{ path: '/Run/ERR1914274' }">Example 1</b-navbar-item>
+            <!-- </b-navbar-dropdown>
+            </b-navbar-item> -->
+
+            <b-navbar-item tag="router-link" :to="{ path: '/About' }">About</b-navbar-item>
         </template>
     </b-navbar>
     <router-view />
+
+    &nbsp;
+    <footer class="footer">
+      <div class="content">
+        <div class="columns">
+
+          <div class="column has-text-centered is-half is-offset-one-quarter">
+            <p />
+            <p />
+          <p>
+            Sandpiper was devised by the <a
+            href="https://research.qut.edu.au/cmr/team/ben-woodcroft/">Woodcroft
+            group</a> at the <a href="https://research.qut.edu.au/cmr">Centre
+            for Microbiome Research</a>, <br /> School of Biomedical Sciences,
+            Queensland University of Technology
+          </p>
+          </div>
+
+          <div class="column is-one-eighth">
+            <img src="./assets/cmr.png" width=200 />
+          </div>
+        </div>
+      </div>
+    </footer>
   </div>
 </template>
 
