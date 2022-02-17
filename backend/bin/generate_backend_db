@@ -49,6 +49,112 @@ from flask_sqlalchemy import SQLAlchemy
 from api.models import CondensedProfile, NcbiMetadata, Taxonomy, BiosampleAttribute
 
 
+def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path):
+    taxonomy_name_to_id = {}
+    next_taxonomy_id = 0
+
+    count = 0
+    with open(condensed_otu_table_path, 'r') as csvfile_in:
+        reader = csv.reader(csvfile_in, delimiter="\t")
+
+        first = True
+        for row in reader:
+            if first:
+                first = False
+                continue
+
+            # Get the taxonomy id, creating a new entry if necessary
+            taxonomies = row[2]
+            taxons_split = taxonomies.split('; ')
+            species_aware_taxonomy = None
+            for (i, taxonomies_split) in enumerate(taxons_split):
+                # Store species as species+genus since species aren't unique
+                if i == 7:
+                    species_aware_taxonomy = "; ".join([taxons_split[i-1],taxons_split[i]])
+                else:
+                    species_aware_taxonomy = taxonomies_split.strip()
+
+                if species_aware_taxonomy not in taxonomy_name_to_id:
+                    if taxonomies_split == 'Root':
+                        level = 'root'
+                        parent_id = 'NULL'
+                    else:
+                        prefix = taxonomies_split.split('__')[0]
+                        level_id = ['d','p','c','o','f','g','s'].index(prefix)
+                        level = ['domain','phylum','class','order','family','genus','species'][level_id]
+                        # Will throw KeyError if something is amiss
+
+                        parent_id = taxonomy_name_to_id[taxons_split[i-1]]
+
+                    db.session.add(Taxonomy(id=next_taxonomy_id, taxonomy_level=level, parent_id=parent_id, name=taxonomies_split))
+                    # taxonomy_input_tf.write(("\t".join([str(next_taxonomy_id), level, str(parent_id), taxonomies_split]) + "\n").encode())
+
+                    taxonomy_name_to_id[species_aware_taxonomy] = next_taxonomy_id
+                    next_taxonomy_id += 1
+
+            # tf.write(("\t".join([str(count+1),row[0],row[1],str(taxonomy_name_to_id[species_aware_taxonomy])])+"\n").encode())
+            db.session.add(CondensedProfile(id=count+1, sample_name=row[0], coverage=row[1], taxonomy_id=taxonomy_name_to_id[species_aware_taxonomy]))
+            count += 1
+        logging.info("Wrote {} condensed profile rows to DB".format(count))
+        db.session.commit()
+
+
+def fill_metadata(db, metadata_json_files):
+    # Load metadata
+    # Only load metadata for samples that are in the DB
+    samples_of_interest = set([x[0] for x in CondensedProfile.query.with_entities(CondensedProfile.sample_name).distinct()])
+    logging.info("Finding metadata for {} samples".format(len(samples_of_interest)))
+    
+    metadata_count = 0
+    attribute_count = 0
+    for path in metadata_json_files:
+        with open(path) as f:
+            for line in f:
+                j = json.loads(line)
+                acc = j['acc']
+                if acc not in samples_of_interest:
+                    logging.debug("Skipping {}".format(acc))
+                    continue
+                attributes = j['attributes']
+
+                del j['attributes']
+                # Convert datetimes
+                # releasedate = db.Column(db.DateTime, nullable=False)
+                # loaddate = db.Column(db.DateTime, nullable=False)
+                # collection_date_sam = db.Column(db.DateTime, nullable=False)
+                for d in ['releasedate','loaddate']:
+                    if d in j:
+                        j[d] = datetime.datetime.strptime(j[d], '%Y-%m-%dT%H:%M:%S+00:00')
+                for d in ['collection_date_sam']:
+                    if d in j:
+                        j[d] = datetime.datetime.strptime(j[d], '%Y-%m-%d')
+
+                del j['biosamplemodel_sam'] #Assume it is defined in the associated sample metadata
+
+                # Unclear to me why these exist as arrays rather than single values, but eh
+                for d in ['geo_loc_name_sam','ena_first_public_run','ena_last_update_run','sample_name_sam']:
+                    if len(j[d]) > 1:
+                        raise Exception("Unexpectedly found a metadata array for {} in {}: {}".format(d, acc, j[d]))
+                    try:
+                        j[d] = j[d][0]
+                    except IndexError:
+                        del j[d]
+                meta = NcbiMetadata(**j)
+                db.session.add(meta)
+                metadata_count += 1
+
+                # Write biosample attributes
+                for attribute in attributes:
+                    attribute['run_id'] = metadata_count
+                    db.session.add(BiosampleAttribute(**attribute))
+                    attribute_count += 1
+
+                if metadata_count % 1000 == 0:
+                    db.session.commit()
+
+    db.session.commit()
+    logging.info("Wrote {} metadata and {} attribute rows to DB".format(metadata_count, attribute_count))
+
 if __name__ == '__main__':
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument('--debug', help='output debug information', action="store_true")
@@ -87,105 +193,7 @@ if __name__ == '__main__':
         # Create all the tables
         Taxonomy.metadata.create_all(db.engine)
         
-        taxonomy_name_to_id = {}
-        next_taxonomy_id = 0
+        fill_condensed_and_taxonomy_tables(db, args.condensed_otu_table)
 
-        count = 0
-        with open(args.condensed_otu_table, 'r') as csvfile_in:
-            reader = csv.reader(csvfile_in, delimiter="\t")
+        fill_metadata(db, args.metadata_json_files)
 
-            first = True
-            for row in reader:
-                if first:
-                    first = False
-                    continue
-
-                # Get the taxonomy id, creating a new entry if necessary
-                taxonomies = row[2]
-                taxons_split = taxonomies.split('; ')
-                species_aware_taxonomy = None
-                for (i, taxonomies_split) in enumerate(taxons_split):
-                    # Store species as species+genus since species aren't unique
-                    if i == 7:
-                        species_aware_taxonomy = "; ".join([taxons_split[i-1],taxons_split[i]])
-                    else:
-                        species_aware_taxonomy = taxonomies_split.strip()
-
-                    if species_aware_taxonomy not in taxonomy_name_to_id:
-                        if taxonomies_split == 'Root':
-                            level = 'root'
-                            parent_id = 'NULL'
-                        else:
-                            prefix = taxonomies_split.split('__')[0]
-                            level_id = ['d','p','c','o','f','g','s'].index(prefix)
-                            level = ['domain','phylum','class','order','family','genus','species'][level_id]
-                            # Will throw KeyError if something is amiss
-
-                            parent_id = taxonomy_name_to_id[taxons_split[i-1]]
-
-                        db.session.add(Taxonomy(id=next_taxonomy_id, taxonomy_level=level, parent_id=parent_id, name=taxonomies_split))
-                        # taxonomy_input_tf.write(("\t".join([str(next_taxonomy_id), level, str(parent_id), taxonomies_split]) + "\n").encode())
-
-                        taxonomy_name_to_id[species_aware_taxonomy] = next_taxonomy_id
-                        next_taxonomy_id += 1
-
-                # tf.write(("\t".join([str(count+1),row[0],row[1],str(taxonomy_name_to_id[species_aware_taxonomy])])+"\n").encode())
-                db.session.add(CondensedProfile(id=count+1, sample_name=row[0], coverage=row[1], taxonomy_id=taxonomy_name_to_id[species_aware_taxonomy]))
-                count += 1
-            logging.info("Wrote {} condensed profile rows to DB".format(count))
-            db.session.commit()
-
-        # Load metadata
-        # Only load metadata for samples that are in the DB
-        samples_of_interest = set([x[0] for x in CondensedProfile.query.with_entities(CondensedProfile.sample_name).distinct()])
-        logging.info("Finding metadata for {} samples".format(len(samples_of_interest)))
-        
-        metadata_count = 0
-        attribute_count = 0
-        for path in args.metadata_json_files:
-            with open(path) as f:
-                for line in f:
-                    j = json.loads(line)
-                    acc = j['acc']
-                    if acc not in samples_of_interest:
-                        logging.debug("Skipping {}".format(acc))
-                        continue
-                    attributes = j['attributes']
-
-                    del j['attributes']
-                    # Convert datetimes
-                    # releasedate = db.Column(db.DateTime, nullable=False)
-                    # loaddate = db.Column(db.DateTime, nullable=False)
-                    # collection_date_sam = db.Column(db.DateTime, nullable=False)
-                    for d in ['releasedate','loaddate']:
-                        if d in j:
-                            j[d] = datetime.datetime.strptime(j[d], '%Y-%m-%dT%H:%M:%S+00:00')
-                    for d in ['collection_date_sam']:
-                        if d in j:
-                            j[d] = datetime.datetime.strptime(j[d], '%Y-%m-%d')
-
-                    del j['biosamplemodel_sam'] #Assume it is defined in the associated sample metadata
-
-                    # Unclear to me why these exist as arrays rather than single values, but eh
-                    for d in ['geo_loc_name_sam','ena_first_public_run','ena_last_update_run','sample_name_sam']:
-                        if len(j[d]) > 1:
-                            raise Exception("Unexpectedly found a metadata array for {} in {}: {}".format(d, acc, j[d]))
-                        try:
-                            j[d] = j[d][0]
-                        except IndexError:
-                            del j[d]
-                    meta = NcbiMetadata(**j)
-                    db.session.add(meta)
-                    metadata_count += 1
-
-                    # Write biosample attributes
-                    for attribute in attributes:
-                        attribute['run_id'] = metadata_count
-                        db.session.add(BiosampleAttribute(**attribute))
-                        attribute_count += 1
-
-                    if metadata_count % 1000 == 0:
-                        db.session.commit()
-
-        db.session.commit()
-        logging.info("Wrote {} metadata and {} attribute rows to DB".format(metadata_count, attribute_count))
