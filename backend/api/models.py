@@ -59,6 +59,7 @@ class CondensedProfile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sample_name = db.Column(db.String, nullable=False)
     coverage = db.Column(db.Float, nullable=False)
+    # relative_abundance = db.Column(db.Float, nullable=False)
     taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
 
     domain_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
@@ -88,7 +89,7 @@ class Taxonomy(db.Model):
     condensed_profile_orders = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.order_id])
     condensed_profile_families = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.family_id])
     condensed_profile_genera = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.genus_id])
-    condensed_profile_species = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.species_id])
+    condensed_profile_species = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.species_id]) 
 
     def to_dict(self):
         return dict(id=self.id,

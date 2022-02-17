@@ -52,8 +52,11 @@ from api.models import CondensedProfile, NcbiMetadata, Taxonomy, BiosampleAttrib
 def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path):
     taxonomy_name_to_id = {}
     next_taxonomy_id = 0
-
     count = 0
+
+    current_sample = None
+    current_sample_entries = []
+
     with open(condensed_otu_table_path, 'r') as csvfile_in:
         reader = csv.reader(csvfile_in, delimiter="\t")
 
@@ -63,51 +66,68 @@ def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path):
                 first = False
                 continue
 
-            # Get the taxonomy id, creating a new entry if necessary
-            taxonomies = row[2]
-            taxons_split = taxonomies.split('; ')
-            species_aware_taxonomy = None
-            taxonomy_ids_here = []
-            for (i, taxonomies_split) in enumerate(taxons_split):
-                # Store species as species+genus since species aren't unique
-                if i == 7:
-                    species_aware_taxonomy = "; ".join([taxons_split[i-1],taxons_split[i]])
+            # Calculate per-sample because we need to calculate relative abundance within-sample
+            if row[0] != current_sample:
+                if current_sample is not None:
+                    (taxonomy_name_to_id, next_taxonomy_id, count) = fill_a_condensed_profile_sample(db, row[0], current_sample_entries, taxonomy_name_to_id, next_taxonomy_id, count)
+                current_sample = row[0]
+                current_sample_entries = []
+            
+            current_sample_entries.append(row)
+        
+    if current_sample is not None:
+        (taxonomy_name_to_id, next_taxonomy_id, count) = fill_a_condensed_profile_sample(db, row[0], current_sample_entries, taxonomy_name_to_id, next_taxonomy_id, count)
+
+    db.session.commit()
+    logging.info("Wrote {} condensed profile rows to DB".format(count))
+    
+
+def fill_a_condensed_profile_sample(db, sample_name, entries, taxonomy_name_to_id, next_taxonomy_id, count):
+    for row in entries:
+        # Get the taxonomy id, creating a new entry if necessary
+        taxonomies = row[2]
+        taxons_split = taxonomies.split('; ')
+        species_aware_taxonomy = None
+        taxonomy_ids_here = []
+        for (i, taxonomies_split) in enumerate(taxons_split):
+            # Store species as species+genus since species aren't unique
+            if i == 7:
+                species_aware_taxonomy = "; ".join([taxons_split[i-1],taxons_split[i]])
+            else:
+                species_aware_taxonomy = taxonomies_split.strip()
+
+            if species_aware_taxonomy not in taxonomy_name_to_id:
+                if taxonomies_split == 'Root':
+                    level = 'root'
+                    parent_id = 'NULL'
                 else:
-                    species_aware_taxonomy = taxonomies_split.strip()
+                    prefix = taxonomies_split.split('__')[0]
+                    level_id = ['d','p','c','o','f','g','s'].index(prefix)
+                    level = ['domain','phylum','class','order','family','genus','species'][level_id]
+                    # Will throw KeyError if something is amiss
 
-                if species_aware_taxonomy not in taxonomy_name_to_id:
-                    if taxonomies_split == 'Root':
-                        level = 'root'
-                        parent_id = 'NULL'
-                    else:
-                        prefix = taxonomies_split.split('__')[0]
-                        level_id = ['d','p','c','o','f','g','s'].index(prefix)
-                        level = ['domain','phylum','class','order','family','genus','species'][level_id]
-                        # Will throw KeyError if something is amiss
+                    parent_id = taxonomy_name_to_id[taxons_split[i-1]]
 
-                        parent_id = taxonomy_name_to_id[taxons_split[i-1]]
+                db.session.add(Taxonomy(id=next_taxonomy_id, taxonomy_level=level, parent_id=parent_id, name=taxonomies_split))
+                # taxonomy_input_tf.write(("\t".join([str(next_taxonomy_id), level, str(parent_id), taxonomies_split]) + "\n").encode())
 
-                    db.session.add(Taxonomy(id=next_taxonomy_id, taxonomy_level=level, parent_id=parent_id, name=taxonomies_split))
-                    # taxonomy_input_tf.write(("\t".join([str(next_taxonomy_id), level, str(parent_id), taxonomies_split]) + "\n").encode())
+                taxonomy_name_to_id[species_aware_taxonomy] = next_taxonomy_id
+                next_taxonomy_id += 1
+            taxonomy_ids_here.append(taxonomy_name_to_id[species_aware_taxonomy])
 
-                    taxonomy_name_to_id[species_aware_taxonomy] = next_taxonomy_id
-                    next_taxonomy_id += 1
-                taxonomy_ids_here.append(taxonomy_name_to_id[species_aware_taxonomy])
+        condensed_profile_entry = {
+            'id': count+1,
+            'sample_name': row[0],
+            'coverage': row[1],
+            'taxonomy_id': taxonomy_name_to_id[species_aware_taxonomy]
+        }
+        for (idx, column_name) in zip(taxonomy_ids_here, Taxonomy.taxonomy_level_columns):
+            condensed_profile_entry[column_name] = idx
 
-            condensed_profile_entry = {
-                'id': count+1,
-                'sample_name': row[0],
-                'coverage': row[1],
-                'taxonomy_id': taxonomy_name_to_id[species_aware_taxonomy]
-            }
-            for (idx, column_name) in zip(taxonomy_ids_here, Taxonomy.taxonomy_level_columns):
-                condensed_profile_entry[column_name] = idx
+        db.session.add(CondensedProfile(**condensed_profile_entry))
+        count += 1
 
-            db.session.add(CondensedProfile(**condensed_profile_entry))
-            count += 1
-        logging.info("Wrote {} condensed profile rows to DB".format(count))
-        db.session.commit()
-
+    return (taxonomy_name_to_id, next_taxonomy_id, count)
 
 def fill_metadata(db, metadata_json_files):
     # Load metadata
