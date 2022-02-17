@@ -59,7 +59,7 @@ class CondensedProfile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sample_name = db.Column(db.String, nullable=False)
     coverage = db.Column(db.Float, nullable=False)
-    # relative_abundance = db.Column(db.Float, nullable=False)
+    relative_abundance = db.Column(db.Float, nullable=False)
     taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
 
     domain_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
