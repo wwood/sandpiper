@@ -61,14 +61,34 @@ class CondensedProfile(db.Model):
     coverage = db.Column(db.Float, nullable=False)
     taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
 
+    domain_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
+    phylum_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
+    class_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
+    order_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
+    family_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
+    genus_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
+    species_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
+
+
 class Taxonomy(db.Model):
+    # Not used here but this is the logical place to put it since it is used in the condensed profile, plus maybe otus in the future
+    taxonomy_level_columns = ['domain_id','phylum_id','class_id','order_id','family_id','genus_id','species_id']
+
     #     "CREATE TABLE taxonomies (id INTEGER PRIMARY KEY, taxonomy_level TEXT, parent_id INTEGER, name TEXT); \n"
     __tablename__ = 'taxonomies'
     id = db.Column(db.Integer, primary_key=True)
     taxonomy_level = db.Column(db.String, nullable=False)
     parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
     name = db.Column(db.String, nullable=False)
-    condensed_profiles = db.relationship('CondensedProfile', backref='taxonomy')
+
+    condensed_profiles = db.relationship('CondensedProfile', backref='taxonomy', foreign_keys=[CondensedProfile.taxonomy_id])
+    condensed_profile_domains = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.domain_id])
+    condensed_profile_phyla = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.phylum_id])
+    condensed_profile_classes = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.class_id])
+    condensed_profile_orders = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.order_id])
+    condensed_profile_families = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.family_id])
+    condensed_profile_genera = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.genus_id])
+    condensed_profile_species = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.species_id])
 
     def to_dict(self):
         return dict(id=self.id,

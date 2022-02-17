@@ -67,6 +67,7 @@ def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path):
             taxonomies = row[2]
             taxons_split = taxonomies.split('; ')
             species_aware_taxonomy = None
+            taxonomy_ids_here = []
             for (i, taxonomies_split) in enumerate(taxons_split):
                 # Store species as species+genus since species aren't unique
                 if i == 7:
@@ -91,9 +92,18 @@ def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path):
 
                     taxonomy_name_to_id[species_aware_taxonomy] = next_taxonomy_id
                     next_taxonomy_id += 1
+                taxonomy_ids_here.append(taxonomy_name_to_id[species_aware_taxonomy])
 
-            # tf.write(("\t".join([str(count+1),row[0],row[1],str(taxonomy_name_to_id[species_aware_taxonomy])])+"\n").encode())
-            db.session.add(CondensedProfile(id=count+1, sample_name=row[0], coverage=row[1], taxonomy_id=taxonomy_name_to_id[species_aware_taxonomy]))
+            condensed_profile_entry = {
+                'id': count+1,
+                'sample_name': row[0],
+                'coverage': row[1],
+                'taxonomy_id': taxonomy_name_to_id[species_aware_taxonomy]
+            }
+            for (idx, column_name) in zip(taxonomy_ids_here, Taxonomy.taxonomy_level_columns):
+                condensed_profile_entry[column_name] = idx
+
+            db.session.add(CondensedProfile(**condensed_profile_entry))
             count += 1
         logging.info("Wrote {} condensed profile rows to DB".format(count))
         db.session.commit()
