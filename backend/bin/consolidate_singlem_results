@@ -76,7 +76,9 @@ if __name__ == '__main__':
     # iterate dict, when there are multiple choose the one that is largest in size
     for (base, full) in basename_to_full_paths.items():
         if len(full) > 1:
-            logging.debug(f"{base} has {len(full)} files")
+            logging.debug(f"{base} has {len(full)} files: {' '.join(full)}")
             largest_file = max(full, key=os.path.getsize)
             logging.debug(f"Choosing {largest_file}")
             print(largest_file)
+        else:
+            print(full[0])
