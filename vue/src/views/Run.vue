@@ -13,7 +13,7 @@
       </div>
 
       <div>
-        NCBI: <a :href="bioproject_url">{{ bioproject_id }}</a> | <a :href="accession">{{ accession }}</a>
+        NCBI: <a :href="bioproject_url">{{ bioproject_id }}</a> | <a :href="'http://www.ncbi.nlm.nih.gov/sra?term=' + accession">{{ accession }}</a>
       </div>
 
     </div>

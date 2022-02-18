@@ -3,13 +3,38 @@ api.py
 - provides the API endpoints for consuming and producing
   REST requests and responses
 """
+import re
 
 from flask import Blueprint, jsonify, request
+from sqlalchemy import select
+from sqlalchemy.sql import func
 from .models import NcbiMetadata, db, Marker, Otu, CondensedProfile, Taxonomy
 
 from singlem.condense import WordNode
 
 api = Blueprint('api', __name__)
+
+sandpiper_total_terrabases = None
+sandpiper_num_runs = None
+sandpiper_num_bioprojects = None
+
+@api.route('/sandpiper_stats', methods=['GET'])
+def sandpiper_stats():
+    global sandpiper_total_terrabases
+    global sandpiper_num_runs
+    global sandpiper_num_bioprojects
+    # Cache results because they don't change unless the DB changes
+    if sandpiper_total_terrabases is None:
+        sandpiper_total_terrabases = db.session.query(func.sum(NcbiMetadata.mbases)).scalar()/10**6
+    if sandpiper_num_runs is None:
+        sandpiper_num_runs = NcbiMetadata.query.distinct(NcbiMetadata.acc).count()
+    if sandpiper_num_bioprojects is None:
+        sandpiper_num_bioprojects = NcbiMetadata.query.distinct(NcbiMetadata.bioproject).count()
+    return jsonify({
+        'num_terrabases': round(sandpiper_total_terrabases),
+        'num_runs': sandpiper_num_runs,
+        'num_bioprojects': sandpiper_num_bioprojects
+    })
 
 @api.route('/markers/', methods=('GET',))
 def fetch_markers():
@@ -47,8 +72,14 @@ def fetch_condensed(sample_name):
     return jsonify({ 'condensed': wordnode_json(root, 0, 0), 'sample_name': sample_name })
 
 def wordnode_json(wordnode, order, depth):
+    r = re.compile('^.__(.+)')
+    matches = r.match(wordnode.word)
+    if matches is None:
+        name = wordnode.word
+    else:
+        name = matches.group(1)
     j = {
-        'name': wordnode.word,
+        'name': name,
         'size': wordnode.coverage,
         'order': order,
         'depth': depth,
@@ -81,3 +112,18 @@ def taxonomy_search(taxon):
                 'relative_abundance': round(c.relative_abundance*100,2),
                 'coverage': c.coverage }
                 for c in condensed_profile_hits] })
+
+@api.route('/taxonomy_search_hints/<string:taxon>', methods=('GET',))
+def taxonomy_search_hints(taxon):
+    if len(taxon) < 3: return jsonify(['3 or more characters are required'])
+
+    # Underscores are wildcards, but we don't want that since there are names like p__Actinobacteria
+    sql = "select name from taxonomies where name like :taxon escape \'\\\' order by name limit 30"
+    results = db.session.execute(sql, {'taxon': '%'+taxon.replace('_','\_')+'%'})
+    taxonomies = []
+    for r in results:
+        taxonomies.append(r)
+    if len(taxonomies) == 0:
+        return jsonify(['no taxonomy found for '+taxon])
+
+    return jsonify({ 'taxonomies': [t.name for t in taxonomies] })

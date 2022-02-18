@@ -36,7 +36,7 @@
           </div>
 
           <div class="column is-one-eighth">
-            <img src="./assets/cmr.png" width=200 />
+            <a href="https://research.qut.edu.au/cmr"><img src="./assets/cmr.png" width=200 /></a>
           </div>
         </div>
       </div>

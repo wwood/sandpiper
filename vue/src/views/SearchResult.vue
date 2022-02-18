@@ -1,22 +1,27 @@
 <template>
   <section class="section container" v-if="search_result !== null">
-    Found {{ search_result['condensed_profiles'].length }} runs containing "<i>{{ taxonomy }}</i>"
-    <b-table :data="search_result['condensed_profiles']" :striped="true" :sort-icon="'arrow-up'" default-sort="relative_abundance" :default-sort-direction="'desc'">
+    <div v-if="('condensed_profiles' in search_result)">
+      Found {{ search_result['condensed_profiles'].length }} runs containing "<i>{{ taxonomy }}</i>"
+      <b-table :data="search_result['condensed_profiles']" :striped="true" :sort-icon="'arrow-up'" default-sort="relative_abundance" :default-sort-direction="'desc'">
 
-      <b-table-column field='sample_name' label='Run' v-slot="props">
-        <a :href="'/run/' + props.row.sample_name">{{ props.row.sample_name }}</a>
-      </b-table-column>
+        <b-table-column field='sample_name' label='Run' v-slot="props">
+          <a :href="'/run/' + props.row.sample_name">{{ props.row.sample_name }}</a>
+        </b-table-column>
 
-      <b-table-column field='relative_abundance' label='Relative abundance (%)' v-slot="props" centered sortable>
-        {{ props.row.relative_abundance }}
-      </b-table-column>
+        <b-table-column field='relative_abundance' label='Relative abundance (%)' v-slot="props" centered sortable>
+          {{ props.row.relative_abundance }}
+        </b-table-column>
 
-      <b-table-column field='coverage' label='Coverage' v-slot="props" centered sortable>
-        {{ props.row.coverage }}
-      </b-table-column>
-    </b-table>
+        <b-table-column field='coverage' label='Coverage' v-slot="props" centered sortable>
+          {{ props.row.coverage }}
+        </b-table-column>
+      </b-table>
+    </div>
+    <div v-else>
+      {{ search_result['taxon'] }}
+    </div>
   </section>
-  <section v-else>
+  <section class="section container" v-else>
     Searching ..
   </section>
 </template>
