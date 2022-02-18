@@ -12,6 +12,8 @@ dependencies:
   - Flask-Script
   - extern
   - Flask-CORS
+  - nodejs
+  - vue=2
 
   - numpy
   - graftm

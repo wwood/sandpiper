@@ -60,15 +60,15 @@ class CondensedProfile(db.Model):
     sample_name = db.Column(db.String, nullable=False)
     coverage = db.Column(db.Float, nullable=False)
     relative_abundance = db.Column(db.Float, nullable=False)
-    taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
+    taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False, index=True)
 
-    domain_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
-    phylum_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
-    class_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
-    order_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
-    family_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
-    genus_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
-    species_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'))
+    domain_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+    phylum_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+    family_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+    genus_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+    species_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
 
 
 class Taxonomy(db.Model):
@@ -134,7 +134,7 @@ class NcbiMetadata(db.Model):
     # geo_loc_name_sam,
     # sample_name_sam,
     # attributes
-    acc = db.Column(db.String, nullable=False)
+    acc = db.Column(db.String, nullable=False, index=True)
     assay_type = db.Column(db.String)
     center_name = db.Column(db.String)
     experiment = db.Column(db.String)
@@ -215,8 +215,8 @@ class NcbiMetadata(db.Model):
 class BiosampleAttribute(db.Model):
     __tablename__ = 'biosample_attributes'
     id = db.Column(db.Integer, primary_key=True)
-    run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False)
-    k = db.Column(db.String, nullable=False)
+    run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
+    k = db.Column(db.String, nullable=False, index=True)
     v = db.Column(db.String, nullable=False)
     
     def to_dict(self):

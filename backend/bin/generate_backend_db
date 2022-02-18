@@ -143,6 +143,9 @@ def fill_a_condensed_profile_sample(db, sample_name, entries, taxonomy_name_to_i
         db.session.add(CondensedProfile(**condensed_profile_entry))
         count += 1
 
+        if count % 10000 == 0:
+            db.session.commit()
+
     return (taxonomy_name_to_id, next_taxonomy_id, count)
 
 def iterate_condensed_profile_split_taxonomy(entries):
@@ -211,7 +214,7 @@ def fill_metadata(db, metadata_json_files):
                     db.session.add(BiosampleAttribute(**attribute))
                     attribute_count += 1
 
-                if metadata_count % 1000 == 0:
+                if metadata_count % 10000 == 0:
                     db.session.commit()
 
     db.session.commit()
