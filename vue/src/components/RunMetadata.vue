@@ -18,8 +18,6 @@
 
 <script>
 
-import 'vue-data-tablee/dist/vue-data-tablee.css'
-
 export default {
   name: 'RunMetadata',
   props: ['mdata'],
