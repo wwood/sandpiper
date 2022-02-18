@@ -23,7 +23,7 @@
       <div class="content">
         <div class="columns">
 
-          <div class="column has-text-centered is-half is-offset-one-quarter">
+          <div class="column has-text-centered is-two-thirds is-offset-one-eigth">
             <p />
             <p />
           <p>
@@ -35,8 +35,11 @@
           </p>
           </div>
 
-          <div class="column is-one-eighth">
+          <div class="column is-one-tenth">
             <a href="https://research.qut.edu.au/cmr"><img src="./assets/cmr.png" width=200 /></a>
+          </div>
+          <div class="column is-one-tenth">
+            <img src="./assets/logo-strapline-two-deck-white.svg" width=200 />
           </div>
         </div>
       </div>
@@ -46,14 +49,7 @@
 
 <style lang="scss">
 #app {
-//   font-family: Avenir, Helvetica, Arial, sans-serif;
-//   -webkit-font-smoothing: antialiased;
-//   -moz-osx-font-smoothing: grayscale;
-//   text-align: center;
-//   color: #2c3e50;
-
-  // height: 800px;
-
+  // sunburst-related styles
   .pop-up {
     background-color: white;
     border: black;
@@ -61,49 +57,16 @@
     opacity: 0.92;
     font-size: 25px;
   }
-
-//   .main-row {
-//     height: 1800px;
-//   }
-
-//   .control-middle {
-//     height: 600px;
-//   }
-
-//   .resizable {
-//     margin-left: calc(50% - 50px);
-//   }
-
-//   .father {
-//     position: relative;
-//     width: 100%;
-//     height: 100%;
-//     display: flex;
-//     justify-content: center;
-//   }
-
   .sunburst {
     width: 100%;
     height: 700px;
     position: relative;
   }
 
-//   .custo-checkbox {
-//     display: flex;
-//     justify-content: space-between;
-//   }
-// }
-
-// #nav {
-//   padding: 30px;
-
-//   a {
-//     font-weight: bold;
-//     color: #2c3e50;
-
-//     &.router-link-exact-active {
-//       color: #42b983;
-//     }
-//   }
+  .sandpiperbackground {
+    background-image: url("./assets/sandpiper.jpg");
+    background-size: cover;
+    height: 1000px
+  }
 }
 </style>

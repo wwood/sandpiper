@@ -1,0 +1,25 @@
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 55 55"><script xmlns="">Object.defineProperty(screen, "availTop", { value: 0 });
+Object.defineProperty(screen, "availLeft", { value: 0 });
+Object.defineProperty(screen, "availWidth", { value: 1664 });
+Object.defineProperty(screen, "availHeight", { value: 1109 });
+Object.defineProperty(screen, "colorDepth", { value: 24 });
+Object.defineProperty(screen, "pixelDepth", { value: 24 });
+Object.defineProperty(navigator, "hardwareConcurrency", { value: 8 });
+Object.defineProperty(navigator, "userAgent", { value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0) Gecko/20100101 Firefox/77.0" });
+Object.defineProperty(navigator, "appVersion", { value: "5.0 (Windows)" });
+Object.defineProperty(navigator, "doNotTrack", { value: "unspecified" });
+window.screenY = 1102
+window.screenTop = 1102
+
+                try {
+                    window.top.window.outerHeight = 1084
+
+                } catch (e) {}
+            window.screenX = 1657
+window.screenLeft = 1657
+
+                try {
+                    window.top.window.outerWidth = 1679
+
+                } catch (e) {}
+            </script><defs><style>.cls-1{fill:#fff;}.cls-2{fill:#003c71;}</style></defs><title>logo-strapline-two-deck-white</title><rect class="cls-1" width="55" height="55"/><path class="cls-2" d="M24.18,5.47V20.21c0,1,1.27,5.79,7.85,5.79s7.63-4.74,7.63-5.76V11.82l-5-5.28V19.7c0,.26,0,1.6-2.6,1.6S29.3,20,29.3,19.66V5.48Z"/><polygon class="cls-2" points="35.13 5.48 39.94 10.46 43.42 10.46 43.42 25.7 48.67 25.7 48.67 10.46 52.73 10.46 52.73 5.48 35.13 5.48"/><path class="cls-2" d="M21.52,21.36l4.3,4.37H20l-9.45-9.84h5.58l1.49,1.52A4.61,4.61,0,0,0,18,15.5a5.37,5.37,0,1,0-5.36,5.4,3.26,3.26,0,0,0,1-.11L17.47,25a9.47,9.47,0,0,1-4.83,1.17A10.41,10.41,0,1,1,23.19,15.85a10.79,10.79,0,0,1-1.67,5.51"/></svg>

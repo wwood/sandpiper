@@ -4,6 +4,7 @@ import Home from '../views/Home.vue'
 import Search from '../views/Search.vue'
 import Run from '../views/Run.vue'
 import SearchResults from '../views/SearchResult.vue'
+import About from '../views/About.vue'
 
 Vue.use(VueRouter)
 
@@ -29,6 +30,11 @@ const routes = [
     name: 'Run',
     component: Run,
     props: true
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: About
   }
 ]
 
