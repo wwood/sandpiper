@@ -5,7 +5,7 @@ api.py
 """
 
 from flask import Blueprint, jsonify, request
-from .models import NcbiMetadata, db, Marker, Otu, CondensedProfile
+from .models import NcbiMetadata, db, Marker, Otu, CondensedProfile, Taxonomy
 
 from singlem.condense import WordNode
 
@@ -65,3 +65,19 @@ def fetch_metadata(sample_name):
     if metadata == [] or metadata is None:
         return jsonify({ sample_name: 'no metadata found for '+sample_name })
     return jsonify({ 'metadata': metadata[0].to_displayable_dict() })
+
+@api.route('/taxonomy_search/<string:taxon>', methods=('GET',))
+def taxonomy_search(taxon):
+    taxonomy = Taxonomy.query.filter_by(name=taxon).first()
+    if taxonomy is None:
+        return jsonify({ 'taxon': 'no taxonomy found for '+taxon })
+    else:
+        # Query for samples that contain this taxon
+        condensed_profile_hits = taxonomy.condensed_profiles
+        return jsonify({
+            'taxon': taxonomy.split_taxonomy(),
+            'condensed_profiles': [{
+                'sample_name': c.sample_name,
+                'relative_abundance': round(c.relative_abundance*100,2),
+                'coverage': c.coverage }
+                for c in condensed_profile_hits] })

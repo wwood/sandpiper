@@ -229,7 +229,7 @@ if __name__ == '__main__':
     parent_parser.add_argument('--singlem-db', help='sqlite file from a singlem db', required=True)
     parent_parser.add_argument('--condensed-otu-table', help='condensed OTU table input', required=True)
     parent_parser.add_argument('-o', help='sqlite3 file to generate', required=True)
-    parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files')
+    parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files', required=True)
 
     args = parent_parser.parse_args()
 
