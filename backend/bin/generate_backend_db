@@ -55,9 +55,11 @@ def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path):
     taxonomy_name_to_id = {}
     next_taxonomy_id = 0
     count = 0
+    sample_count = 0
 
     current_sample = None
     current_sample_entries = []
+    logging.info("Processing condensed profiles and associated taxonomy tables ..")
 
     with open(condensed_otu_table_path, 'r') as csvfile_in:
         reader = csv.reader(csvfile_in, delimiter="\t")
@@ -74,6 +76,9 @@ def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path):
                     (taxonomy_name_to_id, next_taxonomy_id, count) = fill_a_condensed_profile_sample(db, row[0], current_sample_entries, taxonomy_name_to_id, next_taxonomy_id, count)
                 current_sample = row[0]
                 current_sample_entries = []
+                sample_count += 1
+                if sample_count % 10000 == 0:
+                    logging.info("Processed condensed profiles for {} samples".format(sample_count))
             
             current_sample_entries.append(row)
         
@@ -198,12 +203,13 @@ def fill_metadata(db, metadata_json_files):
 
                 # Unclear to me why these exist as arrays rather than single values, but eh
                 for d in ['geo_loc_name_sam','ena_first_public_run','ena_last_update_run','sample_name_sam']:
-                    if len(j[d]) > 1:
-                        raise Exception("Unexpectedly found a metadata array for {} in {}: {}".format(d, acc, j[d]))
-                    try:
-                        j[d] = j[d][0]
-                    except IndexError:
-                        del j[d]
+                    if d in j:
+                        if len(j[d]) > 1:
+                            raise Exception("Unexpectedly found a metadata array for {} in {}: {}".format(d, acc, j[d]))
+                        try:
+                            j[d] = j[d][0]
+                        except IndexError:
+                            del j[d]
                 meta = NcbiMetadata(**j)
                 db.session.add(meta)
                 metadata_count += 1
