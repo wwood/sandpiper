@@ -23,9 +23,10 @@ manager.add_command('db', MigrateCommand)
 def shell_ctx():
     return dict(app=app,
                 db=db,
-                Survey=Survey,
-                Question=Question,
-                Choice=Choice)
+                # Survey=Survey,
+                # Question=Question,
+                # Choice=Choice
+                )
 
 if __name__ == '__main__':
     manager.run()

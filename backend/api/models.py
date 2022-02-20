@@ -57,7 +57,7 @@ class CondensedProfile(db.Model):
     #     "CREATE TABLE condensed_profiles (id INTEGER PRIMARY KEY,"
     #     " sample_name text, coverage float, taxonomy_id INTEGER);\n")
     id = db.Column(db.Integer, primary_key=True)
-    sample_name = db.Column(db.String, nullable=False)
+    sample_name = db.Column(db.String, nullable=False, index=True)
     coverage = db.Column(db.Float, nullable=False)
     relative_abundance = db.Column(db.Float, nullable=False)
     taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False, index=True)
