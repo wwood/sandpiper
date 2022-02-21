@@ -6,7 +6,7 @@ api.py
 import re
 
 from flask import Blueprint, jsonify, request
-from sqlalchemy import select
+from sqlalchemy import select, distinct
 from sqlalchemy.sql import func
 from .models import NcbiMetadata, db, Marker, Otu, CondensedProfile, Taxonomy
 
@@ -14,26 +14,21 @@ from singlem.condense import WordNode
 
 api = Blueprint('api', __name__)
 
-sandpiper_total_terrabases = None
-sandpiper_num_runs = None
-sandpiper_num_bioprojects = None
+sandpiper_stats_cache = None
 
 @api.route('/sandpiper_stats', methods=['GET'])
 def sandpiper_stats():
-    global sandpiper_total_terrabases
-    global sandpiper_num_runs
-    global sandpiper_num_bioprojects
+    global sandpiper_stats_cache
     # Cache results because they don't change unless the DB changes
-    if sandpiper_total_terrabases is None:
-        sandpiper_total_terrabases = db.session.query(func.sum(NcbiMetadata.mbases)).scalar()/10**6
-    if sandpiper_num_runs is None:
-        sandpiper_num_runs = NcbiMetadata.query.distinct(NcbiMetadata.acc).count()
-    if sandpiper_num_bioprojects is None:
-        sandpiper_num_bioprojects = NcbiMetadata.query.distinct(NcbiMetadata.bioproject).count()
+    if sandpiper_stats_cache is None:
+        sandpiper_stats_cache = {}
+        sandpiper_stats_cache['sandpiper_total_terrabases'] = db.session.query(func.sum(NcbiMetadata.mbases)).scalar()/10**6
+        sandpiper_stats_cache['sandpiper_num_runs'] = db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar() #NcbiMetadata.query.distinct(NcbiMetadata.acc).count()
+        sandpiper_stats_cache['sandpiper_num_bioprojects'] = db.session.query(func.count(distinct(NcbiMetadata.bioproject))).scalar()
     return jsonify({
-        'num_terrabases': round(sandpiper_total_terrabases),
-        'num_runs': sandpiper_num_runs,
-        'num_bioprojects': sandpiper_num_bioprojects
+        'num_terrabases': round(sandpiper_stats_cache['sandpiper_total_terrabases']),
+        'num_runs': sandpiper_stats_cache['sandpiper_num_runs'],
+        'num_bioprojects': sandpiper_stats_cache['sandpiper_num_bioprojects']
     })
 
 @api.route('/markers/', methods=('GET',))
