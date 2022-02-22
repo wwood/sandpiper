@@ -99,12 +99,7 @@ class Taxonomy(db.Model):
                     name=self.name)
 
     def split_taxonomy(self):
-        taxons = []
-        current = self
-        while current.parent_id != 'NULL':
-            taxons.append(current.name)
-            current = Taxonomy.query.get(current.parent_id)
-        return list(reversed(taxons))
+        return self.full_name.split('; ')
 
 class NcbiMetadata(db.Model):
     __tablename__ = 'ncbi_metadata'

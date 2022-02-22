@@ -8,6 +8,7 @@ import re
 from flask import Blueprint, jsonify, request
 from sqlalchemy import select, distinct
 from sqlalchemy.sql import func
+from sqlalchemy.orm import joinedload
 from .models import NcbiMetadata, db, Marker, Otu, CondensedProfile, Taxonomy
 
 import os, sys
@@ -49,7 +50,7 @@ def fetch_condensed(sample_name):
     taxons_to_wordnode = {root.word: root}
 
     # condensed = CondensedProfile.query.filter_by(sample_name=sample_name).options(lazyload(CondensedProfile.taxonomy)).all()
-    condensed = CondensedProfile.query.filter_by(sample_name=sample_name).all()
+    condensed = CondensedProfile.query.filter_by(sample_name=sample_name).options(joinedload(CondensedProfile.taxonomy)).all()
     if len(condensed) == 0:
         return jsonify({ sample_name: 'no condensed data found' })
     for entry in condensed:
