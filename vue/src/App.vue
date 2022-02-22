@@ -39,7 +39,7 @@
             <a href="https://research.qut.edu.au/cmr"><img src="./assets/cmr.png" width=200 /></a>
           </div>
           <div class="column is-one-tenth">
-            <img src="./assets/logo-strapline-two-deck-white.svg" width=200 />
+            <img src="./assets/QUT_SQUARE_RGB_SVG.svg" width=200 />
           </div>
         </div>
       </div>
