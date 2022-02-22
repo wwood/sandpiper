@@ -35,11 +35,11 @@
           </p>
           </div>
 
-          <div class="column is-one-tenth">
-            <a href="https://research.qut.edu.au/cmr"><img src="./assets/cmr.png" width=200 /></a>
+          <div class="column is-one-eigth">
+            <a href="https://research.qut.edu.au/cmr"><img src="./assets/cmr.png"  class="footer-image" /></a>
           </div>
-          <div class="column is-one-tenth">
-            <img src="./assets/QUT_SQUARE_RGB_SVG.svg" width=200 />
+          <div class="column is-one-eigth">
+            <a href="https://qut.edu.au"><img src="./assets/QUT_SQUARE_RGB_SVG.svg" class="footer-image" /></a>
           </div>
         </div>
       </div>
@@ -67,6 +67,9 @@
     background-image: url("./assets/sandpiper.jpg");
     background-size: cover;
     height: 1000px
+  }
+  .footer-image {
+    height: 50%;
   }
 }
 </style>
