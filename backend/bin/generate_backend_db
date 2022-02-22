@@ -120,15 +120,20 @@ def fill_a_condensed_profile_sample(db, sample_name, entries, taxonomy_name_to_i
                 if species_aware_taxonomy == 'Root':
                     level = 'root'
                     parent_id = 'NULL'
+                    full_taxonomy = 'Root'
                 else:
-                    prefix = species_aware_taxonomy.split('__')[0]
-                    level_id = ['d','p','c','o','f','g','s'].index(prefix)
-                    level = ['domain','phylum','class','order','family','genus','species'][level_id]
-                    # Will throw KeyError if something is amiss
+                    if i==7:
+                        level = 'species'
+                    else:
+                        prefix = species_aware_taxonomy.split('__')[0]
+                        level_id = ['d','p','c','o','f','g','s'].index(prefix)
+                        level = ['domain','phylum','class','order','family','genus','species'][level_id]
+                        # Will throw KeyError if something is amiss
 
                     parent_id = taxonomy_name_to_id[taxons[i-1]]
+                    full_taxonomy = '; '.join(taxons[1:])
 
-                db.session.add(Taxonomy(id=next_taxonomy_id, taxonomy_level=level, parent_id=parent_id, name=species_aware_taxonomy))
+                db.session.add(Taxonomy(id=next_taxonomy_id, taxonomy_level=level, parent_id=parent_id, name=species_aware_taxonomy, full_name=full_taxonomy))
 
                 taxonomy_name_to_id[species_aware_taxonomy] = next_taxonomy_id
                 next_taxonomy_id += 1
@@ -160,11 +165,8 @@ def iterate_condensed_profile_split_taxonomy(entries):
         species_aware_taxonomies = []
 
         for (i, taxonomies_split) in enumerate(taxons_split):
-            # Store species as species+genus since species aren't unique
-            if i == 7:
-                species_aware_taxonomy = "; ".join([taxons_split[i-1],taxons_split[i]])
-            else:
-                species_aware_taxonomy = taxonomies_split.strip()
+            # Store species as species+genus since species aren't unique. But this already happens, so don't need to worry
+            species_aware_taxonomy = taxonomies_split.strip()
             species_aware_taxonomies.append(species_aware_taxonomy)
 
         yield row, species_aware_taxonomies

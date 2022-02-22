@@ -81,6 +81,7 @@ class Taxonomy(db.Model):
     taxonomy_level = db.Column(db.String, nullable=False)
     parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
     name = db.Column(db.String, nullable=False, index=True)
+    full_name = db.Column(db.String, nullable=False)
 
     condensed_profiles = db.relationship('CondensedProfile', backref='taxonomy', foreign_keys=[CondensedProfile.taxonomy_id])
     condensed_profile_domains = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.domain_id])

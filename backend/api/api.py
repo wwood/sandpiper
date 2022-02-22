@@ -10,6 +10,8 @@ from sqlalchemy import select, distinct
 from sqlalchemy.sql import func
 from .models import NcbiMetadata, db, Marker, Otu, CondensedProfile, Taxonomy
 
+import os, sys
+sys.path = [os.environ['HOME']+'/git/singlem-local'] + [os.environ['HOME']+'/git/singlem'] + sys.path
 from singlem.condense import WordNode
 
 api = Blueprint('api', __name__)
@@ -46,6 +48,7 @@ def fetch_condensed(sample_name):
     root = WordNode(None, 'Root')
     taxons_to_wordnode = {root.word: root}
 
+    # condensed = CondensedProfile.query.filter_by(sample_name=sample_name).options(lazyload(CondensedProfile.taxonomy)).all()
     condensed = CondensedProfile.query.filter_by(sample_name=sample_name).all()
     if len(condensed) == 0:
         return jsonify({ sample_name: 'no condensed data found' })
