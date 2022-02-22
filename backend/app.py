@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 appserver.py
 - creates an application instance and runs the dev server

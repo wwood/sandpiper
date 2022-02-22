@@ -64,9 +64,8 @@ def fetch_condensed(sample_name):
                 # print("Adding tax %s with prev %s" % (tax, last_taxon.word))
                 last_taxon.children[tax] = wn
                 taxons_to_wordnode[tax] = wn #TODO: Problem when there is non-unique labels? Require full taxonomy used?
-
             last_taxon = taxons_to_wordnode[tax]
-        wn.coverage = entry.coverage
+        last_taxon.coverage = entry.coverage
 
     return jsonify({ 'condensed': wordnode_json(root, 0, 0), 'sample_name': sample_name })
 
@@ -109,7 +108,7 @@ def taxonomy_search(taxon):
             'condensed_profiles': [{
                 'sample_name': c.sample_name,
                 'relative_abundance': round(c.relative_abundance*100,2),
-                'coverage': c.coverage }
+                'coverage': c.filled_coverage }
                 for c in condensed_profile_hits] })
 
 @api.route('/taxonomy_search_hints/<string:taxon>', methods=('GET',))

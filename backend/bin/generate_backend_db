@@ -110,7 +110,7 @@ def fill_a_condensed_profile_sample(db, sample_name, entries, taxonomy_name_to_i
                 last_taxon.children[tax] = wn
                 taxons_to_wordnode[tax] = wn #TODO: Problem when there is non-unique labels? Require full taxonomy used?
             last_taxon = taxons_to_wordnode[tax]
-        wn.coverage = coverage
+        last_taxon.coverage = coverage
 
     for row, taxons in iterate_condensed_profile_split_taxonomy(entries):
         # Get the taxonomy id, creating a new entry if necessary
@@ -144,6 +144,7 @@ def fill_a_condensed_profile_sample(db, sample_name, entries, taxonomy_name_to_i
             'id': count+1,
             'sample_name': row[0],
             'coverage': row[1],
+            'filled_coverage': taxons_to_wordnode[taxons[-1]].get_full_coverage(),
             'relative_abundance': taxons_to_wordnode[taxons[-1]].get_full_coverage() / total_coverage,
             'taxonomy_id': taxonomy_name_to_id[species_aware_taxonomy]
         }
