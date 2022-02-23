@@ -95,6 +95,8 @@ def fill_a_condensed_profile_sample(db, sample_name, entries, taxonomy_name_to_i
     # Generate WordNode tree so we can calculate relative abundance later
     root = WordNode(None, 'Root')
     taxons_to_wordnode = {root.word: root}
+
+    inserted_taxonomy_ids = set()
     
     for row, taxons in iterate_condensed_profile_split_taxonomy(entries):
         coverage = float(row[1])
@@ -106,6 +108,7 @@ def fill_a_condensed_profile_sample(db, sample_name, entries, taxonomy_name_to_i
         for (i, tax) in enumerate(taxons):
             if tax not in taxons_to_wordnode:
                 wn = WordNode(last_taxon, tax)
+                wn.coverage = 0
                 logging.debug("Adding tax %s with prev %s", tax, last_taxon.word)
                 last_taxon.children[tax] = wn
                 taxons_to_wordnode[tax] = wn #TODO: Problem when there is non-unique labels? Require full taxonomy used?
@@ -113,6 +116,8 @@ def fill_a_condensed_profile_sample(db, sample_name, entries, taxonomy_name_to_i
         last_taxon.coverage = coverage
 
     for row, taxons in iterate_condensed_profile_split_taxonomy(entries):
+        sample_name = row[0]
+
         # Get the taxonomy id, creating a new entry if necessary
         taxonomy_ids_here = []
         for (i, species_aware_taxonomy) in enumerate(taxons):
@@ -131,7 +136,7 @@ def fill_a_condensed_profile_sample(db, sample_name, entries, taxonomy_name_to_i
                         # Will throw KeyError if something is amiss
 
                     parent_id = taxonomy_name_to_id[taxons[i-1]]
-                    full_taxonomy = '; '.join(taxons[1:])
+                    full_taxonomy = '; '.join(taxons[1:(i+1)])
 
                 db.session.add(Taxonomy(id=next_taxonomy_id, taxonomy_level=level, parent_id=parent_id, name=species_aware_taxonomy, full_name=full_taxonomy))
 
@@ -140,22 +145,32 @@ def fill_a_condensed_profile_sample(db, sample_name, entries, taxonomy_name_to_i
 
             taxonomy_ids_here.append(taxonomy_name_to_id[species_aware_taxonomy])
 
-        condensed_profile_entry = {
-            'id': count+1,
-            'sample_name': row[0],
-            'coverage': row[1],
-            'filled_coverage': taxons_to_wordnode[taxons[-1]].get_full_coverage(),
-            'relative_abundance': taxons_to_wordnode[taxons[-1]].get_full_coverage() / total_coverage,
-            'taxonomy_id': taxonomy_name_to_id[species_aware_taxonomy]
-        }
-        for (idx, column_name) in zip(taxonomy_ids_here, Taxonomy.taxonomy_level_columns):
-            condensed_profile_entry[column_name] = idx
+        def add_a_condensed_profile_taxon(count, taxon_name, taxon_level_index): # db, , taxons_to_wordnode, taxonomy, taxonomy_ids_here, taxonomy_name_to_id
+            condensed_profile_entry = {
+                'id': count+1,
+                'sample_name': sample_name,
+                'coverage': taxons_to_wordnode[taxon_name].coverage,
+                'filled_coverage': taxons_to_wordnode[taxon_name].get_full_coverage(),
+                'relative_abundance': taxons_to_wordnode[taxon_name].get_full_coverage() / total_coverage,
+                'taxonomy_id': taxonomy_name_to_id[taxon_name]
+            }
+            for (idx, column_name) in zip(taxonomy_ids_here[:(taxon_level_index+1)], Taxonomy.taxonomy_level_columns):
+                condensed_profile_entry[column_name] = idx
+            db.session.add(CondensedProfile(**condensed_profile_entry))
+            count += 1
+            if count % 10000 == 0:
+                db.session.commit()
+            return count
 
-        db.session.add(CondensedProfile(**condensed_profile_entry))
-        count += 1
+        # In some cases, like c__Coriobacteriia in the 6_runs test dataset,
+        # there is no actual entry for c__Coriobacteriia in the condensed
+        # profile. So that searching condensed profiles for taxonomy returns
+        # results for c__Coriobacteriia, we need to add an inferred entry.
+        for (i, taxon) in enumerate(taxons):
+            if taxonomy_name_to_id[taxon] not in inserted_taxonomy_ids:
+                count = add_a_condensed_profile_taxon(count, taxon, i)
+                inserted_taxonomy_ids.add(taxonomy_name_to_id[taxon])
 
-        if count % 10000 == 0:
-            db.session.commit()
 
     return (taxonomy_name_to_id, next_taxonomy_id, count)
 
