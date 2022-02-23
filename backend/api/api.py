@@ -108,7 +108,7 @@ def taxonomy_search(taxon):
             'condensed_profiles': [{
                 'sample_name': c.sample_name,
                 'relative_abundance': round(c.relative_abundance*100,2),
-                'coverage': c.filled_coverage }
+                'coverage': round(c.filled_coverage, 2) }
                 for c in condensed_profile_hits] })
 
 @api.route('/taxonomy_search_hints/<string:taxon>', methods=('GET',))

@@ -43,9 +43,7 @@
 import Sunburst from '@/components/Sunburst.vue'
 import RunMetadata from '@/components/RunMetadata.vue'
 
-import axios from 'axios'
-
-const API_URL = 'http://127.0.0.1:5000/api'
+import { fetchRunMetadata, fetchRunCondensed } from '@/api'
 
 export default {
   name: 'Run',
@@ -83,14 +81,13 @@ export default {
     fetchData () {
       // const accession = this.$route.params.accession
       const accession = this.accession
-      console.log('mounting accession: ' + accession)
 
-      axios.get(`${API_URL}/condensed/${accession}`)
+      fetchRunCondensed(accession)
         .then(response => {
           this.condensed_tree = response.data
         })
 
-      axios.get(`${API_URL}/metadata/${accession}`)
+      fetchRunMetadata(accession)
         .then(response => {
           this.metadata = response.data
         })

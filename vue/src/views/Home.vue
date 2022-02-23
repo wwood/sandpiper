@@ -14,9 +14,8 @@
   </div>
 </template>
 
-<script lang="ts">
-import axios from 'axios'
-const API_URL = 'http://127.0.0.1:5000/api'
+<script>
+import { fetchSandpiperStats } from '@/api'
 
 export default {
   name: 'Home',
@@ -34,10 +33,9 @@ export default {
   },
   methods: {
     fetchData () {
-      axios.get(`${API_URL}/sandpiper_stats`)
+      fetchSandpiperStats()
         .then(response => {
           const r = response.data
-          console.log(r)
           this.num_terrabases = r.num_terrabases
           this.num_runs = r.num_runs
           this.num_bioprojects = r.num_bioprojects

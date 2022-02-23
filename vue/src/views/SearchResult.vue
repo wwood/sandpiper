@@ -27,8 +27,7 @@
 </template>
 
 <script>
-import axios from 'axios'
-const API_URL = 'http://127.0.0.1:5000/api'
+import { fetchRunsByTaxonomy } from '@/api'
 
 export default {
   name: 'SearchResults',
@@ -46,15 +45,14 @@ export default {
   },
   methods: {
     fetchData () {
-      // const accession = this.$route.params.accession
       const taxonomy = this.taxonomy
 
-      axios.get(`${API_URL}/taxonomy_search/${taxonomy}`)
+      fetchRunsByTaxonomy(taxonomy)
         .then(response => {
           this.search_result = response.data
         })
     },
-    numericColumnTdAttrs (row, column) {
+    numericColumnTdAttrs (_row, _column) {
       return {
         style: 'text-align: center;'
       }

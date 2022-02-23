@@ -18,10 +18,8 @@
 </template>
 
 <script>
-import axios from 'axios'
+import { fetchTaxonomySearchHints } from '@/api'
 import debounce from 'lodash/debounce'
-
-const API_URL = 'http://127.0.0.1:5000/api'
 
 export default {
   name: 'Search',
@@ -35,10 +33,7 @@ export default {
   },
   methods: {
     search () {
-      const url = `${API_URL}/taxonomy_search/${this.taxonomy}`
-      axios.get(url).then(response => {
-        this.$router.push({ name: 'SearchResults', params: { taxonomy: this.taxonomy } })
-      })
+      this.$router.push({ name: 'SearchResults', params: { taxonomy: this.taxonomy } })
     },
     getAsyncData: debounce(function (name) {
       if (!name.length) {
@@ -46,7 +41,8 @@ export default {
         return
       }
       this.isFetching = true
-      axios.get(`${API_URL}/taxonomy_search_hints/${this.taxonomy}`) // TODO: use axios properly with uncaught errors
+      console.log('name: ' + name)
+      fetchTaxonomySearchHints(name)
         .then(({ data }) => {
           this.autocomplete_taxons = data.taxonomies
           if (this.autocomplete_taxons.length >= 30) {
