@@ -4,6 +4,8 @@ import router from './router'
 // import store from './store'
 import './assets/scss/app.scss'
 
+import 'leaflet/dist/leaflet.css'
+
 import Buefy from 'buefy'
 import 'buefy/dist/buefy.css'
 Vue.use(Buefy)

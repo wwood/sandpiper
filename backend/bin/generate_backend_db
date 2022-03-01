@@ -51,7 +51,7 @@ from api.models import CondensedProfile, NcbiMetadata, Taxonomy, BiosampleAttrib
 from singlem.condense import WordNode
 
 
-def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path):
+def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path, blacklist):
     taxonomy_name_to_id = {}
     next_taxonomy_id = 0
     count = 0
@@ -68,6 +68,8 @@ def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path):
         for row in reader:
             if first:
                 first = False
+                continue
+            if row[0] in blacklist:
                 continue
 
             # Calculate per-sample because we need to calculate relative abundance within-sample
@@ -255,6 +257,7 @@ if __name__ == '__main__':
     parent_parser.add_argument('--condensed-otu-table', help='condensed OTU table input', required=True)
     parent_parser.add_argument('-o', help='sqlite3 file to generate', required=True)
     parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files', required=True)
+    parent_parser.add_argument('--run-blacklist', help='Ignore runs listed in this file')
 
     args = parent_parser.parse_args()
 
@@ -266,6 +269,14 @@ if __name__ == '__main__':
     else:
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+
+    blacklist = set()
+    if args.run_blacklist:
+        with open(args.run_blacklist) as f:
+            for line in f:
+                if line != 'acc':
+                    blacklist.add(line.strip())
+        logging.info("Ignoring {} runs".format(len(blacklist)))
 
     # Copy file over
     logging.info("Copying SQLite file")
@@ -283,7 +294,7 @@ if __name__ == '__main__':
         # Create all the tables
         Taxonomy.metadata.create_all(db.engine)
         
-        fill_condensed_and_taxonomy_tables(db, args.condensed_otu_table)
+        fill_condensed_and_taxonomy_tables(db, args.condensed_otu_table, blacklist)
 
         fill_metadata(db, args.metadata_json_files)
 

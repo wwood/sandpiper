@@ -103,13 +103,19 @@ def taxonomy_search(taxon):
     else:
         # Query for samples that contain this taxon
         condensed_profile_hits = taxonomy.condensed_profiles
+        # lat_lons are commented out for now because it is too slow to query and
+        # render. SQL needs better querying i.e. in batch, and multiple
+        # annotations at a single location need to be collapsed.
+        lat_lons = [] #get_lat_lons([c.sample_name for c in sorted(condensed_profile_hits, key=lambda x: -x.relative_abundance)])
         return jsonify({
             'taxon': taxonomy.split_taxonomy(),
             'condensed_profiles': [{
                 'sample_name': c.sample_name,
                 'relative_abundance': round(c.relative_abundance*100,2),
                 'coverage': round(c.filled_coverage, 2) }
-                for c in condensed_profile_hits] })
+                for c in condensed_profile_hits],
+            'lat_lons': lat_lons
+        })  
 
 @api.route('/taxonomy_search_hints/<string:taxon>', methods=('GET',))
 def taxonomy_search_hints(taxon):
@@ -125,3 +131,77 @@ def taxonomy_search_hints(taxon):
         return jsonify(['no taxonomy found for '+taxon])
 
     return jsonify({ 'taxonomies': [t.name for t in taxonomies] })
+
+def get_lat_lons(sample_names):
+    lat_lon_regex = re.compile('^([0-9.-]+) ([NS]) ([0-9.-]+) ([EW])$')
+    geoloc_lat_regex = re.compile('^([0-9.-]+) ([NS])$')
+    geoloc_lon_regex = re.compile('^([0-9.-]+) ([EW])$')
+
+    lat_lons = {}
+    
+    for sample_name in sample_names:
+        metadata = NcbiMetadata.query.filter_by(acc=sample_name).options(joinedload(NcbiMetadata.biosample_attributes)).first()
+        if metadata is None:
+            continue
+
+        if len(lat_lons) >= 500:
+            break
+
+        # lat_lon_sam in BioSample metadata, like SRR9113719
+        lat_lon_annotations = [attr for attr in metadata.biosample_attributes if attr.k == 'lat_lon_sam']
+        if len(lat_lon_annotations) > 0:
+            lat_lon = lat_lon_annotations[0].v
+            if lat_lon is None or lat_lon == 'not applicable': # not applicable ERR1914274
+                continue
+            matches = lat_lon_regex.match(lat_lon)
+            if matches is None:
+                print("Unexpected lat_lon_sam value: %s" % lat_lon)
+                continue
+            lat = float(matches.group(1))
+            if matches.group(2) == 'S':
+                lat = -lat
+            lon = float(matches.group(3))
+            if matches.group(4) == 'W':
+                lon = -lon
+            if validate_lat_lon(lat, lon):
+                lat_lons[sample_name] = {'lat_lon': [lat, lon], 'sample_name': sample_name}
+                continue
+
+        # Samples like ERR4131628
+        geolocs_latitude = list([attr for attr in metadata.biosample_attributes if attr.k == 'geographic_location__latitude__sam'])
+        geolocs_longitude = list([attr for attr in metadata.biosample_attributes if attr.k == 'geographic_location__longitude__sam'])
+        if len(geolocs_latitude) == 1 and len(geolocs_longitude) == 1:
+            try:
+                matches = geoloc_lat_regex.match(geolocs_latitude[0].v)
+                if matches is not None:
+                    lat = float(matches.group(1))
+                    if matches.group(2) == 'S':
+                        lat = -lat
+                else:
+                    lat = float(geolocs_latitude[0].v)
+            except ValueError:
+                print("Failed to parse {} as a latitude".format(geolocs_latitude[0].v))
+                continue
+
+            try:
+                matches = geoloc_lon_regex.match(geolocs_longitude[0].v)
+                if matches is not None:
+                    lon = float(matches.group(1))
+                    if matches.group(2) == 'W':
+                        lon = -lon
+                else:
+                    lon = float(geolocs_longitude[0].v)
+            except ValueError:
+                print("Failed to parse {} as a longitude".format(geolocs_longitude[0].v))
+                continue
+
+            if validate_lat_lon(lat, lon):
+                lat_lons[sample_name] = {'lat_lon': [lat, lon], 'sample_name': sample_name}
+                continue
+
+    return list(lat_lons.values())
+
+def validate_lat_lon(lat, lon):
+    if lat >= -90 and lat <= 90 and lon >= -180 and lon <= 180:
+        return True
+    return False
