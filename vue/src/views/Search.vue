@@ -41,7 +41,6 @@ export default {
         return
       }
       this.isFetching = true
-      console.log('name: ' + name)
       fetchTaxonomySearchHints(name)
         .then(({ data }) => {
           this.autocomplete_taxons = data.taxonomies

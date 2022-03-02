@@ -8,7 +8,7 @@ import re
 from flask import Blueprint, jsonify, request
 from sqlalchemy import select, distinct
 from sqlalchemy.sql import func
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, lazyload
 from .models import NcbiMetadata, db, Marker, Otu, CondensedProfile, Taxonomy
 
 import os, sys
@@ -95,26 +95,59 @@ def fetch_metadata(sample_name):
         return jsonify({ sample_name: 'no metadata found for '+sample_name })
     return jsonify({ 'metadata': metadata[0].to_displayable_dict() })
 
+# sort_field=${sortField}&sort_direction=${sortDirection}&page=${page
 @api.route('/taxonomy_search/<string:taxon>', methods=('GET',))
 def taxonomy_search(taxon):
+    args = request.args
+    sort_field = args.get('sort_field')
+    sort_direction = args.get('sort_direction')
+    page = args.get('page')
+    page_size = args.get('page_size')
+    sort_field = 'relative_abundance' if sort_field is None else sort_field
+    sort_direction = 'desc' if sort_direction is None else sort_direction
+    page = int(page) if page is not None else 0
+    page_size = int(page_size) if page_size is not None else 100
+
+    if sort_field not in ['relative_abundance', 'coverage']:
+        return jsonify({ 'error': 'invalid sort field' })
+    if sort_direction not in ['asc', 'desc']:
+        return jsonify({ 'error': 'invalid sort direction' })
+
     taxonomy = Taxonomy.query.filter_by(name=taxon).first()
     if taxonomy is None:
         return jsonify({ 'taxon': 'no taxonomy found for '+taxon })
     else:
         # Query for samples that contain this taxon
-        condensed_profile_hits = taxonomy.condensed_profiles
+        if sort_field == 'relative_abundance':
+            if sort_direction == 'desc':
+                hits_query = CondensedProfile.query.order_by(CondensedProfile.relative_abundance.desc())
+            else:
+                hits_query = CondensedProfile.query.order_by(CondensedProfile.relative_abundance.asc())
+        elif sort_field == 'coverage':
+            if sort_direction == 'desc':
+                hits_query = CondensedProfile.query.order_by(CondensedProfile.coverage.desc())
+            else:
+                hits_query = CondensedProfile.query.order_by(CondensedProfile.coverage.asc())
+
+        condensed_profile_hits = hits_query.where(
+                CondensedProfile.taxonomy_id == taxonomy.id).limit(
+                    page_size).offset((page-1)*page_size).all()
+        total_num_hits = CondensedProfile.query.filter_by(taxonomy_id=taxonomy.id).count()
         # lat_lons are commented out for now because it is too slow to query and
         # render. SQL needs better querying i.e. in batch, and multiple
         # annotations at a single location need to be collapsed.
         lat_lons = [] #get_lat_lons([c.sample_name for c in sorted(condensed_profile_hits, key=lambda x: -x.relative_abundance)])
         return jsonify({
+            'total_num_results': total_num_hits,
             'taxon': taxonomy.split_taxonomy(),
-            'condensed_profiles': [{
-                'sample_name': c.sample_name,
-                'relative_abundance': round(c.relative_abundance*100,2),
-                'coverage': round(c.filled_coverage, 2) }
-                for c in condensed_profile_hits],
-            'lat_lons': lat_lons
+            'results': {
+                'condensed_profiles': [{
+                    'sample_name': c.sample_name,
+                    'relative_abundance': round(c.relative_abundance*100,2),
+                    'coverage': round(c.filled_coverage, 2) }
+                    for c in condensed_profile_hits],
+                'lat_lons': lat_lons
+            }
         })  
 
 @api.route('/taxonomy_search_hints/<string:taxon>', methods=('GET',))

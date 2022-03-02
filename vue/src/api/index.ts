@@ -19,11 +19,10 @@ export function fetchRunCondensed (runId: string) {
   return axios.get(`${API_URL}/condensed/${runId}`)
 }
 
-export function fetchRunsByTaxonomy (taxonomy: string) {
-  return axios.get(`${API_URL}/taxonomy_search/${taxonomy}`)
+export function fetchRunsByTaxonomy (taxonomy: string, page: number, sortField: string, sortDirection: string, pageSize: number) {
+  return axios.get(`${API_URL}/taxonomy_search/${taxonomy}?sort_field=${sortField}&sort_direction=${sortDirection}&page=${page}&page_size=${pageSize}`)
 }
 
 export function fetchTaxonomySearchHints (taxonomy: string) {
-  console.log('fetching ' + taxonomy)
   return axios.get(`${API_URL}/taxonomy_search_hints/${taxonomy}`)
 }
