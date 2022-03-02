@@ -58,9 +58,9 @@ class CondensedProfile(db.Model):
     #     " sample_name text, coverage float, taxonomy_id INTEGER);\n")
     id = db.Column(db.Integer, primary_key=True)
     sample_name = db.Column(db.String, nullable=False, index=True)
-    coverage = db.Column(db.Float, nullable=False)
-    filled_coverage = db.Column(db.Float, nullable=False)
-    relative_abundance = db.Column(db.Float, nullable=False)
+    coverage = db.Column(db.Float, nullable=False, index=True)
+    filled_coverage = db.Column(db.Float, nullable=False, index=True)
+    relative_abundance = db.Column(db.Float, nullable=False, index=True)
     taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False, index=True)
 
     domain_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)

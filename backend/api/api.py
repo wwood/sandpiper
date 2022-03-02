@@ -95,8 +95,22 @@ def fetch_metadata(sample_name):
         return jsonify({ sample_name: 'no metadata found for '+sample_name })
     return jsonify({ 'metadata': metadata[0].to_displayable_dict() })
 
+def taxonomy_search_fail_json(reason):
+    return jsonify({ 'taxon': reason })
+
+@api.route('/taxonomy_search_global_data/<string:taxon>', methods=('GET',))
+def taxonomy_search_global_data(taxon):
+    taxonomy = Taxonomy.query.filter_by(name=taxon).first()
+    if taxonomy is None:
+        return taxonomy_search_fail_json('no taxonomy found for '+taxon)
+    total_num_hits = CondensedProfile.query.filter_by(taxonomy_id=taxonomy.id).count()
+    return jsonify({ 
+        'total_num_results': total_num_hits,
+        'taxon': taxonomy.split_taxonomy()
+    })
+
 # sort_field=${sortField}&sort_direction=${sortDirection}&page=${page
-@api.route('/taxonomy_search/<string:taxon>', methods=('GET',))
+@api.route('/taxonomy_search_run_data/<string:taxon>', methods=('GET',))
 def taxonomy_search(taxon):
     args = request.args
     sort_field = args.get('sort_field')
@@ -115,7 +129,7 @@ def taxonomy_search(taxon):
 
     taxonomy = Taxonomy.query.filter_by(name=taxon).first()
     if taxonomy is None:
-        return jsonify({ 'taxon': 'no taxonomy found for '+taxon })
+        return taxonomy_search_fail_json('no taxonomy found for '+taxon)
     else:
         # Query for samples that contain this taxon
         if sort_field == 'relative_abundance':
@@ -125,20 +139,19 @@ def taxonomy_search(taxon):
                 hits_query = CondensedProfile.query.order_by(CondensedProfile.relative_abundance.asc())
         elif sort_field == 'coverage':
             if sort_direction == 'desc':
-                hits_query = CondensedProfile.query.order_by(CondensedProfile.coverage.desc())
+                hits_query = CondensedProfile.query.order_by(CondensedProfile.filled_coverage.desc())
             else:
-                hits_query = CondensedProfile.query.order_by(CondensedProfile.coverage.asc())
+                hits_query = CondensedProfile.query.order_by(CondensedProfile.filled_coverage.asc())
 
         condensed_profile_hits = hits_query.where(
                 CondensedProfile.taxonomy_id == taxonomy.id).limit(
                     page_size).offset((page-1)*page_size).all()
-        total_num_hits = CondensedProfile.query.filter_by(taxonomy_id=taxonomy.id).count()
+        
         # lat_lons are commented out for now because it is too slow to query and
         # render. SQL needs better querying i.e. in batch, and multiple
         # annotations at a single location need to be collapsed.
         lat_lons = [] #get_lat_lons([c.sample_name for c in sorted(condensed_profile_hits, key=lambda x: -x.relative_abundance)])
         return jsonify({
-            'total_num_results': total_num_hits,
             'taxon': taxonomy.split_taxonomy(),
             'results': {
                 'condensed_profiles': [{
@@ -148,7 +161,7 @@ def taxonomy_search(taxon):
                     for c in condensed_profile_hits],
                 'lat_lons': lat_lons
             }
-        })  
+        })
 
 @api.route('/taxonomy_search_hints/<string:taxon>', methods=('GET',))
 def taxonomy_search_hints(taxon):

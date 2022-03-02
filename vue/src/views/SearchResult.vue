@@ -1,55 +1,59 @@
 <template>
-  <section class="section container" v-if="search_result !== null">
-    Found {{ total_num_results }} runs containing "<i>{{ taxonomy }}</i>"
+  <div>
+    <section class="section container" v-if="total_num_results !== null">
+      Found {{ total_num_results.toLocaleString("en-US") }} runs containing "<i>{{ taxonomy }}</i>"
+    </section>
 
-    <!-- <l-map style="height: 700px" :zoom="zoom">
-      <l-tile-layer :url="url" :attribution="attribution" />
-        <l-marker v-for="markerLatLng in search_result['lat_lons']" v-bind:key='markerLatLng[0]' :lat-lng="markerLatLng['lat_lon']">
-          <l-popup :content="'<a href=\'/run/' + markerLatLng['sample_name'] + '\'><b>' + markerLatLng['sample_name'] + '</b></a>'" :options="{ interactive: true }">
-          </l-popup>
-        </l-marker>
-    </l-map> -->
+    <section class="section container" v-if="search_result !== null">
+      <!-- <l-map style="height: 700px" :zoom="zoom">
+        <l-tile-layer :url="url" :attribution="attribution" />
+          <l-marker v-for="markerLatLng in search_result['lat_lons']" v-bind:key='markerLatLng[0]' :lat-lng="markerLatLng['lat_lon']">
+            <l-popup :content="'<a href=\'/run/' + markerLatLng['sample_name'] + '\'><b>' + markerLatLng['sample_name'] + '</b></a>'" :options="{ interactive: true }">
+            </l-popup>
+          </l-marker>
+      </l-map> -->
 
-    <div class="section">
-      <h2 class="title is-4">Matching samples</h2>
-      <b-table
-        :data="search_result['condensed_profiles']"
-        :loading="loading"
-        :striped="true"
-        :sort-icon="'arrow-up'"
-        :default-sort="this.sortField"
-        :default-sort-direction="this.sortDirection"
-        paginated
-        :current-page="this.page"
-        :per-page="this.pageSize"
-        pagination-simple
-        backend-pagination
-        backend-sorting
-        :total="total_num_results"
-        @page-change="onPageChange"
-        @sort="onSort">
+      <div class="section">
+        <h2 class="title is-4">Matching samples</h2>
+        <b-table
+          :data="search_result['condensed_profiles']"
+          :loading="loading"
+          :striped="true"
+          :sort-icon="'arrow-up'"
+          :default-sort="this.sortField"
+          :default-sort-direction="this.sortDirection"
+          paginated
+          :current-page="this.page"
+          :per-page="this.pageSize"
+          pagination-simple
+          backend-pagination
+          backend-sorting
+          :total="total_num_results"
+          @page-change="onPageChange"
+          @sort="onSort">
 
-        <b-table-column field='sample_name' label='Run' v-slot="props">
-          <a :href="'/run/' + props.row.sample_name">{{ props.row.sample_name }}</a>
-        </b-table-column>
+          <b-table-column field='sample_name' label='Run' v-slot="props">
+            <a :href="'/run/' + props.row.sample_name">{{ props.row.sample_name }}</a>
+          </b-table-column>
 
-        <b-table-column field='relative_abundance' label='Relative abundance (%)' v-slot="props" centered sortable>
-          {{ props.row.relative_abundance }}
-        </b-table-column>
+          <b-table-column field='relative_abundance' label='Relative abundance (%)' v-slot="props" centered sortable>
+            {{ props.row.relative_abundance }}
+          </b-table-column>
 
-        <b-table-column field='coverage' label='Coverage' v-slot="props" centered sortable>
-          {{ props.row.coverage }}
-        </b-table-column>
-      </b-table>
-    </div>
-  </section>
-  <section class="section container" v-else>
-    Searching ..
-  </section>
+          <b-table-column field='coverage' label='Coverage' v-slot="props" centered sortable>
+            {{ props.row.coverage }}
+          </b-table-column>
+        </b-table>
+      </div>
+    </section>
+    <section class="section container" v-else>
+      Searching ..
+    </section>
+  </div>
 </template>
 
 <script>
-import { fetchRunsByTaxonomy } from '@/api'
+import { fetchGlobalDataByTaxonomy, fetchRunsByTaxonomy } from '@/api'
 
 // If you need to reference 'L', such as in 'L.icon', then be sure to
 // explicitly import 'leaflet' into your component
@@ -80,9 +84,9 @@ export default {
       search_result: null,
       taxon: null,
       sortIcon: 'arrow-up',
-      total_num_results: 0,
+      total_num_results: null,
       page: 1,
-      pageSize: 1000,
+      pageSize: 100,
       sortField: 'relative_abundance',
       sortDirection: 'desc',
 
@@ -95,9 +99,17 @@ export default {
   created () {
     // fetch the data when the view is created and the data is
     // already being observed
-    this.fetchData()
+    this.fetchGlobalData()
   },
   methods: {
+    fetchGlobalData () {
+      fetchGlobalDataByTaxonomy(this.taxonomy)
+        .then(response => {
+          this.taxon = response.data.taxon
+          this.total_num_results = response.data.total_num_results
+        })
+      this.fetchData() // call here so that this and the run data are loaded by the watch in a single function
+    },
     fetchData () {
       this.loading = true
       this.search_result = null
@@ -105,8 +117,6 @@ export default {
       fetchRunsByTaxonomy(this.taxonomy, this.page, this.sortField, this.sortDirection, this.pageSize)
         .then(response => {
           this.search_result = response.data.results
-          this.taxon = response.data.taxon
-          this.total_num_results = response.data.total_num_results
           this.loading = false
         })
     },
@@ -127,7 +137,7 @@ export default {
   },
   watch: {
     // call again the method if the route changes
-    $route: 'fetchData'
+    $route: 'fetchGlobalData'
   }
 }
 </script>
