@@ -184,90 +184,24 @@ def get_lat_lons(taxonomy_id, max_to_show):
     # not be performant. We must order by CondensedProfile.id at least because
     # the lat and lon of geographic_location__latitude__sam /
     # geographic_location__longitude__sam are in separate rows.
-    lat_lon_db_entries = NcbiMetadata.query.join(NcbiMetadata.biosample_attributes).join(NcbiMetadata.condensed_profiles).with_entities(
-        NcbiMetadata.acc, BiosampleAttribute.k, BiosampleAttribute.v).where(
-        BiosampleAttribute.k.in_(
-            ['lat_lon_sam','geographic_location__latitude__sam','geographic_location__longitude__sam'])).where(
-                CondensedProfile.taxonomy_id==taxonomy_id
-            ).where(
-                BiosampleAttribute.v.not_in(['missing','not applicable',None])
-            ).where(
-                CondensedProfile.relative_abundance > 0.01
-            ).order_by(CondensedProfile.id).limit(max_to_show).all()
-
-    print('db entry hits: '+str(lat_lon_db_entries))
-
-    lat_lon_regex = re.compile('^([0-9.-]+) ([NS]),{0,1} ([0-9.-]+) ([EW])$')
-    # geoloc_lat_regex = re.compile('^([0-9.-]+) ([NS])$')
-    # geoloc_lon_regex = re.compile('^([0-9.-]+) ([EW])$')
+    lat_lon_db_entries = NcbiMetadata.query.join(NcbiMetadata.condensed_profiles).with_entities(
+        NcbiMetadata.acc, NcbiMetadata.latitude, NcbiMetadata.longitude).where(
+            NcbiMetadata.latitude != None
+        ).where(
+            CondensedProfile.relative_abundance > 0.01
+        ).where(
+            CondensedProfile.taxonomy_id == taxonomy_id
+        ).order_by(CondensedProfile.relative_abundance.desc(), CondensedProfile.id).limit(max_to_show).all()
 
     lat_lons = {}
-    previous_sample = None
-    previous_geographic_lat_or_lon = None
-
-    for (sample_name, k, v) in lat_lon_db_entries:
-        print((sample_name, k, v, previous_sample, previous_geographic_lat_or_lon))
-        if sample_name != previous_sample:
-            if k == 'lat_lon_sam':
-                matches = lat_lon_regex.match(v)
-                if matches is None:
-                    print("Unexpected lat_lon_sam value: %s" % v)
-                    continue
-                lat = float(matches.group(1))
-                if matches.group(2) == 'S':
-                    lat = -lat
-                lon = float(matches.group(3))
-                if matches.group(4) == 'W':
-                    lon = -lon
-                if validate_lat_lon(lat, lon):
-                    mykey = '%s %s' % (lat, lon)
-                    if mykey in lat_lons:
-                        lat_lons[mykey]['sample_names'].append(sample_name)
-                    else:
-                        lat_lons[mykey] = {'lat_lon': [lat, lon], 'sample_names': [sample_name]}
-            else:
-                previous_geographic_lat_or_lon = [k, v]
+    print(lat_lon_db_entries)
+    for (sample_name, lat, lon) in lat_lon_db_entries:
+        mykey = '%s %s' % (lat, lon)
+        if mykey in lat_lons:
+            lat_lons[mykey]['sample_names'].append(sample_name)
         else:
-            if k == 'lat_lon_sam':
-                continue # duplicate entry (unless it doesn't validate, eh..)
-            if previous_geographic_lat_or_lon is None:
-                previous_geographic_lat_or_lon = [k, v]
-            else:
-                if len(set((k, previous_geographic_lat_or_lon[0]))) == 2:
-                    lat = None
-                    lon = None
-                    if k == 'geographic_location__latitude__sam':
-                        lat_input = v
-                        lon_input = previous_geographic_lat_or_lon[1]
-                    elif k == 'geographic_location__longitude__sam':
-                        lat_input = previous_geographic_lat_or_lon[1]
-                        lon_input = v
-                    else:
-                        print("Unexpected geographic_location__latitude__sam or geographic_location__longitude__sam value: %s" % [v, previous_geographic_lat_or_lon])
-                        continue
-
-                    try:
-                        lat = float(lat_input)
-                        lon = float(lon_input)
-                    except ValueError:
-                        print("Unexpected geographic_location__latitude__sam or geographic_location__longitude__sam value: %s" % [lat, lon])
-                        continue
-                    previous_geographic_lat_or_lon = None
-
-                    if lat and lon and validate_lat_lon(lat, lon):
-                        mykey = '%s %s' % (lat, lon)
-                        if mykey in lat_lons:
-                            lat_lons[mykey]['sample_names'].append(sample_name)
-                        else:
-                            lat_lons[mykey] = {'lat_lon': [lat, lon], 'sample_names': [sample_name]}
-
-                else:
-                    print("Unexpected geographic_location__latitude__sam or geographic_location__longitude__sam value: %s" % (k, v, previous_geographic_lat_or_lon))
-                    continue
-            
-        previous_sample = sample_name
-
-    return list(lat_lons.values())    
+            lat_lons[mykey] = {'lat_lon': [lat, lon], 'sample_names': [sample_name]}
+    return list(lat_lons.values())   
 
 
 def validate_lat_lon(lat, lon):
