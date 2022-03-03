@@ -48,6 +48,9 @@ from flask_sqlalchemy import SQLAlchemy
 
 from api.models import CondensedProfile, NcbiMetadata, Taxonomy, BiosampleAttribute
 
+sys.path = ['.'] + sys.path
+from parse_lat_lons import parse_lat_lons
+
 from singlem.condense import WordNode
 
 
@@ -247,6 +250,18 @@ def fill_metadata(db, metadata_json_files):
     db.session.commit()
     logging.info("Wrote {} metadata and {} attribute rows to DB".format(metadata_count, attribute_count))
 
+def fill_lat_lons(db):
+    update_count = 0
+
+    for (ncbi_metadata_id, _sample_name, lat, lon) in parse_lat_lons():
+        NcbiMetadata.query.filter_by(id=ncbi_metadata_id).update({'latitude': lat, 'longitude': lon})
+        update_count += 1
+        if update_count % 10000 == 0:
+            db.session.commit()
+    db.session.commit()
+    logging.info("Updated {} lat/lons".format(update_count))
+
+
 if __name__ == '__main__':
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument('--debug', help='output debug information', action="store_true")
@@ -297,4 +312,6 @@ if __name__ == '__main__':
         fill_condensed_and_taxonomy_tables(db, args.condensed_otu_table, blacklist)
 
         fill_metadata(db, args.metadata_json_files)
+
+        fill_lat_lons(db)
 

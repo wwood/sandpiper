@@ -57,7 +57,7 @@ class CondensedProfile(db.Model):
     #     "CREATE TABLE condensed_profiles (id INTEGER PRIMARY KEY,"
     #     " sample_name text, coverage float, taxonomy_id INTEGER);\n")
     id = db.Column(db.Integer, primary_key=True)
-    sample_name = db.Column(db.String, nullable=False, index=True)
+    sample_name = db.Column(db.String, db.ForeignKey('ncbi_metadata.acc'), nullable=False, index=True)
     coverage = db.Column(db.Float, nullable=False, index=True)
     filled_coverage = db.Column(db.Float, nullable=False, index=True)
     relative_abundance = db.Column(db.Float, nullable=False, index=True)
@@ -160,8 +160,11 @@ class NcbiMetadata(db.Model):
     ena_first_public_run = db.Column(db.String)
     ena_last_update_run = db.Column(db.String)
     sample_name_sam = db.Column(db.String)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
 
     biosample_attributes = db.relationship('BiosampleAttribute', backref='ncbi_metadata')
+    condensed_profiles = db.relationship('CondensedProfile', backref='ncbi_metadata')
 
     def to_displayable_dict(self):
         return dict(acc=self.acc,

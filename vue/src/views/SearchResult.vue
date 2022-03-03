@@ -5,13 +5,13 @@
     </section>
 
     <section class="section container" v-if="search_result !== null">
-      <!-- <l-map style="height: 700px" :zoom="zoom">
+      <l-map style="height: 700px" :zoom="zoom" v-if="this.lat_lons !== null">
         <l-tile-layer :url="url" :attribution="attribution" />
-          <l-marker v-for="markerLatLng in search_result['lat_lons']" v-bind:key='markerLatLng[0]' :lat-lng="markerLatLng['lat_lon']">
-            <l-popup :content="'<a href=\'/run/' + markerLatLng['sample_name'] + '\'><b>' + markerLatLng['sample_name'] + '</b></a>'" :options="{ interactive: true }">
+          <l-marker v-for="markerLatLng in this.lat_lons" v-bind:key="markerLatLng[0]" :lat-lng="markerLatLng['lat_lon']">
+            <l-popup :content="html_for_map_popup(markerLatLng)" :options="{ interactive: true }">
             </l-popup>
           </l-marker>
-      </l-map> -->
+      </l-map>
 
       <div class="section">
         <h2 class="title is-4">Matching samples</h2>
@@ -58,7 +58,7 @@ import { fetchGlobalDataByTaxonomy, fetchRunsByTaxonomy } from '@/api'
 // If you need to reference 'L', such as in 'L.icon', then be sure to
 // explicitly import 'leaflet' into your component
 // import L from 'leaflet'
-// import { LMap, LTileLayer, LMarker, LPopup } from 'vue2-leaflet'
+import { LMap, LTileLayer, LMarker, LPopup } from 'vue2-leaflet'
 
 // Make the marker appear https://vue2-leaflet.netlify.app/quickstart/#marker-icons-are-missing
 import { Icon } from 'leaflet'
@@ -73,10 +73,10 @@ export default {
   name: 'SearchResults',
   props: ['taxonomy'],
   components: {
-    // LMap,
-    // LTileLayer,
-    // LMarker,
-    // LPopup
+    LMap,
+    LTileLayer,
+    LMarker,
+    LPopup
   },
   data: function () {
     return {
@@ -90,6 +90,7 @@ export default {
       sortField: 'relative_abundance',
       sortDirection: 'desc',
 
+      lat_lons: null,
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       attribution:
         '&copy; <a target="_blank" href="http://osm.org/copyright">OpenStreetMap</a> contributors',
@@ -107,6 +108,8 @@ export default {
         .then(response => {
           this.taxon = response.data.taxon
           this.total_num_results = response.data.total_num_results
+          this.lat_lons = response.data.lat_lons
+          console.log('finished fetching global data')
         })
       this.fetchData() // call here so that this and the run data are loaded by the watch in a single function
     },
@@ -133,6 +136,16 @@ export default {
       return {
         style: 'text-align: center;'
       }
+    },
+    html_for_map_popup (markerLatLng) {
+      let toReturn = ''
+      markerLatLng.sample_names.forEach((sample) => {
+        // if (toReturn !== '') {
+        //   toReturn += '<br>'
+        // }
+        toReturn += '<a href="/run/' + sample + '">' + sample + '</a><br>'
+      })
+      return toReturn
     }
   },
   watch: {

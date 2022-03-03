@@ -9,7 +9,8 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy import select, distinct
 from sqlalchemy.sql import func
 from sqlalchemy.orm import joinedload, lazyload
-from .models import NcbiMetadata, db, Marker, Otu, CondensedProfile, Taxonomy
+from .models import NcbiMetadata, db, Marker, Otu, CondensedProfile, Taxonomy, BiosampleAttribute
+# from api.models import #for flask shell
 
 import os, sys
 sys.path = [os.environ['HOME']+'/git/singlem-local'] + [os.environ['HOME']+'/git/singlem'] + sys.path
@@ -104,9 +105,14 @@ def taxonomy_search_global_data(taxon):
     if taxonomy is None:
         return taxonomy_search_fail_json('no taxonomy found for '+taxon)
     total_num_hits = CondensedProfile.query.filter_by(taxonomy_id=taxonomy.id).count()
+    # lat_lons are commented out for now because it is too slow to query and
+    # render. SQL needs better querying i.e. in batch, and multiple
+    # annotations at a single location need to be collapsed.
+    lat_lons = get_lat_lons(taxonomy.id, 100)
     return jsonify({ 
         'total_num_results': total_num_hits,
-        'taxon': taxonomy.split_taxonomy()
+        'taxon': taxonomy.split_taxonomy(),
+        'lat_lons': lat_lons
     })
 
 # sort_field=${sortField}&sort_direction=${sortDirection}&page=${page
@@ -147,10 +153,6 @@ def taxonomy_search(taxon):
                 CondensedProfile.taxonomy_id == taxonomy.id).limit(
                     page_size).offset((page-1)*page_size).all()
         
-        # lat_lons are commented out for now because it is too slow to query and
-        # render. SQL needs better querying i.e. in batch, and multiple
-        # annotations at a single location need to be collapsed.
-        lat_lons = [] #get_lat_lons([c.sample_name for c in sorted(condensed_profile_hits, key=lambda x: -x.relative_abundance)])
         return jsonify({
             'taxon': taxonomy.split_taxonomy(),
             'results': {
@@ -158,8 +160,7 @@ def taxonomy_search(taxon):
                     'sample_name': c.sample_name,
                     'relative_abundance': round(c.relative_abundance*100,2),
                     'coverage': round(c.filled_coverage, 2) }
-                    for c in condensed_profile_hits],
-                'lat_lons': lat_lons
+                    for c in condensed_profile_hits],                
             }
         })
 
@@ -178,74 +179,96 @@ def taxonomy_search_hints(taxon):
 
     return jsonify({ 'taxonomies': [t.name for t in taxonomies] })
 
-def get_lat_lons(sample_names):
-    lat_lon_regex = re.compile('^([0-9.-]+) ([NS]) ([0-9.-]+) ([EW])$')
-    geoloc_lat_regex = re.compile('^([0-9.-]+) ([NS])$')
-    geoloc_lon_regex = re.compile('^([0-9.-]+) ([EW])$')
+def get_lat_lons(taxonomy_id, max_to_show):
+    # It would be ideal to order by relative_abundance desc, but this seems to
+    # not be performant. We must order by CondensedProfile.id at least because
+    # the lat and lon of geographic_location__latitude__sam /
+    # geographic_location__longitude__sam are in separate rows.
+    lat_lon_db_entries = NcbiMetadata.query.join(NcbiMetadata.biosample_attributes).join(NcbiMetadata.condensed_profiles).with_entities(
+        NcbiMetadata.acc, BiosampleAttribute.k, BiosampleAttribute.v).where(
+        BiosampleAttribute.k.in_(
+            ['lat_lon_sam','geographic_location__latitude__sam','geographic_location__longitude__sam'])).where(
+                CondensedProfile.taxonomy_id==taxonomy_id
+            ).where(
+                BiosampleAttribute.v.not_in(['missing','not applicable',None])
+            ).where(
+                CondensedProfile.relative_abundance > 0.01
+            ).order_by(CondensedProfile.id).limit(max_to_show).all()
+
+    print('db entry hits: '+str(lat_lon_db_entries))
+
+    lat_lon_regex = re.compile('^([0-9.-]+) ([NS]),{0,1} ([0-9.-]+) ([EW])$')
+    # geoloc_lat_regex = re.compile('^([0-9.-]+) ([NS])$')
+    # geoloc_lon_regex = re.compile('^([0-9.-]+) ([EW])$')
 
     lat_lons = {}
-    
-    for sample_name in sample_names:
-        metadata = NcbiMetadata.query.filter_by(acc=sample_name).options(joinedload(NcbiMetadata.biosample_attributes)).first()
-        if metadata is None:
-            continue
+    previous_sample = None
+    previous_geographic_lat_or_lon = None
 
-        if len(lat_lons) >= 500:
-            break
+    for (sample_name, k, v) in lat_lon_db_entries:
+        print((sample_name, k, v, previous_sample, previous_geographic_lat_or_lon))
+        if sample_name != previous_sample:
+            if k == 'lat_lon_sam':
+                matches = lat_lon_regex.match(v)
+                if matches is None:
+                    print("Unexpected lat_lon_sam value: %s" % v)
+                    continue
+                lat = float(matches.group(1))
+                if matches.group(2) == 'S':
+                    lat = -lat
+                lon = float(matches.group(3))
+                if matches.group(4) == 'W':
+                    lon = -lon
+                if validate_lat_lon(lat, lon):
+                    mykey = '%s %s' % (lat, lon)
+                    if mykey in lat_lons:
+                        lat_lons[mykey]['sample_names'].append(sample_name)
+                    else:
+                        lat_lons[mykey] = {'lat_lon': [lat, lon], 'sample_names': [sample_name]}
+            else:
+                previous_geographic_lat_or_lon = [k, v]
+        else:
+            if k == 'lat_lon_sam':
+                continue # duplicate entry (unless it doesn't validate, eh..)
+            if previous_geographic_lat_or_lon is None:
+                previous_geographic_lat_or_lon = [k, v]
+            else:
+                if len(set((k, previous_geographic_lat_or_lon[0]))) == 2:
+                    lat = None
+                    lon = None
+                    if k == 'geographic_location__latitude__sam':
+                        lat_input = v
+                        lon_input = previous_geographic_lat_or_lon[1]
+                    elif k == 'geographic_location__longitude__sam':
+                        lat_input = previous_geographic_lat_or_lon[1]
+                        lon_input = v
+                    else:
+                        print("Unexpected geographic_location__latitude__sam or geographic_location__longitude__sam value: %s" % [v, previous_geographic_lat_or_lon])
+                        continue
 
-        # lat_lon_sam in BioSample metadata, like SRR9113719
-        lat_lon_annotations = [attr for attr in metadata.biosample_attributes if attr.k == 'lat_lon_sam']
-        if len(lat_lon_annotations) > 0:
-            lat_lon = lat_lon_annotations[0].v
-            if lat_lon is None or lat_lon == 'not applicable': # not applicable ERR1914274
-                continue
-            matches = lat_lon_regex.match(lat_lon)
-            if matches is None:
-                print("Unexpected lat_lon_sam value: %s" % lat_lon)
-                continue
-            lat = float(matches.group(1))
-            if matches.group(2) == 'S':
-                lat = -lat
-            lon = float(matches.group(3))
-            if matches.group(4) == 'W':
-                lon = -lon
-            if validate_lat_lon(lat, lon):
-                lat_lons[sample_name] = {'lat_lon': [lat, lon], 'sample_name': sample_name}
-                continue
+                    try:
+                        lat = float(lat_input)
+                        lon = float(lon_input)
+                    except ValueError:
+                        print("Unexpected geographic_location__latitude__sam or geographic_location__longitude__sam value: %s" % [lat, lon])
+                        continue
+                    previous_geographic_lat_or_lon = None
 
-        # Samples like ERR4131628
-        geolocs_latitude = list([attr for attr in metadata.biosample_attributes if attr.k == 'geographic_location__latitude__sam'])
-        geolocs_longitude = list([attr for attr in metadata.biosample_attributes if attr.k == 'geographic_location__longitude__sam'])
-        if len(geolocs_latitude) == 1 and len(geolocs_longitude) == 1:
-            try:
-                matches = geoloc_lat_regex.match(geolocs_latitude[0].v)
-                if matches is not None:
-                    lat = float(matches.group(1))
-                    if matches.group(2) == 'S':
-                        lat = -lat
+                    if lat and lon and validate_lat_lon(lat, lon):
+                        mykey = '%s %s' % (lat, lon)
+                        if mykey in lat_lons:
+                            lat_lons[mykey]['sample_names'].append(sample_name)
+                        else:
+                            lat_lons[mykey] = {'lat_lon': [lat, lon], 'sample_names': [sample_name]}
+
                 else:
-                    lat = float(geolocs_latitude[0].v)
-            except ValueError:
-                print("Failed to parse {} as a latitude".format(geolocs_latitude[0].v))
-                continue
+                    print("Unexpected geographic_location__latitude__sam or geographic_location__longitude__sam value: %s" % (k, v, previous_geographic_lat_or_lon))
+                    continue
+            
+        previous_sample = sample_name
 
-            try:
-                matches = geoloc_lon_regex.match(geolocs_longitude[0].v)
-                if matches is not None:
-                    lon = float(matches.group(1))
-                    if matches.group(2) == 'W':
-                        lon = -lon
-                else:
-                    lon = float(geolocs_longitude[0].v)
-            except ValueError:
-                print("Failed to parse {} as a longitude".format(geolocs_longitude[0].v))
-                continue
+    return list(lat_lons.values())    
 
-            if validate_lat_lon(lat, lon):
-                lat_lons[sample_name] = {'lat_lon': [lat, lon], 'sample_name': sample_name}
-                continue
-
-    return list(lat_lons.values())
 
 def validate_lat_lon(lat, lon):
     if lat >= -90 and lat <= 90 and lon >= -180 and lon <= 180:
