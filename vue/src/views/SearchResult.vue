@@ -1,55 +1,107 @@
 <template>
-  <div>
-    <section class="section container" v-if="total_num_results !== null">
-      Found {{ total_num_results.toLocaleString("en-US") }} runs containing "<i>{{ taxonomy }}</i>"
-    </section>
+  <section class="section">
+    <div v-if="search_result !== null" class="container">
+      <section class="section">
+        <!-- <h1 class="title">Search results for {{ taxonomy }}</h1> -->
+        <h1 class="title" style="text-align: center;">The {{ taxonomy_level }} {{ taxon_name }}</h1>
+        <p style="text-align: center;">{{ lineage.join('; ') }}</p>
+      </section>
 
-    <section class="section container" v-if="search_result !== null">
-      <l-map style="height: 700px" :zoom="zoom" v-if="this.lat_lons !== null">
-        <l-tile-layer :url="url" :attribution="attribution" />
-          <l-marker v-for="markerLatLng in this.lat_lons" v-bind:key="markerLatLng[0]" :lat-lng="markerLatLng['lat_lon']">
-            <l-popup :content="html_for_map_popup(markerLatLng)" :options="{ interactive: true }">
-            </l-popup>
-          </l-marker>
-      </l-map>
+      <section class="section">
+        <nav class="level">
+          <div class="level-item has-text-centered">
+            <div class="level-item">
+              <div>
+                <a href="#geographic-distribution">
+                  <p class="heading">Geographic Distribution</p>
+                  <p class="title" v-if="num_lat_lon_runs < 1000">{{ num_lat_lon_runs.toLocaleString("en-US") }}</p>
+                  <p class="title" v-else>1000+</p>
+                </a>
+                <p>runs with >1% relative abundance and lat/lon</p>
+              </div>
+            </div>
+          </div>
+          <div class="level-item has-text-centered">
+            <div class="level-item">
+              <div>
+                <a href="#matching-samples">
+                  <p class="heading">Matching Samples</p>
+                  <p class="title"> {{ total_num_results.toLocaleString("en-US") }}</p>
+                </a>
+                <p>runs total</p>
+              </div>
+            </div>
+          </div>
+        </nav>
+      </section>
 
-      <div class="section">
-        <h2 class="title is-4">Matching samples</h2>
-        <b-table
-          :data="search_result['condensed_profiles']"
-          :loading="loading"
-          :striped="true"
-          :sort-icon="'arrow-up'"
-          :default-sort="this.sortField"
-          :default-sort-direction="this.sortDirection"
-          paginated
-          :current-page="this.page"
-          :per-page="this.pageSize"
-          pagination-simple
-          backend-pagination
-          backend-sorting
-          :total="total_num_results"
-          @page-change="onPageChange"
-          @sort="onSort">
+      <section class="section" id="geographic-distribution">
+        <div class="section" v-if="this.lat_lons !== null">
+          <h2 class="subtitle is-2 bd-anchor-title">
+            <a class="bd-anchor-link" href="#geographic-distribution"># </a>
+            <span class="bd-anchor-name">Geographic distribution</span>
+          </h2>
+          <div class="section">
+            <div v-if="this.num_lat_lon_runs < 1000">
+              {{ this.num_lat_lon_runs.toLocaleString("en-US") }} runs have relative abundance > 1% and associated latitude/longitude metadata:
+            </div>
+            <div v-else>
+              1,000+ runs have relative abundance > 1% and associated latitude/longitude metadata:
+            </div>
+          </div>
+          <l-map style="height: 900px" :zoom="zoom" :center="center">
+            <l-tile-layer :url="url" :attribution="attribution" />
+              <l-marker v-for="markerLatLng in this.lat_lons" v-bind:key="markerLatLng[0]" :lat-lng="markerLatLng['lat_lon']">
+                <l-popup :content="html_for_map_popup(markerLatLng)" :options="{ interactive: true }">
+                </l-popup>
+              </l-marker>
+          </l-map>
+        </div>
 
-          <b-table-column field='sample_name' label='Run' v-slot="props">
-            <a :href="'/run/' + props.row.sample_name">{{ props.row.sample_name }}</a>
-          </b-table-column>
+        <section class="section" id="matching-samples">
+          <h2 class="subtitle is-2 bd-anchor-title">
+            <a class="bd-anchor-link" href="#matching-samples"># </a>
+            <span class="bd-anchor-name">Matching samples</span>
+          </h2>
+          <b-table
+            :data="search_result['condensed_profiles']"
+            :loading="loading"
+            :striped="true"
+            :sort-icon="'arrow-up'"
+            :default-sort="this.sortField"
+            :default-sort-direction="this.sortDirection"
+            paginated
+            :current-page="this.page"
+            :per-page="this.pageSize"
+            pagination-simple
+            backend-pagination
+            backend-sorting
+            :total="total_num_results"
+            @page-change="onPageChange"
+            @sort="onSort">
 
-          <b-table-column field='relative_abundance' label='Relative abundance (%)' v-slot="props" centered sortable>
-            {{ props.row.relative_abundance }}
-          </b-table-column>
+            <b-table-column field='sample_name' label='Run' v-slot="props">
+              <a :href="'/run/' + props.row.sample_name">{{ props.row.sample_name }}</a>
+            </b-table-column>
 
-          <b-table-column field='coverage' label='Coverage' v-slot="props" centered sortable>
-            {{ props.row.coverage }}
-          </b-table-column>
-        </b-table>
-      </div>
-    </section>
-    <section class="section container" v-else>
-      Searching ..
-    </section>
-  </div>
+            <b-table-column field='relative_abundance' label='Relative abundance (%)' v-slot="props" centered sortable>
+              {{ props.row.relative_abundance }}
+            </b-table-column>
+
+            <b-table-column field='coverage' label='Coverage' v-slot="props" centered sortable>
+              {{ props.row.coverage }}
+            </b-table-column>
+          </b-table>
+        </section>
+      </section>
+    </div>
+
+    <div v-else>
+      <section class="section container">
+        Searching ..
+      </section>
+    </div>
+  </section>
 </template>
 
 <script>
@@ -61,7 +113,8 @@ import { fetchGlobalDataByTaxonomy, fetchRunsByTaxonomy } from '@/api'
 import { LMap, LTileLayer, LMarker, LPopup } from 'vue2-leaflet'
 
 // Make the marker appear https://vue2-leaflet.netlify.app/quickstart/#marker-icons-are-missing
-import { Icon } from 'leaflet'
+import { Icon, latLng } from 'leaflet'
+
 delete Icon.Default.prototype._getIconUrl
 Icon.Default.mergeOptions({
   iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
@@ -82,7 +135,8 @@ export default {
     return {
       loading: true,
       search_result: null,
-      taxon: null,
+      taxon_name: null,
+      lineage: null,
       sortIcon: 'arrow-up',
       total_num_results: null,
       page: 1,
@@ -91,10 +145,12 @@ export default {
       sortDirection: 'desc',
 
       lat_lons: null,
+      num_lat_lon_runs: null,
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       attribution:
         '&copy; <a target="_blank" href="http://osm.org/copyright">OpenStreetMap</a> contributors',
-      zoom: 2
+      center: latLng(0, 0),
+      zoom: 1.5
     }
   },
   created () {
@@ -106,10 +162,12 @@ export default {
     fetchGlobalData () {
       fetchGlobalDataByTaxonomy(this.taxonomy)
         .then(response => {
-          this.taxon = response.data.taxon
+          this.taxon_name = response.data.taxon_name
+          this.lineage = response.data.lineage
+          this.taxonomy_level = response.data.taxonomy_level
           this.total_num_results = response.data.total_num_results
           this.lat_lons = response.data.lat_lons
-          console.log('finished fetching global data')
+          this.num_lat_lon_runs = response.data.num_lat_lon_runs
         })
       this.fetchData() // call here so that this and the run data are loaded by the watch in a single function
     },

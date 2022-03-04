@@ -108,11 +108,14 @@ def taxonomy_search_global_data(taxon):
     # lat_lons are commented out for now because it is too slow to query and
     # render. SQL needs better querying i.e. in batch, and multiple
     # annotations at a single location need to be collapsed.
-    lat_lons = get_lat_lons(taxonomy.id, 100)
+    lat_lons = get_lat_lons(taxonomy.id, 1000)
     return jsonify({ 
         'total_num_results': total_num_hits,
-        'taxon': taxonomy.split_taxonomy(),
-        'lat_lons': lat_lons
+        'taxon_name': taxonomy.name.split('__')[-1],
+        'lineage': taxonomy.split_taxonomy(),
+        'taxonomy_level': taxonomy.taxonomy_level,
+        'lat_lons': lat_lons,
+        'num_lat_lon_runs': sum([len(l['sample_names']) for l in lat_lons]),
     })
 
 # sort_field=${sortField}&sort_direction=${sortDirection}&page=${page
@@ -154,7 +157,6 @@ def taxonomy_search(taxon):
                     page_size).offset((page-1)*page_size).all()
         
         return jsonify({
-            'taxon': taxonomy.split_taxonomy(),
             'results': {
                 'condensed_profiles': [{
                     'sample_name': c.sample_name,
@@ -194,7 +196,6 @@ def get_lat_lons(taxonomy_id, max_to_show):
         ).order_by(CondensedProfile.relative_abundance.desc(), CondensedProfile.id).limit(max_to_show).all()
 
     lat_lons = {}
-    print(lat_lon_db_entries)
     for (sample_name, lat, lon) in lat_lon_db_entries:
         mykey = '%s %s' % (lat, lon)
         if mykey in lat_lons:
