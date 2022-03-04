@@ -3,7 +3,13 @@
     <div v-if="search_result !== null" class="container">
       <section class="section">
         <!-- <h1 class="title">Search results for {{ taxonomy }}</h1> -->
-        <h1 class="title" style="text-align: center;">The {{ taxonomy_level }} {{ taxon_name }}</h1>
+        <h1 class="title" style="text-align: center;">
+          The {{ taxonomy_level }}
+          <span v-if="taxonomy_level==='species' || taxonomy_level==='genus'">
+            <i>{{ taxon_name }}</i>
+          </span>
+          <span v-else>{{ taxon_name }}</span>
+          </h1>
         <p style="text-align: center;">{{ lineage.join('; ') }}</p>
       </section>
 
