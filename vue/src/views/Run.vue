@@ -25,7 +25,7 @@
 
         <div class="sunburst">
           <template v-if="condensed_tree != null">
-            <Sunburst :json_tree="sunburst_tree" />
+            <Sunburst3 :json_tree="sunburst_tree" />
           </template>
         </div>
       </div>
@@ -40,7 +40,7 @@
 <script>
 
 /* eslint-disable vue/no-unused-components */
-import Sunburst from '@/components/Sunburst.vue'
+import Sunburst3 from '@/components/Sunburst3.vue'
 import RunMetadata from '@/components/RunMetadata.vue'
 
 import { fetchRunMetadata, fetchRunCondensed } from '@/api'
@@ -55,7 +55,7 @@ export default {
   },
   props: ['accession'],
   components: {
-    Sunburst,
+    Sunburst3,
     RunMetadata
   },
   computed: {

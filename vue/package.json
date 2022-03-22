@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
+    "build": "npm run lint -- --fix && vue-cli-service build",
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
@@ -13,6 +13,7 @@
     "buefy": "^0.9.14",
     "bulma": "^0.9.3",
     "core-js": "^3.6.5",
+    "d3": "^7.3.0",
     "vue": "^2.6.11",
     "vue-class-component": "^7.2.3",
     "vue-d3-sunburst": "^1.9.1",
