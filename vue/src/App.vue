@@ -59,8 +59,9 @@
   }
   .sunburst {
     width: 100%;
-    height: 700px;
+    height: 900px;
     position: relative;
+    font-size: 10px;
   }
 
   .sandpiperbackground {

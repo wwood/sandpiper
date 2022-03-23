@@ -62,7 +62,6 @@ def fetch_condensed(sample_name):
         for (i, tax) in enumerate(taxons):
             if tax not in taxons_to_wordnode:
                 wn = WordNode(last_taxon, tax)
-                # print("Adding tax %s with prev %s" % (tax, last_taxon.word))
                 last_taxon.children[tax] = wn
                 taxons_to_wordnode[tax] = wn #TODO: Problem when there is non-unique labels? Require full taxonomy used?
             last_taxon = taxons_to_wordnode[tax]
@@ -78,10 +77,10 @@ def wordnode_json(wordnode, order, depth):
     else:
         name = matches.group(1)
     j = {
-        'name': name,
+        'name': '' if name == 'Root' else name,
         'size': wordnode.coverage,
         'order': order,
-        'depth': depth,
+        'condensed_depth': depth,
     }
     # Sort children descending by coverage so more abundance lineages are first
     sorted_children = sorted(wordnode.children.values(), key=lambda x: x.get_full_coverage(), reverse=True)
