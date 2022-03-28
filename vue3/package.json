@@ -10,6 +10,7 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },
   "dependencies": {
+    "@oruga-ui/oruga-next": "^0.5.5",
     "@oruga-ui/theme-bulma": "^0.2.4",
     "axios": "^0.26.1",
     "vue": "^3.2.31",
