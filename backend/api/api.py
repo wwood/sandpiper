@@ -208,3 +208,4 @@ def validate_lat_lon(lat, lon):
     if lat >= -90 and lat <= 90 and lon >= -180 and lon <= 180:
         return True
     return False
+                                           

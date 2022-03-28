@@ -16,7 +16,7 @@
             <b-navbar-item tag="router-link" :to="{ path: '/About' }">About</b-navbar-item>
         </template>
     </b-navbar>
-    <router-view />
+    <router-view :key="$route.fullPath" />
 
     &nbsp;
     <footer class="footer">
@@ -62,6 +62,14 @@
     height: 900px;
     position: relative;
     font-size: 10px;
+  }
+  .sunburst-annotation {
+    width: 100%;
+    position: relative;
+    font-size: 30px;
+  }
+  .svg-link {
+    fill: blue;
   }
 
   .sandpiperbackground {

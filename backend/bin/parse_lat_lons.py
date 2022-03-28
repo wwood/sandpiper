@@ -124,6 +124,8 @@ if __name__ == '__main__':
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
+    logging.warn("There is better code for this at big_data/3")
+
     sqlite_db_path = args.sandpiper_db
 
     # Create the app and create the tables

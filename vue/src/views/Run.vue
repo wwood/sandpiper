@@ -25,7 +25,7 @@
 
         <div class="sunburst">
           <template v-if="condensed_tree != null">
-            <Sunburst3 :json_tree="sunburst_tree" />
+            <Sunburst3 :json_tree="sunburst_tree" :overall_coverage="10.3" />
           </template>
         </div>
       </div>

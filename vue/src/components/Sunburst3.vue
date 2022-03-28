@@ -1,10 +1,11 @@
 <template>
-<div>
-  <!-- here: {{this.getdata()}} aye -->
-  <!-- <svg class="sunburst">{{ sunburst(this.getdata()) }}</svg> -->
-  <!-- {{ sunburst(this.getdata()) }} -->
-  <!-- <svg id="sunburst3"><circle/></svg> -->
-  <svg id="dataviz_area" class="sunburst" height=400></svg>
+  <div class="columns">
+    <div class="column is-three-quarters">
+      <svg id="dataviz_area" class="sunburst" height=400 width=400></svg>
+    </div>
+    <div class="column sunburst-annotation">
+      <svg class="sunburst-annotation" id="annotation_area" height=400 width=300></svg>
+    </div>
   </div>
 </template>
 
@@ -20,8 +21,20 @@ export default {
   name: 'Sunburst3',
   props: ['json_tree'],
   mounted () {
+    console.log('mounted')
     this.sunburst(this.json_tree)
   },
+  updated () {
+    console.log('updated')
+    this.sunburst(this.json_tree)
+  },
+  // watch: {
+  //   // call again the method if the route changes
+  //   // $route: 'sunburst'
+  //   load: function () {
+  //     this.mounted()
+  //   }
+  // },
   methods: {
     partition (sunburstData) {
       const root = d3.hierarchy(sunburstData)
@@ -30,7 +43,32 @@ export default {
       return d3.partition()
         .size([2 * Math.PI, root.height + 1])(root)
     },
+
+    phylogenyColor (order, depth) {
+      // console.log('colors in' + d[0] + ' : ' + d[1])
+      // console.log(order, depth)
+      // const order = d[0]
+      // const depth = d[1]
+      // const order = order
+      // const depth = condensed_depth
+      // console.log(order + '==' + depth)
+      const baseColors = ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00', '#cab2d6', '#6a3d9a']
+
+      const base = baseColors[order]
+      const colorScale = scaleLinear()
+        .domain([1, 12])
+        .range([base, 'white'])
+      if (depth === 0) {
+        return 'white'
+      } else {
+        return colorScale(depth)
+      }
+    },
+
     sunburst (sunburstData) {
+      // const sunburstData = this.json_tree
+      console.log('redrawing')
+      console.log(sunburstData)
       // const color = function (s) {
       //   phylogenyColor(s)
       // } // self.phylogenyColor // d3.scaleOrdinal(d3.quantize(d3.interpolateRainbow, 30))
@@ -49,7 +87,8 @@ export default {
 
       root.each(d => { d.current = d })
 
-      // const svg = d3.create('svg')
+      // clear SVG contents first
+      d3.select('#dataviz_area > *').remove()
       const svg = d3.select('#dataviz_area')
         .attr('viewBox', [0, 0, width, width])
         // .style('font', '10px')
@@ -67,8 +106,9 @@ export default {
 
         .attr('d', d => arc(d.current))
 
-      path.filter(d => d.children)
+      path
         .style('cursor', 'pointer')
+        .on('dblclick', doubleclicked)
         .on('click', clicked)
         .on('mouseover', function (_event, p) {
           path.filter(d => d.data.name === p.data.name)
@@ -83,7 +123,7 @@ export default {
         })
 
       path.append('title')
-        .text(d => `${d.ancestors().map(d => d.data.name).reverse().join('; ')}\ncoverage: ${format(d.data.size)}\n`)
+        .text(d => `${d.ancestors().map(d => d.data.name).reverse().join(' ')}\ncoverage: ${format(d.data.size)}\n`)
 
       const label = g.append('g')
         .attr('pointer-events', 'none')
@@ -102,9 +142,86 @@ export default {
         .attr('r', radius)
         .attr('fill', 'none')
         .attr('pointer-events', 'all')
-        .on('click', clicked)
+        .on('dblclick', doubleclicked)
+
+      // Calculate total coverage amongst all lineages
+      const overallCoverage = d3.hierarchy(sunburstData)
+        .sum(function (d) { return d.size }).value
 
       function clicked (_event, p) {
+        // clear any content currently there
+        d3.select('#annotation_area > *').remove()
+
+        // Annotate the annotation_area with name, taxonomy and coverage info
+        const svg = d3.select('#annotation_area')
+          .attr('viewBox', [0, 0, 600, 600])
+        const g = svg.append('g')
+        const linewidth = 50
+
+        // Taxonomy is all parents in order except the root
+        var current = p
+        var taxonomy = []
+        while (current.parent) {
+          taxonomy.push(current.data.name)
+          current = current.parent
+        }
+        taxonomy = taxonomy.reverse()
+        for (var i = 0; i < taxonomy.length; i++) {
+          // g.append('text')
+          //   .attr('x', 0)
+          //   .attr('y', linewidth * (i + 2))
+          //   .text(`${taxonomy[taxonomy.length - i - 1]}`)
+          const taxonPrefix = ['d__', 'p__', 'c__', 'o__', 'f__', 'g__', 's__'][i]
+          const taxonLink = '/taxonomy/' + taxonPrefix + taxonomy[i]
+          // g.append('svg:a')
+          //   .attr('xlink:href', taxonLink)
+          //   .append('svg')
+          //   .attr('x', 0)
+          //   .attr('y', linewidth * (i + 2))
+          //   .attr('font-family', 'FontAwesome 5 Free')
+          //   .attr('font-size', '5em') // function (d) { return d.size + 'em' })
+          //   // .text('\uf871')
+          //   .text('&#xf871')
+
+          // g.append('svg:a')
+          //   .attr('xlink:href', taxonLink)
+          //   .append('text')
+          //   .attr('x', 0)
+          //   .attr('y', linewidth * (i + 2))
+          //   .attr('font-family', 'FontAwesome 5 Free')
+          //   .attr('font-size', '5em') // function (d) { return d.size + 'em' })
+          //   // .text('\uf871')
+          //   .text('&#xf871')
+          g.append('svg:a')
+            .attr('xlink:href', taxonLink)
+            .append('text')
+            .attr('x', 75)
+            .attr('y', linewidth * (i + 2))
+            .attr('class', 'svg-link')
+            .text(`${taxonomy[i]}`)
+        }
+        // At most 6 levels of depth I think
+
+        // calculate total coverage as size of node and descendents
+        var totalCoverage = p.sum(d => d.size).value
+        g.append('text')
+          .attr('x', 0)
+          .attr('y', 10 * linewidth)
+          .text(`coverage: ${round(totalCoverage, 2)}`)
+
+        g.append('text')
+          .attr('x', 0)
+          .attr('y', 12 * linewidth)
+          .text(`relative abundance: ${round(totalCoverage / overallCoverage * 100, 2)} %`)
+        console.log(p.data)
+      }
+
+      function round (value, precision) {
+        var multiplier = Math.pow(10, precision || 0)
+        return Math.round(value * multiplier) / multiplier
+      }
+
+      function doubleclicked (_event, p) {
         parent.datum(root)
 
         root.each(d => {
@@ -156,59 +273,8 @@ export default {
       }
 
       return svg.node()
-    },
-
-    phylogenyColor (order, depth) {
-      // console.log('colors in' + d[0] + ' : ' + d[1])
-      // console.log(order, depth)
-      // const order = d[0]
-      // const depth = d[1]
-      // const order = order
-      // const depth = condensed_depth
-      // console.log(order + '==' + depth)
-      const baseColors = ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00', '#cab2d6', '#6a3d9a']
-
-      const base = baseColors[order]
-      const colorScale = scaleLinear()
-        .domain([1, 12])
-        .range([base, 'white'])
-      if (depth === 0) {
-        return 'white'
-      } else {
-        return colorScale(depth)
-      }
     }
   }
-  // components: {
-  //   breadcrumbTrail,
-  //   highlightOnHover,
-  //   nodeInfoDisplayer,
-  //   sunburst,
-  //   popUpOnHover,
-  //   zoomOnClick
-  // },
-  // methods: {
-  //   phylogenyColor (d) {
-  //     const order = d[0]
-  //     const depth = d[1]
-  //     const baseColors = ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00', '#cab2d6', '#6a3d9a']
-
-  //     const base = baseColors[order]
-  //     const colorScale = scaleLinear()
-  //       .domain([1, 12])
-  //       .range([base, 'white'])
-
-  //     return colorScale(depth)
-  //   },
-  //   phylogenyDataForColor (d) {
-  //     return [d.order, d.depth]
-  //   }
-
-  //   // myShowLabels (d) {
-  //   //   console.log(d)
-  //   //   return d.depth < 2
-  //   // }
-  // }
 }
 
 </script>
