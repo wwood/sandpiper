@@ -6,6 +6,9 @@ application.py
 from flask import Flask
 from flask_cors import CORS
 
+import sys, os
+sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
+
 def create_app(app_name='SURVEY_API'):
   app = Flask(app_name)
   app.config.from_object('api.config.BaseConfig')

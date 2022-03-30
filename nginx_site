@@ -1,0 +1,14 @@
+server {
+    listen 3000;
+    server_name localhost;
+
+    location /api {
+        include uwsgi_params;
+        uwsgi_pass unix:/sandpiper/backend/surveyapi.sock;
+    }
+
+  location / {
+    root /sandpiper/vue/dist;
+    try_files $uri $uri/ /index.html;
+  }
+}
