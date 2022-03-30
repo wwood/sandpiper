@@ -5,30 +5,35 @@ import HelloWorld from "@/components/HelloWorld.vue";
 
 <template>
   <header>
-    <img
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@5.8.55/css/materialdesignicons.min.css">
+
+    <div class="navigation">
+      <!-- <nav> -->
+        <RouterLink to="/">Home</RouterLink>
+        <RouterLink to="/about">About</RouterLink>
+      <!-- </nav> -->
+    </div>
+    <!-- <img
       alt="Vue logo"
       class="logo"
       src="@/assets/logo.svg"
       width="125"
       height="125"
-    />
+    /> -->
 
-    <div class="wrapper">
+    <!-- <div class="wrapper">
       <HelloWorld msg="You did it!" />
 
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
+
+    </div> -->
   </header>
 
   <RouterView />
 </template>
 
 <style>
-@import "@/assets/base.css";
-
+/* @import "@/assets/base.css"; */
+/* 
 #app {
   max-width: 1280px;
   margin: 0 auto;
@@ -121,5 +126,5 @@ nav a:first-of-type {
     padding: 1rem 0;
     margin-top: 1rem;
   }
-}
+} */
 </style>
