@@ -2,7 +2,7 @@ import axios from 'axios'
 
 let API_URL = 'unset'
 if (process.env.NODE_ENV === 'production') {
-  API_URL = `http://${process.env.BASE_URL}/api`
+  API_URL = `http://${process.env.VUE_APP_API_URL}/api`
 } else {
   API_URL = 'http://localhost:5000/api'
 }
