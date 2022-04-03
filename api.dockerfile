@@ -20,5 +20,5 @@ RUN pip install --user --no-cache-dir \
 
 COPY backend /sandpiper
 
-# CMD uwsgi --ini sandpiper.ini
-CMD flask run --host=0.0.0.0
+CMD uwsgi --http :5000 --ini sandpiper.ini
+# CMD flask run --host=0.0.0.0
