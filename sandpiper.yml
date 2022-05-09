@@ -3,7 +3,7 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - python>=3.6
+  - python
   - requests
   - ipython
   - Flask
@@ -17,3 +17,4 @@ dependencies:
 
   - numpy
   - graftm
+  - typing_extensions=4.1 #4.2 gives an Attribute error when flast starts
