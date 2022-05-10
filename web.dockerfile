@@ -11,6 +11,7 @@ ARG VUE_APP_API_URL="localhost:5000"
 
 COPY vue ./
 RUN npm run build
+COPY nginx_site dist/
 
 FROM nginxinc/nginx-unprivileged:stable-alpine as website
 COPY --from=build /app/dist /usr/share/nginx/html
