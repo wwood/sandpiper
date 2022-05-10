@@ -1,0 +1,47 @@
+name: build and push dist
+on:
+  push:
+    tags:
+      - '*'
+env:
+  API_URL: sandpiper.dev.eresearchqut.net
+jobs:
+  build-and-push-dist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: prepare
+        id: prep
+        run: |
+          VERSION="${{ github.event.inputs.tag }}-${GITHUB_SHA::8}"
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF/refs\/tags\//}
+          fi
+          echo ::set-output name=BUILD_DATE::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          echo ::set-output name=VERSION::${VERSION}
+      - name: configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
+      - name: login to ecr
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: docker build api
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: 'sandpiper/api'
+          IMAGE_TAG: ${{ steps.prep.outputs.VERSION }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f api.dockerfile .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      - name: docker build web
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: 'sandpiper/web'
+          IMAGE_TAG: ${{ steps.prep.outputs.VERSION }}
+        run: |
+          docker build --build-arg VUE_APP_API_URL=$API_URL -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f web.dockerfile .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
