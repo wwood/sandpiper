@@ -11,6 +11,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import joinedload, lazyload
 from .models import NcbiMetadata, db, Marker, Otu, CondensedProfile, Taxonomy, BiosampleAttribute
 # from api.models import #for flask shell
+from .version import __version__
 
 import os, sys
 sys.path = [os.environ['HOME']+'/git/singlem-local'] + [os.environ['HOME']+'/git/singlem'] + sys.path
@@ -32,7 +33,8 @@ def sandpiper_stats():
     return jsonify({
         'num_terrabases': round(sandpiper_stats_cache['sandpiper_total_terrabases']),
         'num_runs': sandpiper_stats_cache['sandpiper_num_runs'],
-        'num_bioprojects': sandpiper_stats_cache['sandpiper_num_bioprojects']
+        'num_bioprojects': sandpiper_stats_cache['sandpiper_num_bioprojects'],
+        'version': __version__
     })
 
 @api.route('/markers/', methods=('GET',))
