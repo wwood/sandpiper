@@ -66,8 +66,8 @@ if __name__ == '__main__':
         raise Exception("There appears to be uncommited code changes. Please commit everything first.")
 
     # Check DB is correctly configured
-    from backend.api.config import SQLALCHEMY_DATABASE_URI
-    if not SQLALCHEMY_DATABASE_URI.startswith('sqlite:///db/'):
+    from backend.api.config import BaseConfig
+    if not BaseConfig.SQLALCHEMY_DATABASE_URI.startswith('sqlite:///db/'):
         raise Exception("Backend DB path misconfigured")
 
     # Write to version file
