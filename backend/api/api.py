@@ -3,13 +3,15 @@ api.py
 - provides the API endpoints for consuming and producing
   REST requests and responses
 """
+from email import header
 import re
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, make_response
 from sqlalchemy import select, distinct
 from sqlalchemy.sql import func
 from sqlalchemy.orm import joinedload, lazyload
 from .models import NcbiMetadata, db, Marker, Otu, CondensedProfile, Taxonomy, BiosampleAttribute
+import pandas as pd
 # from api.models import #for flask shell
 from .version import __version__
 
@@ -121,8 +123,44 @@ def taxonomy_search_global_data(taxon):
 
 # sort_field=${sortField}&sort_direction=${sortDirection}&page=${page
 @api.route('/taxonomy_search_run_data/<string:taxon>', methods=('GET',))
-def taxonomy_search(taxon):
-    args = request.args
+def taxonomy_search_run_data(taxon):
+    worked, condensed_profile_hits = taxonomy_search_core(taxon, request.args)
+
+    if worked:
+        return jsonify({
+            'results': {
+                'condensed_profiles': [{
+                    'sample_name': c.sample_name,
+                    'relative_abundance': round(c.relative_abundance*100,2),
+                    'coverage': round(c.filled_coverage, 2) }
+                    for c in condensed_profile_hits],                
+            }
+        })
+    else:
+        return condensed_profile_hits # Really returning a JSON indicating the failure
+
+@api.route('/taxonomy_search_csv/<string:taxon>', methods=('GET',))
+def taxonomy_search_csv(taxon):
+    worked, condensed_profile_hits = taxonomy_search_core(taxon, request.args)
+
+    if worked:
+        df = pd.DataFrame(
+            [[c.sample_name, round(c.relative_abundance*100,2), round(c.filled_coverage, 2)] for c in condensed_profile_hits],
+            columns=['sample', 'relative_abundance', 'coverage']
+        )
+        response = make_response(df.to_csv(index=False, header=True))
+        cd = 'attachment; filename={}.csv'.format(taxon)
+        response.headers['Content-Disposition'] = cd
+        response.mimetype = 'text/csv'
+        return response
+    else:
+        return condensed_profile_hits # Really returning a JSON indicating the failure
+
+def taxonomy_search_core(taxon, args):
+    '''Returns (bool, iterable|json) where bool is whether it worked (True)
+    or not (False) and iterable is the data to render. json is the error if
+    it failed.'''
+
     sort_field = args.get('sort_field')
     sort_direction = args.get('sort_direction')
     page = args.get('page')
@@ -133,13 +171,13 @@ def taxonomy_search(taxon):
     page_size = int(page_size) if page_size is not None else 100
 
     if sort_field not in ['relative_abundance', 'coverage']:
-        return jsonify({ 'error': 'invalid sort field' })
+        return False, jsonify({ 'error': 'invalid sort field' })
     if sort_direction not in ['asc', 'desc']:
-        return jsonify({ 'error': 'invalid sort direction' })
+        return False, jsonify({ 'error': 'invalid sort direction' })
 
     taxonomy = Taxonomy.query.filter_by(name=taxon).first()
     if taxonomy is None:
-        return taxonomy_search_fail_json('no taxonomy found for '+taxon)
+        return False, taxonomy_search_fail_json('no taxonomy found for '+taxon)
     else:
         # Query for samples that contain this taxon
         if sort_field == 'relative_abundance':
@@ -156,16 +194,9 @@ def taxonomy_search(taxon):
         condensed_profile_hits = hits_query.where(
                 CondensedProfile.taxonomy_id == taxonomy.id).limit(
                     page_size).offset((page-1)*page_size).all()
-        
-        return jsonify({
-            'results': {
-                'condensed_profiles': [{
-                    'sample_name': c.sample_name,
-                    'relative_abundance': round(c.relative_abundance*100,2),
-                    'coverage': round(c.filled_coverage, 2) }
-                    for c in condensed_profile_hits],                
-            }
-        })
+
+        return True, condensed_profile_hits
+
 
 @api.route('/taxonomy_search_hints/<string:taxon>', methods=('GET',))
 def taxonomy_search_hints(taxon):
@@ -204,7 +235,6 @@ def get_lat_lons(taxonomy_id, max_to_show):
         else:
             lat_lons[mykey] = {'lat_lon': [lat, lon], 'sample_names': [sample_name]}
     return list(lat_lons.values())   
-
 
 def validate_lat_lon(lat, lon):
     if lat >= -90 and lat <= 90 and lon >= -180 and lon <= 180:

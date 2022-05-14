@@ -7,6 +7,10 @@ if (process.env.NODE_ENV === 'production') {
   API_URL = 'http://localhost:5000/api'
 }
 
+export function api_url () {
+  return API_URL
+}
+
 export function fetchSandpiperStats () {
   return axios.get(`${API_URL}/sandpiper_stats`)
 }

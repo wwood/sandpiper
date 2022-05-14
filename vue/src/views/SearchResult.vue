@@ -63,42 +63,43 @@
               </l-marker>
           </l-map>
         </div>
+      </section>
 
-        <section class="section" id="matching-samples">
-          <h2 class="subtitle is-2 bd-anchor-title">
-            <a class="bd-anchor-link" href="#matching-samples"># </a>
-            <span class="bd-anchor-name">Matching samples</span>
-          </h2>
-          <b-table
-            :data="search_result['condensed_profiles']"
-            :loading="loading"
-            :striped="true"
-            :sort-icon="'arrow-up'"
-            :default-sort="this.sortField"
-            :default-sort-direction="this.sortDirection"
-            paginated
-            :current-page="this.page"
-            :per-page="this.pageSize"
-            pagination-simple
-            backend-pagination
-            backend-sorting
-            :total="total_num_results"
-            @page-change="onPageChange"
-            @sort="onSort">
+      <section class="section" id="matching-samples">
+        <h2 class="subtitle is-2 bd-anchor-title">
+          <a class="bd-anchor-link" href="#matching-samples"># </a>
+          <span class="bd-anchor-name">Matching samples</span>
+        </h2>
+        <b-button tag="a" type="is-info" :href="csv_link()">Download CSV</b-button>
+        <b-table
+          :data="search_result['condensed_profiles']"
+          :loading="loading"
+          :striped="true"
+          :sort-icon="'arrow-up'"
+          :default-sort="this.sortField"
+          :default-sort-direction="this.sortDirection"
+          paginated
+          :current-page="this.page"
+          :per-page="this.pageSize"
+          pagination-simple
+          backend-pagination
+          backend-sorting
+          :total="total_num_results"
+          @page-change="onPageChange"
+          @sort="onSort">
 
-            <b-table-column field='sample_name' label='Run' v-slot="props">
-              <a :href="'/run/' + props.row.sample_name">{{ props.row.sample_name }}</a>
-            </b-table-column>
+          <b-table-column field='sample_name' label='Run' v-slot="props">
+            <a :href="'/run/' + props.row.sample_name">{{ props.row.sample_name }}</a>
+          </b-table-column>
 
-            <b-table-column field='relative_abundance' label='Relative abundance (%)' v-slot="props" centered sortable>
-              {{ props.row.relative_abundance }}
-            </b-table-column>
+          <b-table-column field='relative_abundance' label='Relative abundance (%)' v-slot="props" centered sortable>
+            {{ props.row.relative_abundance }}
+          </b-table-column>
 
-            <b-table-column field='coverage' label='Coverage' v-slot="props" centered sortable>
-              {{ props.row.coverage }}
-            </b-table-column>
-          </b-table>
-        </section>
+          <b-table-column field='coverage' label='Coverage' v-slot="props" centered sortable>
+            {{ props.row.coverage }}
+          </b-table-column>
+        </b-table>
       </section>
     </div>
 
@@ -111,7 +112,7 @@
 </template>
 
 <script>
-import { fetchGlobalDataByTaxonomy, fetchRunsByTaxonomy } from '@/api'
+import { api_url, fetchGlobalDataByTaxonomy, fetchRunsByTaxonomy } from '@/api'
 
 // If you need to reference 'L', such as in 'L.icon', then be sure to
 // explicitly import 'leaflet' into your component
@@ -210,6 +211,9 @@ export default {
         toReturn += '<a href="/run/' + sample + '">' + sample + '</a><br>'
       })
       return toReturn
+    },
+    csv_link () {
+      return api_url() + '/taxonomy_search_csv/' + this.taxonomy
     }
   },
   watch: {
