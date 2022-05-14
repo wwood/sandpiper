@@ -130,9 +130,10 @@ def taxonomy_search_run_data(taxon):
         return jsonify({
             'results': {
                 'condensed_profiles': [{
-                    'sample_name': c.sample_name,
+                    'sample_acc': c.sample_name,
                     'relative_abundance': round(c.relative_abundance*100,2),
-                    'coverage': round(c.filled_coverage, 2) }
+                    'coverage': round(c.filled_coverage, 2),
+                    'organism': c.organism.replace(' metagenome','')}
                     for c in condensed_profile_hits],                
             }
         })
@@ -145,8 +146,13 @@ def taxonomy_search_csv(taxon):
 
     if worked:
         df = pd.DataFrame(
-            [[c.sample_name, round(c.relative_abundance*100,2), round(c.filled_coverage, 2)] for c in condensed_profile_hits],
-            columns=['sample', 'relative_abundance', 'coverage']
+            [[
+                c.sample_name,
+                round(c.relative_abundance*100,2),
+                round(c.filled_coverage, 2),
+                c.organism]
+                for c in condensed_profile_hits],
+            columns=['sample', 'relative_abundance', 'coverage', 'organism', 'biosample_name']
         )
         response = make_response(df.to_csv(index=False, header=True))
         cd = 'attachment; filename={}.csv'.format(taxon)
@@ -180,20 +186,29 @@ def taxonomy_search_core(taxon, args):
         return False, taxonomy_search_fail_json('no taxonomy found for '+taxon)
     else:
         # Query for samples that contain this taxon
+        stmt = select(
+            CondensedProfile.sample_name,
+            CondensedProfile.relative_abundance,
+            CondensedProfile.filled_coverage,
+            NcbiMetadata.organism,
+            # TODO: Add experiment title here, not currently in DB
+        ).where(CondensedProfile.sample_name == NcbiMetadata.acc)
+        
         if sort_field == 'relative_abundance':
             if sort_direction == 'desc':
-                hits_query = CondensedProfile.query.order_by(CondensedProfile.relative_abundance.desc())
+                hits_query = stmt.order_by(CondensedProfile.relative_abundance.desc())
             else:
-                hits_query = CondensedProfile.query.order_by(CondensedProfile.relative_abundance.asc())
+                hits_query = stmt.order_by(CondensedProfile.relative_abundance.asc())
         elif sort_field == 'coverage':
             if sort_direction == 'desc':
-                hits_query = CondensedProfile.query.order_by(CondensedProfile.filled_coverage.desc())
+                hits_query = stmt.order_by(CondensedProfile.filled_coverage.desc())
             else:
-                hits_query = CondensedProfile.query.order_by(CondensedProfile.filled_coverage.asc())
+                hits_query = stmt.order_by(CondensedProfile.filled_coverage.asc())
 
-        condensed_profile_hits = hits_query.where(
+        condensed_profile_hits = db.session.execute(
+            hits_query.where(
                 CondensedProfile.taxonomy_id == taxonomy.id).limit(
-                    page_size).offset((page-1)*page_size).all()
+                    page_size).offset((page-1)*page_size))
 
         return True, condensed_profile_hits
 

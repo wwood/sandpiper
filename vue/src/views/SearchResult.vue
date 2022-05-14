@@ -89,7 +89,11 @@
           @sort="onSort">
 
           <b-table-column field='sample_name' label='Run' v-slot="props">
-            <a :href="'/run/' + props.row.sample_name">{{ props.row.sample_name }}</a>
+            <a :href="'/run/' + props.row.sample_acc">{{ props.row.sample_acc }}</a>
+          </b-table-column>
+
+          <b-table-column field='organism' label='Environment' v-slot="props" sortable>
+            {{ props.row.organism }}
           </b-table-column>
 
           <b-table-column field='relative_abundance' label='Relative abundance (%)' v-slot="props" centered sortable>
