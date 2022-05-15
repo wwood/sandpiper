@@ -152,7 +152,7 @@ def taxonomy_search_csv(taxon):
                 round(c.filled_coverage, 2),
                 c.organism]
                 for c in condensed_profile_hits],
-            columns=['sample', 'relative_abundance', 'coverage', 'organism', 'biosample_name']
+            columns=['sample', 'relative_abundance', 'coverage', 'organism']
         )
         response = make_response(df.to_csv(index=False, header=True))
         cd = 'attachment; filename={}.csv'.format(taxon)
