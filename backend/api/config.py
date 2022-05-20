@@ -11,6 +11,7 @@ class BaseConfig:
 
     if os.path.exists(os.path.join(os.path.dirname(__file__), 'running_on_lyra')):
         SQLALCHEMY_DATABASE_URI = LYRA_DB_PATH
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///6_runs.sandpiper.sqlite3'
 
     else:
         ## For local testing

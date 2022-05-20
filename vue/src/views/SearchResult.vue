@@ -96,6 +96,10 @@
             {{ props.row.organism }}
           </b-table-column>
 
+          <b-table-column field='collection_year' label='Year' v-slot="props" centered sortable>
+            {{ props.row.collection_year }}
+          </b-table-column>
+
           <b-table-column field='relative_abundance' label='Relative abundance (%)' v-slot="props" centered sortable>
             {{ props.row.relative_abundance }}
           </b-table-column>

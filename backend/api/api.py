@@ -10,7 +10,7 @@ from flask import Blueprint, jsonify, request, make_response
 from sqlalchemy import select, distinct
 from sqlalchemy.sql import func
 from sqlalchemy.orm import joinedload, lazyload
-from .models import NcbiMetadata, db, Marker, Otu, CondensedProfile, Taxonomy, BiosampleAttribute
+from .models import NcbiMetadata, ParsedSampleAttribute, db, Marker, Otu, CondensedProfile, Taxonomy, BiosampleAttribute
 import pandas as pd
 # from api.models import #for flask shell
 from .version import __version__
@@ -133,7 +133,8 @@ def taxonomy_search_run_data(taxon):
                     'sample_acc': c.sample_name,
                     'relative_abundance': round(c.relative_abundance*100,2),
                     'coverage': round(c.filled_coverage, 2),
-                    'organism': c.organism.replace(' metagenome','')}
+                    'organism': c.organism.replace(' metagenome',''),
+                    'collection_year': c.collection_year,}
                     for c in condensed_profile_hits],                
             }
         })
@@ -191,8 +192,10 @@ def taxonomy_search_core(taxon, args):
             CondensedProfile.relative_abundance,
             CondensedProfile.filled_coverage,
             NcbiMetadata.organism,
+            ParsedSampleAttribute.collection_year,
             # TODO: Add experiment title here, not currently in DB
-        ).where(CondensedProfile.sample_name == NcbiMetadata.acc)
+        ).where(CondensedProfile.sample_name == NcbiMetadata.acc).where(
+            CondensedProfile.sample_name == ParsedSampleAttribute.run_id)
         
         if sort_field == 'relative_abundance':
             if sort_direction == 'desc':

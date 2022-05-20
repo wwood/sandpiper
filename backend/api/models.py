@@ -224,3 +224,14 @@ class BiosampleAttribute(db.Model):
                     run_id=self.run_id,
                     k=self.k,
                     v=self.v)
+
+class ParsedSampleAttribute(db.Model):
+    __tablename__ = 'parsed_sample_attributes'
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
+    collection_year = db.Column(db.Integer)
+    collection_month = db.Column(db.Integer)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    depth = db.Column(db.Float)
+    temperature = db.Column(db.Float)

@@ -47,10 +47,10 @@ from api.application import create_app
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import select
 
-from api.models import CondensedProfile, NcbiMetadata, Taxonomy, BiosampleAttribute
+from api.models import CondensedProfile, NcbiMetadata, Taxonomy, BiosampleAttribute, ParsedSampleAttribute
 
 sys.path = ['.'] + sys.path
-from parse_lat_lons import parse_lat_lons
+from sandpiper.parse_biosample_extras import *
 
 from singlem.condense import WordNode
 
@@ -194,7 +194,8 @@ def iterate_condensed_profile_split_taxonomy(entries):
         yield row, species_aware_taxonomies
 
 def fill_metadata(db, metadata_json_files):
-    # Load metadata
+    '''Load metadata including directly parsed metadata'''
+
     # Only load metadata for samples that are in the DB
     samples_of_interest = set([x[0] for x in CondensedProfile.query.with_entities(CondensedProfile.sample_name).distinct()])
     logging.info("Finding metadata for {} samples".format(len(samples_of_interest)))
@@ -216,12 +217,12 @@ def fill_metadata(db, metadata_json_files):
                 # releasedate = db.Column(db.DateTime, nullable=False)
                 # loaddate = db.Column(db.DateTime, nullable=False)
                 # collection_date_sam = db.Column(db.DateTime, nullable=False)
-                for d in ['releasedate','loaddate']:
-                    if d in j:
-                        j[d] = datetime.datetime.strptime(j[d], '%Y-%m-%dT%H:%M:%S+00:00')
-                for d in ['collection_date_sam']:
-                    if d in j:
-                        j[d] = datetime.datetime.strptime(j[d], '%Y-%m-%d')
+                for d in ['releasedate','loaddate','collection_date_sam']:
+                    if d in j and j[d].lower() not in actually_missing:
+                        try:
+                            j[d] = iso8601.parse_date(j[d])
+                        except iso8601.ParseError:
+                            logging.warning("Unexpected date value for %s: %s" % (acc, j[d]))
 
                 del j['biosamplemodel_sam'] #Assume it is defined in the associated sample metadata
 
@@ -245,25 +246,32 @@ def fill_metadata(db, metadata_json_files):
                     db.session.add(BiosampleAttribute(**attribute))
                     attribute_count += 1
 
+                # Parsed data
+                j['attributes'] = attributes
+                lat_lon = parse_lat_lons(j['acc'], parse_json_to_lat_lon_dict(j))
+                collection_year, collection_month = parse_extra_sample_attributes(j, ['collection_date_sam'])
+                if collection_year == '': collection_year = None
+                if collection_month == '': collection_month = None
+                depth = parse_extra_sample_attributes(j, ['depth_sam'])[0]
+                if depth == '': depth = None
+                temperature = parse_extra_sample_attributes(j, ['temperature_sam'])[0]
+                if temperature == '': temperature = None
+                db.session.add(ParsedSampleAttribute(**{
+                    'run_id': j['acc'],
+                    'collection_year': collection_year,
+                    'collection_month': collection_month,
+                    'depth': depth,
+                    'temperature': temperature,
+                    'latitude': lat_lon[0],
+                    'longitude': lat_lon[1]
+                }))
+
+
                 if metadata_count % 10000 == 0:
                     db.session.commit()
 
     db.session.commit()
     logging.info("Wrote {} metadata and {} attribute rows to DB".format(metadata_count, attribute_count))
-
-def fill_lat_lons(db):
-    update_count = 0
-
-    for (ncbi_metadata_id, _sample_name, lat, lon) in parse_lat_lons():
-        sandy = db.session.execute(select(NcbiMetadata).filter(NcbiMetadata.id==ncbi_metadata_id)).scalar_one()
-        sandy.latitude = lat
-        sandy.longitude = lon
-        update_count += 1
-        if update_count % 10000 == 0:
-            db.session.commit()
-            
-    db.session.commit()
-    logging.info("Updated {} lat/lons".format(update_count))
 
 
 if __name__ == '__main__':
@@ -316,6 +324,4 @@ if __name__ == '__main__':
         fill_condensed_and_taxonomy_tables(db, args.condensed_otu_table, blacklist)
 
         fill_metadata(db, args.metadata_json_files)
-
-        fill_lat_lons(db)
 
