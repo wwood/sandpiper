@@ -54,12 +54,16 @@ def fetch_condensed(sample_name):
     root = WordNode(None, 'Root')
     taxons_to_wordnode = {root.word: root}
 
-    # condensed = CondensedProfile.query.filter_by(sample_name=sample_name).options(lazyload(CondensedProfile.taxonomy)).all()
-    condensed = CondensedProfile.query.filter_by(sample_name=sample_name).options(joinedload(CondensedProfile.taxonomy)).all()
-    if len(condensed) == 0:
+    condensed = db.session.execute(
+        select(CondensedProfile.coverage, Taxonomy.full_name).join(CondensedProfile.ncbi_metadata).
+            filter(NcbiMetadata.acc == sample_name).filter(CondensedProfile.taxonomy_id==Taxonomy.id)
+        ).fetchall()
+    if len(condensed) is None:
         return jsonify({ sample_name: 'no condensed data found' })
+    # condensed = CondensedProfile.query.filter_by(run_id=run_id).options(joinedload(CondensedProfile.taxonomy)).all()
+
     for entry in condensed:
-        taxons = entry.taxonomy.split_taxonomy()
+        taxons = entry.full_name.split('; ')
 
         last_taxon = root
         wn = None
@@ -130,7 +134,7 @@ def taxonomy_search_run_data(taxon):
         return jsonify({
             'results': {
                 'condensed_profiles': [{
-                    'sample_acc': c.sample_name,
+                    'sample_acc': c.acc,
                     'relative_abundance': round(c.relative_abundance*100,2),
                     'coverage': round(c.filled_coverage, 2),
                     'organism': c.organism.replace(' metagenome',''),
@@ -148,7 +152,7 @@ def taxonomy_search_csv(taxon):
     if worked:
         df = pd.DataFrame(
             [[
-                c.sample_name,
+                c.acc,
                 round(c.relative_abundance*100,2),
                 round(c.filled_coverage, 2),
                 c.organism]
@@ -188,14 +192,14 @@ def taxonomy_search_core(taxon, args):
     else:
         # Query for samples that contain this taxon
         stmt = select(
-            CondensedProfile.sample_name,
+            NcbiMetadata.acc,
             CondensedProfile.relative_abundance,
             CondensedProfile.filled_coverage,
             NcbiMetadata.organism,
             ParsedSampleAttribute.collection_year,
             # TODO: Add experiment title here, not currently in DB
-        ).where(CondensedProfile.sample_name == NcbiMetadata.acc).where(
-            CondensedProfile.sample_name == ParsedSampleAttribute.run_id)
+        ).where(CondensedProfile.run_id == NcbiMetadata.id).where(
+            NcbiMetadata.id == ParsedSampleAttribute.run_id)
         
         if sort_field == 'relative_abundance':
             if sort_direction == 'desc':
@@ -232,18 +236,13 @@ def taxonomy_search_hints(taxon):
     return jsonify({ 'taxonomies': [t.name for t in taxonomies] })
 
 def get_lat_lons(taxonomy_id, max_to_show):
-    # It would be ideal to order by relative_abundance desc, but this seems to
-    # not be performant. We must order by CondensedProfile.id at least because
-    # the lat and lon of geographic_location__latitude__sam /
-    # geographic_location__longitude__sam are in separate rows.
-    lat_lon_db_entries = NcbiMetadata.query.join(NcbiMetadata.condensed_profiles).with_entities(
-        NcbiMetadata.acc, NcbiMetadata.latitude, NcbiMetadata.longitude).where(
-            NcbiMetadata.latitude != None
-        ).where(
-            CondensedProfile.relative_abundance > 0.01
-        ).where(
-            CondensedProfile.taxonomy_id == taxonomy_id
-        ).order_by(CondensedProfile.relative_abundance.desc(), CondensedProfile.id).limit(max_to_show).all()
+    lat_lon_db_entries = db.session.execute(
+        select(NcbiMetadata.acc, ParsedSampleAttribute.latitude, ParsedSampleAttribute.longitude).where(
+            CondensedProfile.taxonomy_id == taxonomy_id).where(
+            NcbiMetadata.id == ParsedSampleAttribute.run_id).where(
+            NcbiMetadata.id == CondensedProfile.run_id).where(
+            ParsedSampleAttribute.latitude.is_not(None)
+            ).order_by(CondensedProfile.relative_abundance.desc(), CondensedProfile.id).limit(max_to_show).distinct()).fetchall()
 
     lat_lons = {}
     for (sample_name, lat, lon) in lat_lon_db_entries:
@@ -252,9 +251,4 @@ def get_lat_lons(taxonomy_id, max_to_show):
             lat_lons[mykey]['sample_names'].append(sample_name)
         else:
             lat_lons[mykey] = {'lat_lon': [lat, lon], 'sample_names': [sample_name]}
-    return list(lat_lons.values())   
-
-def validate_lat_lon(lat, lon):
-    if lat >= -90 and lat <= 90 and lon >= -180 and lon <= 180:
-        return True
-    return False
+    return list(lat_lons.values())

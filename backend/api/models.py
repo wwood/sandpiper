@@ -57,7 +57,7 @@ class CondensedProfile(db.Model):
     #     "CREATE TABLE condensed_profiles (id INTEGER PRIMARY KEY,"
     #     " sample_name text, coverage float, taxonomy_id INTEGER);\n")
     id = db.Column(db.Integer, primary_key=True)
-    sample_name = db.Column(db.String, db.ForeignKey('ncbi_metadata.acc'), nullable=False, index=True)
+    run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     coverage = db.Column(db.Float, nullable=False, index=True)
     filled_coverage = db.Column(db.Float, nullable=False, index=True)
     relative_abundance = db.Column(db.Float, nullable=False, index=True)
@@ -70,6 +70,9 @@ class CondensedProfile(db.Model):
     family_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
     genus_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
     species_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+
+    ncbi_metadata = db.relationship("NcbiMetadata", back_populates="condensed_profiles")
+    taxonomy = db.relationship("Taxonomy", back_populates="condensed_profiles", foreign_keys=[taxonomy_id])
 
 
 class Taxonomy(db.Model):
@@ -84,14 +87,14 @@ class Taxonomy(db.Model):
     name = db.Column(db.String, nullable=False, index=True)
     full_name = db.Column(db.String, nullable=False)
 
-    condensed_profiles = db.relationship('CondensedProfile', backref='taxonomy', foreign_keys=[CondensedProfile.taxonomy_id])
+    condensed_profiles = db.relationship('CondensedProfile', back_populates='taxonomy', foreign_keys=[CondensedProfile.taxonomy_id])
     condensed_profile_domains = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.domain_id])
     condensed_profile_phyla = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.phylum_id])
     condensed_profile_classes = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.class_id])
     condensed_profile_orders = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.order_id])
     condensed_profile_families = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.family_id])
     condensed_profile_genera = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.genus_id])
-    condensed_profile_species = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.species_id]) 
+    condensed_profile_species = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.species_id])
 
     def to_dict(self):
         return dict(id=self.id,
@@ -101,6 +104,30 @@ class Taxonomy(db.Model):
 
     def split_taxonomy(self):
         return self.full_name.split('; ')
+
+class BiosampleAttribute(db.Model):
+    __tablename__ = 'biosample_attributes'
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
+    k = db.Column(db.String, nullable=False, index=True)
+    v = db.Column(db.String, nullable=False)
+    
+    def to_dict(self):
+        return dict(id=self.id,
+                    run_id=self.run_id,
+                    k=self.k,
+                    v=self.v)
+
+class ParsedSampleAttribute(db.Model):
+    __tablename__ = 'parsed_sample_attributes'
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
+    collection_year = db.Column(db.Integer)
+    collection_month = db.Column(db.Integer)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    depth = db.Column(db.Float)
+    temperature = db.Column(db.Float)
 
 class NcbiMetadata(db.Model):
     __tablename__ = 'ncbi_metadata'
@@ -160,11 +187,10 @@ class NcbiMetadata(db.Model):
     ena_first_public_run = db.Column(db.String)
     ena_last_update_run = db.Column(db.String)
     sample_name_sam = db.Column(db.String)
-    latitude = db.Column(db.Float)
-    longitude = db.Column(db.Float)
 
-    biosample_attributes = db.relationship('BiosampleAttribute', backref='ncbi_metadata')
-    condensed_profiles = db.relationship('CondensedProfile', backref='ncbi_metadata')
+    biosample_attributes = db.relationship('BiosampleAttribute', backref='ncbi_metadata', foreign_keys=[BiosampleAttribute.run_id])
+    # condensed_profiles = db.relationship('CondensedProfile', backref='ncbi_metadata', foreign_keys=[CondensedProfile.run_id])
+    condensed_profiles = db.relationship('CondensedProfile', back_populates='ncbi_metadata', foreign_keys=[CondensedProfile.run_id])
 
     def to_displayable_dict(self):
         return dict(acc=self.acc,
@@ -211,27 +237,3 @@ class NcbiMetadata(db.Model):
 #     model_name = db.Column(db.String, nullable=False)
 #     ncbi_metadata = db.relationship('BioSampleModel', secondary=ncbi_metadata_biosample_model_association_table, backref='biosamplemodels')
 
-
-class BiosampleAttribute(db.Model):
-    __tablename__ = 'biosample_attributes'
-    id = db.Column(db.Integer, primary_key=True)
-    run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
-    k = db.Column(db.String, nullable=False, index=True)
-    v = db.Column(db.String, nullable=False)
-    
-    def to_dict(self):
-        return dict(id=self.id,
-                    run_id=self.run_id,
-                    k=self.k,
-                    v=self.v)
-
-class ParsedSampleAttribute(db.Model):
-    __tablename__ = 'parsed_sample_attributes'
-    id = db.Column(db.Integer, primary_key=True)
-    run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
-    collection_year = db.Column(db.Integer)
-    collection_month = db.Column(db.Integer)
-    latitude = db.Column(db.Float)
-    longitude = db.Column(db.Float)
-    depth = db.Column(db.Float)
-    temperature = db.Column(db.Float)

@@ -55,7 +55,7 @@ from sandpiper.parse_biosample_extras import *
 from singlem.condense import WordNode
 
 
-def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path, blacklist):
+def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path, blacklist, run_accession_to_id):
     taxonomy_name_to_id = {}
     next_taxonomy_id = 0
     count = 0
@@ -65,37 +65,42 @@ def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path, blacklist):
     current_sample_entries = []
     logging.info("Processing condensed profiles and associated taxonomy tables ..")
 
+    for row in iterate_condensed_profiles(condensed_otu_table_path, blacklist):
+        # Calculate per-sample because we need to calculate relative abundance within-sample
+        if row[0] != current_sample:
+            if current_sample is not None:
+                (taxonomy_name_to_id, next_taxonomy_id, count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries, taxonomy_name_to_id, next_taxonomy_id, count)
+            current_sample = row[0]
+            current_sample_entries = []
+            sample_count += 1
+            if sample_count % 10000 == 0:
+                logging.info("Processed condensed profiles for {} samples".format(sample_count))
+        
+        current_sample_entries.append(row)
+        
+    if current_sample is not None:
+        (taxonomy_name_to_id, next_taxonomy_id, count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries, taxonomy_name_to_id, next_taxonomy_id, count)
+
+    db.session.commit()
+    logging.info("Wrote {} condensed profile rows to DB".format(count))
+
+def iterate_condensed_profiles(condensed_otu_table_path, blacklist):
     with open(condensed_otu_table_path, 'r') as csvfile_in:
         reader = csv.reader(csvfile_in, delimiter="\t")
 
         first = True
         for row in reader:
             if first:
+                if len(row) != 3:
+                    raise Exception("Condensed profile file has unexpected number of columns: {}".format(len(row)))
                 first = False
                 continue
             if row[0] in blacklist:
                 continue
-
-            # Calculate per-sample because we need to calculate relative abundance within-sample
-            if row[0] != current_sample:
-                if current_sample is not None:
-                    (taxonomy_name_to_id, next_taxonomy_id, count) = fill_a_condensed_profile_sample(db, row[0], current_sample_entries, taxonomy_name_to_id, next_taxonomy_id, count)
-                current_sample = row[0]
-                current_sample_entries = []
-                sample_count += 1
-                if sample_count % 10000 == 0:
-                    logging.info("Processed condensed profiles for {} samples".format(sample_count))
-            
-            current_sample_entries.append(row)
-        
-    if current_sample is not None:
-        (taxonomy_name_to_id, next_taxonomy_id, count) = fill_a_condensed_profile_sample(db, row[0], current_sample_entries, taxonomy_name_to_id, next_taxonomy_id, count)
-
-    db.session.commit()
-    logging.info("Wrote {} condensed profile rows to DB".format(count))
+            yield row
     
 
-def fill_a_condensed_profile_sample(db, sample_name, entries, taxonomy_name_to_id, next_taxonomy_id, count):
+def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_name_to_id, next_taxonomy_id, count):
     total_coverage = sum([float(x[1]) for x in entries])
     
     # Generate WordNode tree so we can calculate relative abundance later
@@ -122,7 +127,7 @@ def fill_a_condensed_profile_sample(db, sample_name, entries, taxonomy_name_to_i
         last_taxon.coverage = coverage
 
     for row, taxons in iterate_condensed_profile_split_taxonomy(entries):
-        sample_name = row[0]
+        run_id = run_accession_to_id[row[0]]
 
         # Get the taxonomy id, creating a new entry if necessary
         taxonomy_ids_here = []
@@ -154,7 +159,7 @@ def fill_a_condensed_profile_sample(db, sample_name, entries, taxonomy_name_to_i
         def add_a_condensed_profile_taxon(count, taxon_name, taxon_level_index): # db, , taxons_to_wordnode, taxonomy, taxonomy_ids_here, taxonomy_name_to_id
             condensed_profile_entry = {
                 'id': count+1,
-                'sample_name': sample_name,
+                'run_id': run_id,
                 'coverage': taxons_to_wordnode[taxon_name].coverage,
                 'filled_coverage': taxons_to_wordnode[taxon_name].get_full_coverage(),
                 'relative_abundance': taxons_to_wordnode[taxon_name].get_full_coverage() / total_coverage,
@@ -193,15 +198,16 @@ def iterate_condensed_profile_split_taxonomy(entries):
 
         yield row, species_aware_taxonomies
 
-def fill_metadata(db, metadata_json_files):
-    '''Load metadata including directly parsed metadata'''
+def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_json_files):
+    '''Load metadata including directly parsed metadata, using only samples in the condensed otu table'''
 
     # Only load metadata for samples that are in the DB
-    samples_of_interest = set([x[0] for x in CondensedProfile.query.with_entities(CondensedProfile.sample_name).distinct()])
+    samples_of_interest = set([x[0] for x in iterate_condensed_profiles(condensed_otu_table_path, blacklist)])
     logging.info("Finding metadata for {} samples".format(len(samples_of_interest)))
     
-    metadata_count = 0
+    last_metadata_id = 0
     attribute_count = 0
+    run_accession_to_id = {}
     for path in metadata_json_files:
         with open(path) as f:
             for line in f:
@@ -238,11 +244,12 @@ def fill_metadata(db, metadata_json_files):
                             del j[d]
                 meta = NcbiMetadata(**j)
                 db.session.add(meta)
-                metadata_count += 1
+                last_metadata_id += 1
+                run_accession_to_id[acc] = last_metadata_id
 
                 # Write biosample attributes
                 for attribute in attributes:
-                    attribute['run_id'] = metadata_count
+                    attribute['run_id'] = last_metadata_id
                     db.session.add(BiosampleAttribute(**attribute))
                     attribute_count += 1
 
@@ -257,7 +264,7 @@ def fill_metadata(db, metadata_json_files):
                 temperature = parse_extra_sample_attributes(j, ['temperature_sam'])[0]
                 if temperature == '': temperature = None
                 db.session.add(ParsedSampleAttribute(**{
-                    'run_id': j['acc'],
+                    'run_id': last_metadata_id,
                     'collection_year': collection_year,
                     'collection_month': collection_month,
                     'depth': depth,
@@ -267,11 +274,13 @@ def fill_metadata(db, metadata_json_files):
                 }))
 
 
-                if metadata_count % 10000 == 0:
+                if last_metadata_id % 10000 == 0:
                     db.session.commit()
 
     db.session.commit()
-    logging.info("Wrote {} metadata and {} attribute rows to DB".format(metadata_count, attribute_count))
+    logging.info("Wrote {} metadata and {} attribute rows to DB".format(last_metadata_id, attribute_count))
+
+    return run_accession_to_id
 
 
 if __name__ == '__main__':
@@ -320,8 +329,10 @@ if __name__ == '__main__':
 
         # Create all the tables
         Taxonomy.metadata.create_all(db.engine)
-        
-        fill_condensed_and_taxonomy_tables(db, args.condensed_otu_table, blacklist)
 
-        fill_metadata(db, args.metadata_json_files)
+        # Create sample metadata table, restricting it to just those samples
+        # that we have condensed profiles for.
+        run_accession_to_id = create_sample_metadata(db, args.condensed_otu_table, blacklist, args.metadata_json_files)
+        
+        fill_condensed_and_taxonomy_tables(db, args.condensed_otu_table, blacklist, run_accession_to_id)
 
