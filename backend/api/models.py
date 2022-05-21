@@ -129,6 +129,13 @@ class ParsedSampleAttribute(db.Model):
     depth = db.Column(db.Float)
     temperature = db.Column(db.Float)
 
+# class StudyLink(db.Model):
+#     __tablename__ = 'study_links'
+#     id = db.Column(db.Integer, primary_key=True)
+#     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
+#     db = db.Column(db.String)
+#     study_link_id = db.Column(db.String)
+
 class NcbiMetadata(db.Model):
     __tablename__ = 'ncbi_metadata'
     id = db.Column(db.Integer, primary_key=True)
@@ -188,6 +195,22 @@ class NcbiMetadata(db.Model):
     ena_last_update_run = db.Column(db.String)
     sample_name_sam = db.Column(db.String)
 
+    # Below are fields found from kingfisher annotate
+    experiment_title = db.Column(db.String)
+    library_strategy = db.Column(db.String)
+    instrument_model = db.Column(db.String) # model column in kingfisher
+    organisation_department = db.Column(db.String)
+    organisation_institution = db.Column(db.String)
+    organisation_street = db.Column(db.String)
+    organisation_city = db.Column(db.String)
+    organisation_country = db.Column(db.String)
+    organisation_contact_name = db.Column(db.String)
+    study_title = db.Column(db.String)
+    study_abstract = db.Column(db.String)
+    design_description = db.Column(db.String)
+
+    # study_links = db.relationship('StudyLink', back_populates='ncbi_metadata', foreign_keys=[StudyLink.run_id])
+
     biosample_attributes = db.relationship('BiosampleAttribute', backref='ncbi_metadata', foreign_keys=[BiosampleAttribute.run_id])
     # condensed_profiles = db.relationship('CondensedProfile', backref='ncbi_metadata', foreign_keys=[CondensedProfile.run_id])
     condensed_profiles = db.relationship('CondensedProfile', back_populates='ncbi_metadata', foreign_keys=[CondensedProfile.run_id])
@@ -222,18 +245,17 @@ class NcbiMetadata(db.Model):
                     ena_first_public_run=self.ena_first_public_run,
                     ena_last_update_run=self.ena_last_update_run,
                     sample_name_sam=self.sample_name_sam,
+                    experiment_title=self.experiment_title,
+                    library_strategy=self.library_strategy,
+                    instrument_model=self.instrument_model,
+                    organisation_department=self.organisation_department,
+                    organisation_institution=self.organisation_institution,
+                    organisation_street=self.organisation_street,
+                    organisation_city=self.organisation_city,
+                    organisation_country=self.organisation_country,
+                    organisation_contact_name=self.organisation_contact_name,
+                    study_title=self.study_title,
+                    study_abstract=self.study_abstract,
+                    design_description=self.design_description,
+                    # study_links=[study_link.to_displayable_dict() for study_link in self.study_links],
                     biosample_attributes=[{'k': x.k, 'v': x.v} for x in self.biosample_attributes if x.k != 'primary_search'])
-
-# ncbi_metadata_biosample_model_association_table = db.Table(
-#     'ncbi_metadata_biosample_model_association', 
-#     db.Model.metadata, 
-#     db.Column('ncbi_metadata_id', db.Integer, db.ForeignKey('ncbi_metadata.id')),
-#     db.Column('biosamplemodel_id', db.Integer, db.ForeignKey('biosamplemodels.id'))
-# )
-    
-# class BioSampleModel(db.Model):
-#     __tablename__ = 'biosamplemodels'
-#     id = db.Column(db.Integer, primary_key=True)
-#     model_name = db.Column(db.String, nullable=False)
-#     ncbi_metadata = db.relationship('BioSampleModel', secondary=ncbi_metadata_biosample_model_association_table, backref='biosamplemodels')
-

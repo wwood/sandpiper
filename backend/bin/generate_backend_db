@@ -39,6 +39,7 @@ import json
 import datetime
 
 import extern
+import pandas as pd
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 from api.application import create_app
@@ -282,6 +283,55 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
 
     return run_accession_to_id
 
+def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_annotate_path):
+    '''Add metadata from kingfisher_annotate.json'''
+
+    num_kingfisher_annotated = 0
+    num_study_links = 0
+
+    df = pd.read_csv(kingfisher_annotate_path, sep='\t', header=True)
+
+    # experiment_title = db.Column(db.String)
+    # library_strategy = db.Column(db.String)
+    # instrument_model = db.Column(db.String) # model column in kingfisher
+    # organisation_department = db.Column(db.String)
+    # organisation_institution = db.Column(db.String)
+    # organisation_street = db.Column(db.String)
+    # organisation_city = db.Column(db.String)
+    # organisation_country = db.Column(db.String)
+    # organisation_contact_name = db.Column(db.String)
+    # study_title = db.Column(db.String)
+    # study_abstract = db.Column(db.String)
+
+    for row in df.itertuples():
+        # Find associated NcbiMetadata record
+        if row.run not in run_accession_to_id:
+            logging.warning("Skipping {} as there was no condense data for it".format(row.run))
+            continue
+        run_id = run_accession_to_id[row.run_accession]
+        meta = NcbiMetadata.query.filter_by(acc=run_id).first()
+
+        # Add the metadata
+        meta.experiment_title = row.experiment_title
+        meta.library_strategy = row.library_strategy
+        meta.instrument_model = row.model
+        # meta.organisation_department = row.organisation_department
+        # meta.organisation_institution = row.organisation_institution
+        # meta.organisation_street = row.organisation_street
+        # meta.organisation_city = row.organisation_city
+        # meta.organisation_country = row.organisation_country
+        # meta.organisation_contact_name = row.organisation_contact_name
+        meta.study_title = row.study_title
+        meta.design_description = row.design_description
+        meta.study_abstract = row.study_abstract
+        db.session.add(meta)
+        num_kingfisher_annotated += 1
+
+        # TODO: Create new study_links - need to fix in kingfisher annotate first
+
+    db.session.commit()
+    logging.info("Wrote {} metadata and {} study link rows to DB".format(num_kingfisher_annotated, num_study_links))
+            
 
 if __name__ == '__main__':
     parent_parser = argparse.ArgumentParser(add_help=False)
@@ -294,6 +344,7 @@ if __name__ == '__main__':
     parent_parser.add_argument('-o', help='sqlite3 file to generate', required=True)
     parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files', required=True)
     parent_parser.add_argument('--run-blacklist', help='Ignore runs listed in this file')
+    parent_parser.add_argument('--kingfisher-annotate-path', help='kingfisher annotate TSV output', required=True)
 
     args = parent_parser.parse_args()
 
@@ -335,4 +386,6 @@ if __name__ == '__main__':
         run_accession_to_id = create_sample_metadata(db, args.condensed_otu_table, blacklist, args.metadata_json_files)
         
         fill_condensed_and_taxonomy_tables(db, args.condensed_otu_table, blacklist, run_accession_to_id)
+
+        add_metadata_from_kingfisher_annotate(db, run_accession_to_id, args.kingfisher_annotate_path)
 
