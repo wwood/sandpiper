@@ -1,2 +1,4 @@
 /target
 backend/api/running_on_lyra
+vue/node_modules
+vue3/node_modules

@@ -46,7 +46,7 @@ from api.application import create_app
 
 # from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import select
+from sqlalchemy import update, bindparam
 
 from api.models import CondensedProfile, NcbiMetadata, Taxonomy, BiosampleAttribute, ParsedSampleAttribute
 
@@ -302,33 +302,59 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
     # organisation_contact_name = db.Column(db.String)
     # study_title = db.Column(db.String)
     # study_abstract = db.Column(db.String)
+    stmt = (
+        update(NcbiMetadata).
+        where(NcbiMetadata.id == bindparam('run_id')).
+        values(
+            experiment_title = bindparam('experiment_title'), #row.experiment_title,
+            library_strategy = bindparam('library_strategy'), #row.library_strategy,
+            instrument_model = bindparam('model'), #row.model,
+            # # meta.organisation_department = row.organisation_department
+            # # meta.organisation_institution = row.organisation_institution
+            # # meta.organisation_street = row.organisation_street
+            # # meta.organisation_city = row.organisation_city
+            # # meta.organisation_country = row.organisation_country
+            # # meta.organisation_contact_name = row.organisation_contact_name
+            study_title = bindparam('study_title'), #row.study_title,
+            study_abstract = bindparam('study_abstract'), #row.study_abstract,
+            design_description = bindparam('design_description') #row.design_description
+            )
+    )
+    bindparams = []
 
     for row in df.itertuples():
         # Find associated NcbiMetadata record
         if row.run not in run_accession_to_id:
             logging.warning("Skipping {} as there was no condense data for it".format(row.run))
             continue
-        run_id = run_accession_to_id[row.run_accession]
-        meta = NcbiMetadata.query.filter_by(acc=run_id).first()
+        run_id = run_accession_to_id[row.run]
 
-        # Add the metadata
-        meta.experiment_title = row.experiment_title
-        meta.library_strategy = row.library_strategy
-        meta.instrument_model = row.model
-        # meta.organisation_department = row.organisation_department
-        # meta.organisation_institution = row.organisation_institution
-        # meta.organisation_street = row.organisation_street
-        # meta.organisation_city = row.organisation_city
-        # meta.organisation_country = row.organisation_country
-        # meta.organisation_contact_name = row.organisation_contact_name
-        meta.study_title = row.study_title
-        meta.design_description = row.design_description
-        meta.study_abstract = row.study_abstract
-        db.session.add(meta)
+        bindparams.append({
+            'run_id': run_id,
+            'experiment_title': row.experiment_title,
+            'library_strategy': row.library_strategy,
+            'model': row.model,
+            # 'organisation_department': row.organisation_department,
+            # 'organisation_institution': row.organisation_institution,
+            # 'organisation_street': row.organisation_street,
+            # 'organisation_city': row.organisation_city,
+            # 'organisation_country': row.organisation_country,
+            # 'organisation_contact_name': row.organisation_contact_name,
+            'study_title': row.study_title,
+            'study_abstract': row.study_abstract,
+            'design_description': row.design_description
+        })
+
         num_kingfisher_annotated += 1
 
-        # TODO: Create new study_links - need to fix in kingfisher annotate first
+        if num_kingfisher_annotated % 10000 == 0:
+            db.session.execute(stmt, bindparams)
+            db.session.commit()
+            bindparams = []
 
+        # # TODO: Create new study_links - need to fix in kingfisher annotate first
+
+    db.session.execute(stmt, bindparams)
     db.session.commit()
     logging.info("Wrote {} metadata and {} study link rows to DB".format(num_kingfisher_annotated, num_study_links))
             
