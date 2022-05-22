@@ -289,7 +289,7 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
     num_kingfisher_annotated = 0
     num_study_links = 0
 
-    df = pd.read_csv(kingfisher_annotate_path, sep='\t', header=True)
+    df = pd.read_csv(kingfisher_annotate_path, sep='\t')
 
     # experiment_title = db.Column(db.String)
     # library_strategy = db.Column(db.String)
