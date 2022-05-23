@@ -129,12 +129,13 @@ class ParsedSampleAttribute(db.Model):
     depth = db.Column(db.Float)
     temperature = db.Column(db.Float)
 
-# class StudyLink(db.Model):
-#     __tablename__ = 'study_links'
-#     id = db.Column(db.Integer, primary_key=True)
-#     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
-#     db = db.Column(db.String)
-#     study_link_id = db.Column(db.String)
+class StudyLink(db.Model):
+    __tablename__ = 'study_links'
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
+    study_id = db.Column(db.String)
+    database = db.Column(db.String)
+
 
 class NcbiMetadata(db.Model):
     __tablename__ = 'ncbi_metadata'
@@ -199,6 +200,7 @@ class NcbiMetadata(db.Model):
     experiment_title = db.Column(db.String)
     library_strategy = db.Column(db.String)
     instrument_model = db.Column(db.String) # model column in kingfisher
+    organisation_name = db.Column(db.String)
     organisation_department = db.Column(db.String)
     organisation_institution = db.Column(db.String)
     organisation_street = db.Column(db.String)

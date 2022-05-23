@@ -48,7 +48,7 @@ from api.application import create_app
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import update, bindparam
 
-from api.models import CondensedProfile, NcbiMetadata, Taxonomy, BiosampleAttribute, ParsedSampleAttribute
+from api.models import *
 
 sys.path = ['.'] + sys.path
 from sandpiper.parse_biosample_extras import *
@@ -302,7 +302,7 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
     # organisation_contact_name = db.Column(db.String)
     # study_title = db.Column(db.String)
     # study_abstract = db.Column(db.String)
-    stmt = (
+    update_stmt = (
         update(NcbiMetadata).
         where(NcbiMetadata.id == bindparam('run_id')).
         values(
@@ -320,7 +320,7 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
             design_description = bindparam('design_description') #row.design_description
             )
     )
-    bindparams = []
+    update_bindparams = []
 
     for row in df.itertuples():
         # Find associated NcbiMetadata record
@@ -329,32 +329,37 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
             continue
         run_id = run_accession_to_id[row.run]
 
-        bindparams.append({
+        update_bindparams.append({
             'run_id': run_id,
             'experiment_title': row.experiment_title,
             'library_strategy': row.library_strategy,
             'model': row.model,
-            # 'organisation_department': row.organisation_department,
-            # 'organisation_institution': row.organisation_institution,
-            # 'organisation_street': row.organisation_street,
-            # 'organisation_city': row.organisation_city,
-            # 'organisation_country': row.organisation_country,
-            # 'organisation_contact_name': row.organisation_contact_name,
+            'organisation_name': row.organisation,
+            'organisation_department': row.organisation_department,
+            'organisation_institution': row.organisation_institution,
+            'organisation_street': row.organisation_street,
+            'organisation_city': row.organisation_city,
+            'organisation_country': row.organisation_country,
+            'organisation_contact_name': row.organisation_contact_name,
             'study_title': row.study_title,
             'study_abstract': row.study_abstract,
             'design_description': row.design_description
         })
 
+        for h in json.loads(row.study_links):
+            db.session.add(StudyLink(run_id=run_id, study_id=h['id'], database=h['db']))
+            num_study_links += 1
+
         num_kingfisher_annotated += 1
 
         if num_kingfisher_annotated % 10000 == 0:
-            db.session.execute(stmt, bindparams)
+            db.session.execute(update_stmt, update_bindparams)
             db.session.commit()
             bindparams = []
 
         # # TODO: Create new study_links - need to fix in kingfisher annotate first
 
-    db.session.execute(stmt, bindparams)
+    db.session.execute(update_stmt, update_bindparams)
     db.session.commit()
     logging.info("Wrote {} metadata and {} study link rows to DB".format(num_kingfisher_annotated, num_study_links))
             
