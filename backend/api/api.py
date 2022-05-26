@@ -147,7 +147,7 @@ def taxonomy_search_run_data(taxon):
 
 @api.route('/taxonomy_search_csv/<string:taxon>', methods=('GET',))
 def taxonomy_search_csv(taxon):
-    worked, condensed_profile_hits = taxonomy_search_core(taxon, request.args)
+    worked, condensed_profile_hits = taxonomy_search_core(taxon, request.args, no_limit=True)
 
     if worked:
         df = pd.DataFrame(
@@ -160,14 +160,14 @@ def taxonomy_search_csv(taxon):
             columns=['sample', 'relative_abundance', 'coverage', 'organism']
         )
         response = make_response(df.to_csv(index=False, header=True))
-        cd = 'attachment; filename={}.csv'.format(taxon)
+        cd = 'attachment; filename=sandpiper_v{}_{}_condensed.csv'.format(__version__, taxon)
         response.headers['Content-Disposition'] = cd
         response.mimetype = 'text/csv'
         return response
     else:
         return condensed_profile_hits # Really returning a JSON indicating the failure
 
-def taxonomy_search_core(taxon, args):
+def taxonomy_search_core(taxon, args, no_limit=False):
     '''Returns (bool, iterable|json) where bool is whether it worked (True)
     or not (False) and iterable is the data to render. json is the error if
     it failed.'''
@@ -212,10 +212,12 @@ def taxonomy_search_core(taxon, args):
             else:
                 hits_query = stmt.order_by(CondensedProfile.filled_coverage.asc())
 
+        if not no_limit:
+            hits_query = hits_query.limit(page_size).offset((page-1)*page_size)
+            
         condensed_profile_hits = db.session.execute(
             hits_query.where(
-                CondensedProfile.taxonomy_id == taxonomy.id).limit(
-                    page_size).offset((page-1)*page_size))
+                CondensedProfile.taxonomy_id == taxonomy.id))
 
         return True, condensed_profile_hits
 
