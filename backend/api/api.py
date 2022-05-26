@@ -27,7 +27,7 @@ sandpiper_stats_cache = None
 def sandpiper_stats():
     global sandpiper_stats_cache
     # Cache results because they don't change unless the DB changes
-    if sandpiper_stats_cache is None:
+    if sandpiper_stats_cache is None or len(sandpiper_stats_cache) != 3:
         sandpiper_stats_cache = {}
         sandpiper_stats_cache['sandpiper_total_terrabases'] = db.session.query(func.sum(NcbiMetadata.mbases)).scalar()/10**6
         sandpiper_stats_cache['sandpiper_num_runs'] = db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar() #NcbiMetadata.query.distinct(NcbiMetadata.acc).count()
