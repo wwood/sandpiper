@@ -101,7 +101,10 @@ def fetch_metadata(sample_name):
     metadata = NcbiMetadata.query.filter_by(acc=sample_name).all()
     if metadata == [] or metadata is None:
         return jsonify({ sample_name: 'no metadata found for '+sample_name })
-    return jsonify({ 'metadata': metadata[0].to_displayable_dict() })
+    meta = metadata[0]
+    return jsonify({ 
+        'metadata': meta.to_displayable_dict()
+        })
 
 def taxonomy_search_fail_json(reason):
     return jsonify({ 'taxon': reason })

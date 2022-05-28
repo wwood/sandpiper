@@ -128,6 +128,22 @@ class ParsedSampleAttribute(db.Model):
     longitude = db.Column(db.Float)
     depth = db.Column(db.Float)
     temperature = db.Column(db.Float)
+    host_or_not_prediction = db.Column(db.String)
+    host_or_not_recorded = db.Column(db.String)
+    host_or_not_mature = db.Column(db.String)
+
+    def to_displayable_dict(self):
+        return dict(
+            collection_year=self.collection_year,
+            collection_month=self.collection_month,
+            latitude=self.latitude,
+            longitude=self.longitude,
+            depth=self.depth,
+            temperature=self.temperature,
+            host_or_not_prediction=self.host_or_not_prediction,
+            host_or_not_recorded=self.host_or_not_recorded,
+            host_or_not_mature=self.host_or_not_mature)
+
 
 class StudyLink(db.Model):
     __tablename__ = 'study_links'
@@ -135,6 +151,11 @@ class StudyLink(db.Model):
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     study_id = db.Column(db.String)
     database = db.Column(db.String)
+
+    def to_displayable_dict(self):
+        return dict(
+            study_id=self.study_id,
+            database=self.database)
 
 
 class NcbiMetadata(db.Model):
@@ -211,11 +232,10 @@ class NcbiMetadata(db.Model):
     study_abstract = db.Column(db.String)
     design_description = db.Column(db.String)
 
-    # study_links = db.relationship('StudyLink', back_populates='ncbi_metadata', foreign_keys=[StudyLink.run_id])
-
+    study_links = db.relationship('StudyLink', backref='ncbi_metadata', foreign_keys=[StudyLink.run_id])
     biosample_attributes = db.relationship('BiosampleAttribute', backref='ncbi_metadata', foreign_keys=[BiosampleAttribute.run_id])
-    # condensed_profiles = db.relationship('CondensedProfile', backref='ncbi_metadata', foreign_keys=[CondensedProfile.run_id])
     condensed_profiles = db.relationship('CondensedProfile', back_populates='ncbi_metadata', foreign_keys=[CondensedProfile.run_id])
+    parsed_sample_attributes = db.relationship('ParsedSampleAttribute', backref='ncbi_metadata', foreign_keys=[ParsedSampleAttribute.run_id])
 
     def to_displayable_dict(self):
         return dict(acc=self.acc,
@@ -259,5 +279,6 @@ class NcbiMetadata(db.Model):
                     study_title=self.study_title,
                     study_abstract=self.study_abstract,
                     design_description=self.design_description,
-                    # study_links=[study_link.to_displayable_dict() for study_link in self.study_links],
-                    biosample_attributes=[{'k': x.k, 'v': x.v} for x in self.biosample_attributes if x.k != 'primary_search'])
+                    study_links=[study_link.to_displayable_dict() for study_link in self.study_links],
+                    biosample_attributes=[{'k': x.k, 'v': x.v} for x in self.biosample_attributes if x.k != 'primary_search'],
+                    parsed_sample_attributes=self.parsed_sample_attributes[0].to_displayable_dict())

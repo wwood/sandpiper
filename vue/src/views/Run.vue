@@ -2,22 +2,43 @@
   <div>
     <section class="section">
     <div class="container" v-if="metadata !== null">
-      <h1 class="title">{{ accession }}</h1>
+      <h1 class="title">{{ metadata.metadata.study_title }}</h1>
 
       <p class="subtitle">
-        {{ metadata.metadata.organism }} ({{ metadata.metadata.librarysource.toLowerCase() }}) | {{ metadata.metadata.sample_name_sam }}
+        Sample {{ metadata.metadata.sample_name_sam }}
       </p>
 
       <div>
-         {{ metadata.metadata.mbases / 1000}} Gbp | {{ getNumReads }} million reads  | {{ metadata.metadata.avgspotlen }} bp average read length | {{ metadata.metadata.instrument }}
+        {{ metadata.metadata.organism }} | {{ metadata.metadata.librarysource.toLowerCase() }} | {{ metadata.metadata.mbases / 1000}} Gbp | {{ getNumReads }} million reads  | {{ metadata.metadata.avgspotlen }} bp average read length | {{ metadata.metadata.instrument }}
+        <br />
+        NCBI: <a :href="bioproject_url">{{ bioproject_id }}</a> | <a :href="'http://www.ncbi.nlm.nih.gov/sra?term=' + accession">{{ accession }}</a>
+        <br />
       </div>
 
       <div>
-        NCBI: <a :href="bioproject_url">{{ bioproject_id }}</a> | <a :href="'http://www.ncbi.nlm.nih.gov/sra?term=' + accession">{{ accession }}</a>
+        <br />
+        <p>{{ metadata.metadata.study_abstract }}</p>
       </div>
 
+      <div>
+        <br />
+        <div v-if="metadata.metadata.study_links.length===0">
+          <p>No linked studies recorded</p>
+        </div>
+        <div v-else>
+          <i>Linked studies: </i>
+          <ul v-for="link in metadata.metadata.study_links" v-bind:key="link.study_id">
+            <li v-if="link['database'].toLowerCase()==='pubmed'">PubMed <a :href="'https://www.ncbi.nlm.nih.gov/pubmed?term='+link['study_id']">{{ link['study_id'] }}</a></li>
+            <li v-else>{{ link['database'] }} {{ link['study_id'] }}</li>
+          </ul>
+        </div>
+      </div>
     </div>
     </section>
+
+    <!-- <div class="container" v-if="metadata !== null">
+      <p>{{ metadata.metadata.study_abstract }}</p>
+    </div> -->
 
     <section>
       <div class="container is-large">
@@ -60,7 +81,7 @@ export default {
   },
   computed: {
     bioproject_id: function () {
-      return this.metadata.metadata.bioproject_id
+      return this.metadata.metadata.bioproject
     },
     bioproject_url: function () {
       return 'https://www.ncbi.nlm.nih.gov/bioproject/' + this.metadata.metadata.bioproject_id
@@ -91,6 +112,14 @@ export default {
         .then(response => {
           this.metadata = response.data
         })
+    },
+    study_toplink (link) {
+      if (link['database'].toLowerCase()==='pubmed') {
+        return '<a href="https://www.ncbi.nlm.nih.gov/pubmed?term='+link['study_id']+'">'+link['study_id']+'</a>'
+      } else {
+        return link['database'] + ': ' + link['study_id']
+      }
+      return 'link'
     }
   },
   watch: {

@@ -21,11 +21,9 @@ export default {
   name: 'Sunburst3',
   props: ['json_tree'],
   mounted () {
-    console.log('mounted')
     this.sunburst(this.json_tree)
   },
   updated () {
-    console.log('updated')
     this.sunburst(this.json_tree)
   },
   // watch: {
@@ -67,8 +65,6 @@ export default {
 
     sunburst (sunburstData) {
       // const sunburstData = this.json_tree
-      console.log('redrawing')
-      console.log(sunburstData)
       // const color = function (s) {
       //   phylogenyColor(s)
       // } // self.phylogenyColor // d3.scaleOrdinal(d3.quantize(d3.interpolateRainbow, 30))
