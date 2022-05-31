@@ -13,7 +13,7 @@ from sqlalchemy.orm import joinedload, lazyload
 from .models import NcbiMetadata, ParsedSampleAttribute, db, Marker, Otu, CondensedProfile, Taxonomy, BiosampleAttribute
 import pandas as pd
 # from api.models import #for flask shell
-from .version import __version__
+from .version import __version__, __gtdb_version__, __scrape_date__
 
 import os, sys
 sys.path = [os.environ['HOME']+'/git/singlem-local'] + [os.environ['HOME']+'/git/singlem'] + sys.path
@@ -36,7 +36,8 @@ def sandpiper_stats():
         'num_terrabases': round(sandpiper_stats_cache['sandpiper_total_terrabases']),
         'num_runs': sandpiper_stats_cache['sandpiper_num_runs'],
         'num_bioprojects': sandpiper_stats_cache['sandpiper_num_bioprojects'],
-        'version': __version__
+        'version': __version__,
+        'scrape_date': __scrape_date__,
     })
 
 @api.route('/markers/', methods=('GET',))
@@ -113,7 +114,7 @@ def taxonomy_search_fail_json(reason):
 def taxonomy_search_global_data(taxon):
     taxonomy = Taxonomy.query.filter_by(name=taxon).first()
     if taxonomy is None:
-        return taxonomy_search_fail_json('no taxonomy found for '+taxon)
+        return taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in GTDB '+__gtdb_version__+', or no records of this taxon are recorded in Sandpiper. We recommend using the auto-complete function when searching to avoid typographical errors.')
     total_num_hits = CondensedProfile.query.filter_by(taxonomy_id=taxonomy.id).count()
     # lat_lons are commented out for now because it is too slow to query and
     # render. SQL needs better querying i.e. in batch, and multiple
@@ -191,7 +192,7 @@ def taxonomy_search_core(taxon, args, no_limit=False):
 
     taxonomy = Taxonomy.query.filter_by(name=taxon).first()
     if taxonomy is None:
-        return False, taxonomy_search_fail_json('no taxonomy found for '+taxon)
+        return False, taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy, or no records of this taxon are recorded in Sandpiper.')
     else:
         # Query for samples that contain this taxon
         stmt = select(

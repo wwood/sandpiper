@@ -112,10 +112,25 @@
     </div>
 
     <div v-else>
-      <section class="section container">
-        Searching ..
-      </section>
+      <div v-if="error_message !== null">
+        <section class="section container">
+          <b-message 
+            title="Error" 
+            type="is-warning" 
+            :closable="false"
+            has-icon>
+            <p>{{ error_message }}</p>
+          </b-message>
+        </section>
+      </div>
+
+      <div v-else>
+        <section class="section container">
+          Searching ..
+        </section>
+      </div>
     </div>
+
   </section>
 </template>
 
@@ -158,6 +173,7 @@ export default {
       pageSize: 100,
       sortField: 'relative_abundance',
       sortDirection: 'desc',
+      error_message: null,
 
       lat_lons: null,
       num_lat_lon_runs: null,
@@ -177,12 +193,16 @@ export default {
     fetchGlobalData () {
       fetchGlobalDataByTaxonomy(this.taxonomy)
         .then(response => {
-          this.taxon_name = response.data.taxon_name
-          this.lineage = response.data.lineage
-          this.taxonomy_level = response.data.taxonomy_level
-          this.total_num_results = response.data.total_num_results
-          this.lat_lons = response.data.lat_lons
-          this.num_lat_lon_runs = response.data.num_lat_lon_runs
+          if (response.data.total_num_results > 0) {
+            this.taxon_name = response.data.taxon_name
+            this.lineage = response.data.lineage
+            this.taxonomy_level = response.data.taxonomy_level
+            this.total_num_results = response.data.total_num_results
+            this.lat_lons = response.data.lat_lons
+            this.num_lat_lon_runs = response.data.num_lat_lon_runs
+          } else {
+            this.error_message = response.data.taxon
+          }
         })
       this.fetchData() // call here so that this and the run data are loaded by the watch in a single function
     },
