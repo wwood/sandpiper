@@ -5,7 +5,7 @@
       <h1 class="title">{{ metadata.metadata.study_title }}</h1>
 
       <p class="subtitle">
-        Sample {{ metadata.metadata.sample_name_sam }}
+        Sample {{ sample_name_mature }}
       </p>
 
       <div>
@@ -23,10 +23,9 @@
       <div>
         <br />
         <div v-if="metadata.metadata.study_links.length===0">
-          <p>No linked studies recorded</p>
+          <p>No linked publications recorded.</p>
         </div>
         <div v-else>
-          <i>Linked studies: </i>
           <ul v-for="link in metadata.metadata.study_links" v-bind:key="link.study_id">
             <li v-if="link['database'].toLowerCase()==='pubmed'">PubMed <a :href="'https://www.ncbi.nlm.nih.gov/pubmed?term='+link['study_id']">{{ link['study_id'] }}</a></li>
             <li v-else>{{ link['database'] }} {{ link['study_id'] }}</li>
@@ -91,6 +90,13 @@ export default {
     },
     sunburst_tree: function () {
       return this.condensed_tree.condensed
+    },
+    sample_name_mature: function () {
+      if (this.metadata.metadata.sample_name_sam !== null) {
+        return this.metadata.metadata.sample_name_sam
+      } else {
+        return this.metadata.metadata.sample_name
+      }
     }
   },
   created () {

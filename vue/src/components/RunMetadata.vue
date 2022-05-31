@@ -74,10 +74,12 @@ export default {
         } else {
           if (key === section) {
             Object.keys(v).forEach(k => {
-              toReturn.push({
-                k: k,
-                value: v[k]
-              })
+              if (v[k] !== null) {
+                toReturn.push({
+                  k: k,
+                  value: v[k]
+                })
+              }
             })
           }
         }

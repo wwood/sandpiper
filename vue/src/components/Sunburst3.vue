@@ -119,7 +119,7 @@ export default {
         })
 
       path.append('title')
-        .text(d => `${d.ancestors().map(d => d.data.name).reverse().join(' ')}\ncoverage: ${format(d.data.size)}\n`)
+        .text(d => `${d.ancestors().map(d => d.data.name).reverse().join(' ')}\ncoverage: ${format(d.sum(d => d.size).value)}\n`)
 
       const label = g.append('g')
         .attr('pointer-events', 'none')
