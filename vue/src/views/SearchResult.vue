@@ -18,23 +18,34 @@
           <div class="level-item has-text-centered">
             <div class="level-item">
               <div>
-                <a href="#geographic-distribution">
-                  <p class="heading">Geographic Distribution</p>
-                  <p class="title" v-if="num_lat_lon_runs < 1000">{{ num_lat_lon_runs.toLocaleString("en-US") }}</p>
-                  <p class="title" v-else>1000+</p>
+                <a href="#matching-samples">
+                  <p class="heading">Matching Samples</p>
+                  <p class="title"> {{ total_num_results.toLocaleString("en-US") }}</p>
                 </a>
-                <p>runs with >1% relative abundance and lat/lon</p>
+                <p>runs total</p>
               </div>
             </div>
           </div>
           <div class="level-item has-text-centered">
             <div class="level-item">
               <div>
-                <a href="#matching-samples">
-                  <p class="heading">Matching Samples</p>
-                  <p class="title"> {{ total_num_results.toLocaleString("en-US") }}</p>
+                <a href="#host-association-overview">
+                  <p class="heading">Host-association</p>
+                  <p class="title"> {{ Math.round((num_host_runs/(num_host_runs+num_ecological_runs)*100)) }}%</p>
                 </a>
-                <p>runs total</p>
+                <p>of runs are host-associated</p>
+              </div>
+            </div>
+          </div>
+          <div class="level-item has-text-centered">
+            <div class="level-item">
+              <div>
+                <a href="#geographic-distribution">
+                  <p class="heading">Geographic Distribution</p>
+                  <p class="title" v-if="num_lat_lon_runs < 1000">{{ num_lat_lon_runs.toLocaleString("en-US") }}</p>
+                  <p class="title" v-else>1000+</p>
+                </a>
+                <p>runs with >1% relative abundance and lat/lon</p>
               </div>
             </div>
           </div>
@@ -200,6 +211,8 @@ export default {
             this.total_num_results = response.data.total_num_results
             this.lat_lons = response.data.lat_lons
             this.num_lat_lon_runs = response.data.num_lat_lon_runs
+            this.num_host_runs = response.data.num_host_runs
+            this.num_ecological_runs = response.data.num_ecological_runs
           } else {
             this.error_message = response.data.taxon
           }

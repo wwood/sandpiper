@@ -116,6 +116,14 @@ def taxonomy_search_global_data(taxon):
     if taxonomy is None:
         return taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in GTDB '+__gtdb_version__+', or no records of this taxon are recorded in Sandpiper. We recommend using the auto-complete function when searching to avoid typographical errors.')
     total_num_hits = CondensedProfile.query.filter_by(taxonomy_id=taxonomy.id).count()
+    num_host_runs = NcbiMetadata.query. \
+        join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
+        join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='host'). \
+        count()
+    num_ecological_runs = NcbiMetadata.query. \
+        join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
+        join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='ecological'). \
+        count()
     # lat_lons are commented out for now because it is too slow to query and
     # render. SQL needs better querying i.e. in batch, and multiple
     # annotations at a single location need to be collapsed.
@@ -127,6 +135,8 @@ def taxonomy_search_global_data(taxon):
         'taxonomy_level': taxonomy.taxonomy_level,
         'lat_lons': lat_lons,
         'num_lat_lon_runs': sum([len(l['sample_names']) for l in lat_lons]),
+        'num_host_runs': num_host_runs,
+        'num_ecological_runs': num_ecological_runs,
     })
 
 # sort_field=${sortField}&sort_direction=${sortDirection}&page=${page

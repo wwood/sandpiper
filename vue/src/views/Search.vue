@@ -25,7 +25,7 @@ export default {
   name: 'Search',
   data () {
     return {
-      taxonomy: 'p__Actinobacteriota',
+      taxonomy: 'c__Bog-38',
       autocomplete_taxons: [],
       selected: null,
       isFetching: false
