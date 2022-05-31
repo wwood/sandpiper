@@ -101,7 +101,7 @@ def wordnode_json(wordnode, order, depth):
 def fetch_metadata(sample_name):
     metadata = NcbiMetadata.query.filter_by(acc=sample_name).all()
     if metadata == [] or metadata is None:
-        return jsonify({ sample_name: 'no metadata found for '+sample_name })
+        return jsonify({ "error": 'No metadata found for '+sample_name+'. This likely means that this run was not included when the list of runs to analyse was gathered ('+__scrape_date__+').' })
     meta = metadata[0]
     return jsonify({ 
         'metadata': meta.to_displayable_dict()
