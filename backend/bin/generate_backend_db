@@ -35,7 +35,6 @@ import os
 import shutil
 import csv
 import subprocess
-import tempfile
 import json
 import datetime
 
@@ -67,7 +66,13 @@ def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path, blacklist, 
     current_sample_entries = []
     logging.info("Processing condensed profiles and associated taxonomy tables ..")
 
+    skipped_runs = set()
+
     for row in iterate_condensed_profiles(condensed_otu_table_path, blacklist):
+        if row[0] not in run_accession_to_id:
+            skipped_runs.add(row[0])
+            continue
+
         # Calculate per-sample because we need to calculate relative abundance within-sample
         if row[0] != current_sample:
             if current_sample is not None:
@@ -84,22 +89,29 @@ def fill_condensed_and_taxonomy_tables(db, condensed_otu_table_path, blacklist, 
         (taxonomy_name_to_id, next_taxonomy_id, count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries, taxonomy_name_to_id, next_taxonomy_id, count)
 
     db.session.commit()
-    logging.info("Wrote {} condensed profile rows to DB".format(count))
+    logging.info("Wrote {} condensed profile rows to DB, skipping {} that were not in metadata".format(count, len(skipped_runs)))
 
 def iterate_condensed_profiles(condensed_otu_table_path, blacklist):
-    with open(condensed_otu_table_path, 'r') as csvfile_in:
-        reader = csv.reader(csvfile_in, delimiter="\t")
+    first = True
+    for row in iterate_condensed_profile_reader_gzip_or_not(condensed_otu_table_path):
+        if first:
+            if len(row) != 3:
+                raise Exception("Condensed profile file has unexpected number of columns: {}".format(len(row)))
+            first = False
+            continue
+        if row[0] in blacklist:
+            continue
+        yield row
 
-        first = True
-        for row in reader:
-            if first:
-                if len(row) != 3:
-                    raise Exception("Condensed profile file has unexpected number of columns: {}".format(len(row)))
-                first = False
-                continue
-            if row[0] in blacklist:
-                continue
-            yield row
+def iterate_condensed_profile_reader_gzip_or_not(condensed_otu_table_path):
+    if condensed_otu_table_path.endswith('.gz'):
+        with gzip.open(condensed_otu_table_path, 'rt') as csvfile_in:
+            reader = csv.reader(csvfile_in, delimiter="\t")
+            yield from reader
+    else:
+        with open(condensed_otu_table_path, 'r') as csvfile_in:
+            reader = csv.reader(csvfile_in, delimiter="\t")
+            yield from reader
     
 
 def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_name_to_id, next_taxonomy_id, count):
@@ -129,7 +141,8 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
         last_taxon.coverage = coverage
 
     for row, taxons in iterate_condensed_profile_split_taxonomy(entries):
-        run_id = run_accession_to_id[row[0]]
+        run_accession = row[0]
+        run_id = run_accession_to_id[run_accession]
 
         # Get the taxonomy id, creating a new entry if necessary
         taxonomy_ids_here = []
@@ -183,7 +196,6 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
             if taxonomy_name_to_id[taxon] not in inserted_taxonomy_ids:
                 count = add_a_condensed_profile_taxon(count, taxon, i)
                 inserted_taxonomy_ids.add(taxonomy_name_to_id[taxon])
-
 
     return (taxonomy_name_to_id, next_taxonomy_id, count)
 
@@ -290,7 +302,10 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
     num_kingfisher_annotated = 0
     num_study_links = 0
 
-    df = pd.read_csv(kingfisher_annotate_path, sep='\t')
+    # On
+    # sandpiper/sra_metadata/sra_metadata_20220524_kingfisher/sra_metadata_20220524.annotated315.tsv
+    # was getting a buffer overflow error with the default engine
+    df = pd.read_csv(kingfisher_annotate_path, sep='\t', header=0, engine='python')
 
     # experiment_title = db.Column(db.String)
     # library_strategy = db.Column(db.String)
@@ -326,7 +341,7 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
     for row in df.itertuples():
         # Find associated NcbiMetadata record
         if row.run not in run_accession_to_id:
-            logging.warning("Skipping {} as there was no condense data for it".format(row.run))
+            # logging.warning("Skipping {} as there was no condense data for it".format(row.run))
             continue
         run_id = run_accession_to_id[row.run]
 
@@ -358,7 +373,8 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
             db.session.commit()
             bindparams = []
 
-    db.session.execute(update_stmt, update_bindparams)
+    if len(update_bindparams) > 0:
+        db.session.execute(update_stmt, update_bindparams)
     db.session.commit()
     logging.info("Wrote {} metadata and {} study link rows to DB".format(num_kingfisher_annotated, num_study_links))
 
@@ -394,7 +410,7 @@ def add_host_predictions(db, run_accession_to_id, host_predictions_tsv):
             'b_run_id': run_id,
             'host_or_not_prediction': row.prediction,
             'host_or_not_recorded': row.host_or_not,
-            'host_or_not_mature': row.host_or_not if row.host_or_not != '' else row.prediction
+            'host_or_not_mature': row.prediction if str(row.host_or_not)=='nan' else row.host_or_not
         })
 
         num_host_predicted += 1
@@ -419,10 +435,14 @@ if __name__ == '__main__':
     parent_parser.add_argument('-o', help='sqlite3 file to generate', required=True)
     parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files', required=True)
     parent_parser.add_argument('--run-blacklist', help='Ignore runs listed in this file')
-    parent_parser.add_argument('--kingfisher-annotate-path', help='kingfisher annotate TSV output', required=True)
+    parent_parser.add_argument('--kingfisher-annotate-path', help='kingfisher annotate TSV output')
+    parent_parser.add_argument('--kingfisher-annotate-path-list', help='kingfisher annotate TSV outputs listed in this file, one per line')
     parent_parser.add_argument('--host-predictions-tsv', help='host predictions TSV output', required=True)
 
     args = parent_parser.parse_args()
+
+    if not args.kingfisher_annotate_path and not args.kingfisher_annotate_path_list:
+        raise Exception("Kingfisher annotate data must be specified somehow")
 
     # Setup logging
     if args.debug:
@@ -463,6 +483,13 @@ if __name__ == '__main__':
         
         fill_condensed_and_taxonomy_tables(db, args.condensed_otu_table, blacklist, run_accession_to_id)
 
-        add_metadata_from_kingfisher_annotate(db, run_accession_to_id, args.kingfisher_annotate_path)
+        if args.kingfisher_annotate_path:
+            add_metadata_from_kingfisher_annotate(db, run_accession_to_id, args.kingfisher_annotate_path)
+        if args.kingfisher_annotate_path_list:
+            with open(args.kingfisher_annotate_path_list) as f:
+                for line in f:
+                    file_path = line.strip()
+                    logging.info("Adding metadata from {} ..".format(file_path))
+                    add_metadata_from_kingfisher_annotate(db, run_accession_to_id, file_path)
 
         add_host_predictions(db, run_accession_to_id, args.host_predictions_tsv)
