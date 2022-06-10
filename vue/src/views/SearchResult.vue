@@ -45,7 +45,7 @@
                   <p class="title" v-if="num_lat_lon_runs < 1000">{{ num_lat_lon_runs.toLocaleString("en-US") }}</p>
                   <p class="title" v-else>1000+</p>
                 </a>
-                <p>runs with >1% relative abundance and lat/lon</p>
+                <p>runs with >1% relative abundance and lat/lon.</p>
               </div>
             </div>
           </div>
@@ -58,14 +58,15 @@
             <a class="bd-anchor-link" href="#geographic-distribution"># </a>
             <span class="bd-anchor-name">Geographic distribution</span>
           </h2>
-          <div class="section">
+          <!-- <div class="section"> -->
             <div v-if="this.num_lat_lon_runs < 1000">
-              {{ this.num_lat_lon_runs.toLocaleString("en-US") }} runs have relative abundance > 1% and associated latitude/longitude metadata:
+              {{ this.num_lat_lon_runs.toLocaleString("en-US") }} runs have relative abundance > 1% and associated latitude/longitude metadata.
             </div>
             <div v-else>
-              1,000+ runs have relative abundance > 1% and associated latitude/longitude metadata:
+              1,000+ runs have relative abundance > 1% and associated latitude/longitude metadata.
             </div>
-          </div>
+            <br /><p>{{ (total_num_results - num_lat_lon_runs).toLocaleString("en-US") }} other runs are not shown on this map.</p><br />
+          <!-- </div> -->
           <l-map style="height: 900px" :zoom="zoom" :center="center">
             <l-tile-layer :url="url" :attribution="attribution" />
               <l-marker v-for="markerLatLng in this.lat_lons" v-bind:key="markerLatLng[0]" :lat-lng="markerLatLng['lat_lon']">
@@ -245,11 +246,13 @@ export default {
     },
     html_for_map_popup (markerLatLng) {
       let toReturn = ''
-      markerLatLng.sample_names.forEach((sample) => {
-        // if (toReturn !== '') {
-        //   toReturn += '<br>'
-        // }
-        toReturn += '<a href="/run/' + sample + '">' + sample + '</a><br>'
+      Object.entries(markerLatLng.samples).forEach((description_samples) => {
+        toReturn += '<p>' + description_samples[0] + '</p>'
+        toReturn += '<ul>'
+        description_samples[1].forEach((sample) => {
+          toReturn += '<li><a href="/run/' + sample+ '">' + sample + '</a></li>'
+        })
+        toReturn += '</ul>'
       })
       return toReturn
     },

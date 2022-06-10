@@ -8,6 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 class Otu(db.Model):
+    ''' This table is actually dropped during DB generation '''
     __tablename__ = 'otus'
     id = db.Column(db.Integer, primary_key=True)
     # sample_name|num_hits|coverage|taxonomy|marker_id|sequence_id
@@ -26,6 +27,34 @@ class Otu(db.Model):
                     taxonomy=self.taxonomy,
                     marker=self.marker.marker,
                     sequence=self.sequence.sequence
+                    )
+
+class OtuIndexed(db.Model):
+    '''This table is intended to be quickly queried based on run_id only, with
+    taxonomy and marker names cached. SQLite seems to be slow at this query when
+    running it on the original Otu table object.'''
+    
+    __tablename__ = 'otus_indexed'
+    id = db.Column(db.Integer, primary_key=True)
+    # sample_name|num_hits|coverage|taxonomy|marker_id|sequence_id
+    run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
+    num_hits = db.Column(db.Integer, nullable=False)
+    coverage = db.Column(db.Float, nullable=False)
+    taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
+    marker_id = db.Column(db.Integer, db.ForeignKey('markers.id'), nullable=False)
+    sequence = db.Column(db.String, nullable=False)
+
+    ncbi_metadata = db.relationship("NcbiMetadata", back_populates="otus")
+    taxonomy = db.relationship("Taxonomy", back_populates="otus", foreign_keys=[taxonomy_id])
+   
+    def to_dict(self):
+        return dict(id=self.id,
+                    run_id=self.run_id,
+                    num_hits=self.num_hits,
+                    coverage=self.coverage,
+                    taxonomy_id=self.taxonomy_id,
+                    marker_id=self.marker_id,
+                    sequence=self.sequence
                     )
 
 class Marker(db.Model):
@@ -95,6 +124,8 @@ class Taxonomy(db.Model):
     condensed_profile_families = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.family_id])
     condensed_profile_genera = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.genus_id])
     condensed_profile_species = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.species_id])
+
+    otus = db.relationship('OtuIndexed', back_populates='taxonomy', foreign_keys=[OtuIndexed.taxonomy_id])
 
     def to_dict(self):
         return dict(id=self.id,
@@ -236,6 +267,7 @@ class NcbiMetadata(db.Model):
     biosample_attributes = db.relationship('BiosampleAttribute', backref='ncbi_metadata', foreign_keys=[BiosampleAttribute.run_id])
     condensed_profiles = db.relationship('CondensedProfile', back_populates='ncbi_metadata', foreign_keys=[CondensedProfile.run_id])
     parsed_sample_attributes = db.relationship('ParsedSampleAttribute', backref='ncbi_metadata', foreign_keys=[ParsedSampleAttribute.run_id])
+    otus = db.relationship('OtuIndexed', back_populates='ncbi_metadata', foreign_keys=[OtuIndexed.run_id])
 
     def to_displayable_dict(self):
         return dict(acc=self.acc,

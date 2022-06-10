@@ -10,7 +10,7 @@ from flask import Blueprint, jsonify, request, make_response
 from sqlalchemy import select, distinct
 from sqlalchemy.sql import func
 from sqlalchemy.orm import joinedload, lazyload
-from .models import NcbiMetadata, ParsedSampleAttribute, db, Marker, Otu, CondensedProfile, Taxonomy, BiosampleAttribute
+from .models import NcbiMetadata, ParsedSampleAttribute, db, Marker, OtuIndexed, CondensedProfile, Taxonomy, BiosampleAttribute
 import pandas as pd
 # from api.models import #for flask shell
 from .version import __version__, __gtdb_version__, __scrape_date__
@@ -22,16 +22,40 @@ from singlem.condense import WordNode
 api = Blueprint('api', __name__)
 
 sandpiper_stats_cache = None
+sandpiper_taxonomy_id_to_full_name = None
+sandpiper_marker_id_to_name = None
 
-@api.route('/sandpiper_stats', methods=['GET'])
-def sandpiper_stats():
+def generate_cache():
     global sandpiper_stats_cache
-    # Cache results because they don't change unless the DB changes
+    global sandpiper_taxonomy_id_to_full_name
+    global sandpiper_marker_id_to_name
+
     if sandpiper_stats_cache is None or len(sandpiper_stats_cache) != 3:
         sandpiper_stats_cache = {}
         sandpiper_stats_cache['sandpiper_total_terrabases'] = db.session.query(func.sum(NcbiMetadata.mbases)).scalar()/10**6
         sandpiper_stats_cache['sandpiper_num_runs'] = db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar() #NcbiMetadata.query.distinct(NcbiMetadata.acc).count()
         sandpiper_stats_cache['sandpiper_num_bioprojects'] = db.session.query(func.count(distinct(NcbiMetadata.bioproject))).scalar()
+    if sandpiper_taxonomy_id_to_full_name is None:
+        print('Caching taxonomy names')
+        cache = {}
+        for taxon in Taxonomy.query.all():
+            cache[taxon.id] = taxon.full_name
+        sandpiper_taxonomy_id_to_full_name = cache # Roughly atomic
+    if sandpiper_marker_id_to_name is None:
+        print('Caching marker names')
+        cache = {}
+        for marker in Marker.query.all():
+            cache[marker.id] = marker.marker
+        sandpiper_marker_id_to_name = cache
+
+
+@api.route('/sandpiper_stats', methods=['GET'])
+def sandpiper_stats():
+    global sandpiper_stats_cache, sandpiper_taxonomy_id_to_full_name, sandpiper_marker_id_to_name
+
+    # Cache results because they don't change unless the DB changes
+    generate_cache()
+
     return jsonify({
         'num_terrabases': round(sandpiper_stats_cache['sandpiper_total_terrabases']),
         'num_runs': sandpiper_stats_cache['sandpiper_num_runs'],
@@ -44,11 +68,6 @@ def sandpiper_stats():
 def fetch_markers():
     markers = Marker.query.all()
     return jsonify({ 'markers': [s.to_dict() for s in markers] })
-
-@api.route('/otus/<string:sample_name>/marker/<string:marker_name>', methods=('GET',))
-def fetch_otus(sample_name, marker_name):
-    otus = Otu.query.filter_by(sample_name=sample_name).join(Otu.marker, aliased=True).filter_by(marker=marker_name).all()
-    return jsonify({ 'otus': [s.to_dict() for s in otus] })
 
 @api.route('/condensed/<string:sample_name>', methods=('GET',))
 def fetch_condensed(sample_name):
@@ -116,6 +135,9 @@ def taxonomy_search_global_data(taxon):
     if taxonomy is None:
         return taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in GTDB '+__gtdb_version__+', or no records of this taxon are recorded in Sandpiper. We recommend using the auto-complete function when searching to avoid typographical errors.')
     total_num_hits = CondensedProfile.query.filter_by(taxonomy_id=taxonomy.id).count()
+    if total_num_hits == 0:
+        # This happens when there's a taxonomy in the full table that didn't make it into any condensed table
+        return taxonomy_search_fail_json('"'+taxon+'" is a known taxonomy, however no records of it are recorded in Sandpiper.')
     num_host_runs = NcbiMetadata.query. \
         join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
         join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='host'). \
@@ -127,14 +149,14 @@ def taxonomy_search_global_data(taxon):
     # lat_lons are commented out for now because it is too slow to query and
     # render. SQL needs better querying i.e. in batch, and multiple
     # annotations at a single location need to be collapsed.
-    lat_lons = get_lat_lons(taxonomy.id, 1000)
+    lat_lons, lat_lons_count = get_lat_lons(taxonomy.id, 1000)
     return jsonify({ 
         'total_num_results': total_num_hits,
         'taxon_name': taxonomy.name.split('__')[-1],
         'lineage': taxonomy.split_taxonomy(),
         'taxonomy_level': taxonomy.taxonomy_level,
         'lat_lons': lat_lons,
-        'num_lat_lon_runs': sum([len(l['sample_names']) for l in lat_lons]),
+        'num_lat_lon_runs': lat_lons_count,
         'num_host_runs': num_host_runs,
         'num_ecological_runs': num_ecological_runs,
     })
@@ -253,7 +275,7 @@ def taxonomy_search_hints(taxon):
 
 def get_lat_lons(taxonomy_id, max_to_show):
     lat_lon_db_entries = db.session.execute(
-        select(NcbiMetadata.acc, ParsedSampleAttribute.latitude, ParsedSampleAttribute.longitude).where(
+        select(NcbiMetadata.acc, ParsedSampleAttribute.latitude, ParsedSampleAttribute.longitude, NcbiMetadata.study_title).where(
             CondensedProfile.taxonomy_id == taxonomy_id).where(
             NcbiMetadata.id == ParsedSampleAttribute.run_id).where(
             NcbiMetadata.id == CondensedProfile.run_id).where(
@@ -261,10 +283,48 @@ def get_lat_lons(taxonomy_id, max_to_show):
             ).order_by(CondensedProfile.relative_abundance.desc(), CondensedProfile.id).limit(max_to_show).distinct()).fetchall()
 
     lat_lons = {}
-    for (sample_name, lat, lon) in lat_lon_db_entries:
+    lat_lons_count = 0
+    for (sample_name, lat, lon, description) in lat_lon_db_entries:
+        lat_lons_count += 1
         mykey = '%s %s' % (lat, lon)
         if mykey in lat_lons:
-            lat_lons[mykey]['sample_names'].append(sample_name)
+            if description in lat_lons[mykey]['samples']:
+                lat_lons[mykey]['samples'][description].append(sample_name)
+            else:
+                lat_lons[mykey]['samples'][description] = [sample_name]
         else:
-            lat_lons[mykey] = {'lat_lon': [lat, lon], 'sample_names': [sample_name]}
-    return list(lat_lons.values())
+            lat_lons[mykey] = {'lat_lon': [lat, lon], 'samples': {description: [sample_name]}}
+    return list(lat_lons.values()), lat_lons_count
+
+@api.route('/otus/<string:acc>', methods=('GET',))
+def otus(acc):
+    global sandpiper_taxonomy_id_to_full_name, sandpiper_marker_id_to_name
+
+    # Doesn't usually cache anything, but useful to have here for testing
+    generate_cache()
+
+    run_id = NcbiMetadata.query.filter_by(acc=acc).first().id
+    if run_id is None:
+        return jsonify({ 'error': 'no run found for acc '+acc })
+
+    otus = OtuIndexed.query.filter_by(run_id=run_id).order_by(OtuIndexed.id).all()
+    print(otus[0].to_dict())
+    print(sandpiper_marker_id_to_name)
+
+    df = pd.DataFrame(
+        [[
+            # gene	sample	sequence	num_hits	coverage	taxonomy
+            sandpiper_marker_id_to_name[otu.marker_id],
+            acc,
+            otu.sequence,
+            otu.num_hits,
+            otu.coverage,
+            'Root; ' + sandpiper_taxonomy_id_to_full_name[otu.taxonomy_id]
+        ] for otu in otus],
+        columns=['gene','sample','sequence','num_hits','coverage','taxonomy']
+    )
+    response = make_response(df.to_csv(index=False, header=True, sep='\t'))
+    cd = 'attachment; filename=sandpiper_v{}_{}_condensed.csv'.format(__version__, acc)
+    response.headers['Content-Disposition'] = cd
+    response.mimetype = 'text/csv'
+    return response

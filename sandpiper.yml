@@ -16,6 +16,7 @@ dependencies:
   - vue=2
   - iso8601
   - pandas>1.4 # pandas 1.1ish was broken for itertuples in generate_backend_db
+  - graftm
 
   - numpy
   - typing_extensions=4.1 #4.2 gives an Attribute error when flast starts

@@ -2,42 +2,42 @@
   <div>
     <div v-if="metadata !== null">
       <section class="section">
-      <div class="container" v-if="metadata !== null">
-        <h1 class="title">{{ metadata.metadata.study_title }}</h1>
+        <div class="container" v-if="metadata !== null">
+          <h1 class="title">{{ metadata.metadata.study_title }}</h1>
 
-        <p class="subtitle">
-          Sample {{ sample_name_mature }}
-        </p>
+          <p class="subtitle">
+            Sample {{ sample_name_mature }}
+          </p>
 
-        <div>
-          {{ metadata.metadata.organism }} | {{ metadata.metadata.librarysource.toLowerCase() }} | {{ metadata.metadata.mbases / 1000}} Gbp | {{ getNumReads }} million reads  | {{ metadata.metadata.avgspotlen }} bp average read length | {{ metadata.metadata.instrument }}
-          <br />
-          NCBI: <a :href="bioproject_url">{{ bioproject_id }}</a> | <a :href="'http://www.ncbi.nlm.nih.gov/sra?term=' + accession">{{ accession }}</a>
-          <br />
-        </div>
-
-        <div>
-          <br />
-          <p>{{ metadata.metadata.study_abstract }}</p>
-        </div>
-
-        <div>
-          <br />
-          <div v-if="metadata.metadata.study_links.length===0">
-            <p>No linked publications recorded.</p>
+          <div>
+            {{ metadata.metadata.organism }} | {{ metadata.metadata.librarysource.toLowerCase() }} | {{ metadata.metadata.mbases / 1000}} Gbp | {{ getNumReads }} million reads  | {{ metadata.metadata.avgspotlen }} bp average read length | {{ metadata.metadata.instrument }}
+            <br />
+            NCBI: <a :href="bioproject_url">{{ bioproject_id }}</a> | <a :href="'http://www.ncbi.nlm.nih.gov/sra?term=' + accession">{{ accession }}</a>
+            <br />
           </div>
-          <div v-else>
-            <ul v-for="link in metadata.metadata.study_links" v-bind:key="link.study_id">
-              <li v-if="link['database'].toLowerCase()==='pubmed'">PubMed <a :href="'https://www.ncbi.nlm.nih.gov/pubmed?term='+link['study_id']">{{ link['study_id'] }}</a></li>
-              <li v-else>{{ link['database'] }} {{ link['study_id'] }}</li>
-            </ul>
+
+          <div>
+            <br />
+            <p>{{ metadata.metadata.study_abstract }}</p>
+          </div>
+
+          <div>
+            <br />
+            <div v-if="metadata.metadata.study_links.length===0">
+              <p>No linked publications recorded.</p>
+            </div>
+            <div v-else>
+              <ul v-for="link in metadata.metadata.study_links" v-bind:key="link.study_id">
+                <li v-if="link['database'].toLowerCase()==='pubmed'">PubMed <a :href="'https://www.ncbi.nlm.nih.gov/pubmed?term='+link['study_id']">{{ link['study_id'] }}</a></li>
+                <li v-else>{{ link['database'] }} {{ link['study_id'] }}</li>
+              </ul>
+            </div>
           </div>
         </div>
-      </div>
       </section>
 
-      <section>
-        <div class="container is-large">
+      <section class="section">
+        <div class="container">
           <h3 class="title">Condensed profile</h3>
 
           <div class="sunburst">
@@ -45,6 +45,13 @@
               <Sunburst3 :json_tree="sunburst_tree" :overall_coverage="10.3" />
             </template>
           </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container is-large">
+          <h3 class="title">Full SingleM profile</h3>
+          The <a :href="full_profile_link">full SingleM OTU profile of {{ accession }}</a> is a tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.
         </div>
       </section>
 
@@ -79,7 +86,7 @@
 import Sunburst3 from '@/components/Sunburst3.vue'
 import RunMetadata from '@/components/RunMetadata.vue'
 
-import { fetchRunMetadata, fetchRunCondensed } from '@/api'
+import { api_url, fetchRunMetadata, fetchRunCondensed } from '@/api'
 
 export default {
   name: 'Run',
@@ -100,7 +107,7 @@ export default {
       return this.metadata.metadata.bioproject
     },
     bioproject_url: function () {
-      return 'https://www.ncbi.nlm.nih.gov/bioproject/' + this.metadata.metadata.bioproject_id
+      return 'https://www.ncbi.nlm.nih.gov/bioproject/' + this.metadata.metadata.bioproject
     },
     getNumReads: function () {
       return Math.round(this.metadata.metadata.mbases / this.metadata.metadata.avgspotlen)
@@ -114,6 +121,9 @@ export default {
       } else {
         return this.metadata.metadata.sample_name
       }
+    },
+    full_profile_link: function () {
+      return api_url() + '/otus/' + this.accession
     }
   },
   created () {
@@ -146,7 +156,6 @@ export default {
       } else {
         return link['database'] + ': ' + link['study_id']
       }
-      return 'link'
     }
   },
   watch: {
