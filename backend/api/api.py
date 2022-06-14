@@ -35,18 +35,18 @@ def generate_cache():
         sandpiper_stats_cache['sandpiper_total_terrabases'] = db.session.query(func.sum(NcbiMetadata.mbases)).scalar()/10**6
         sandpiper_stats_cache['sandpiper_num_runs'] = db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar() #NcbiMetadata.query.distinct(NcbiMetadata.acc).count()
         sandpiper_stats_cache['sandpiper_num_bioprojects'] = db.session.query(func.count(distinct(NcbiMetadata.bioproject))).scalar()
-    if sandpiper_taxonomy_id_to_full_name is None:
-        print('Caching taxonomy names')
-        cache = {}
-        for taxon in Taxonomy.query.all():
-            cache[taxon.id] = taxon.full_name
-        sandpiper_taxonomy_id_to_full_name = cache # Roughly atomic
-    if sandpiper_marker_id_to_name is None:
-        print('Caching marker names')
-        cache = {}
-        for marker in Marker.query.all():
-            cache[marker.id] = marker.marker
-        sandpiper_marker_id_to_name = cache
+    # if sandpiper_taxonomy_id_to_full_name is None:
+    #     print('Caching taxonomy names')
+    #     cache = {}
+    #     for taxon in Taxonomy.query.all():
+    #         cache[taxon.id] = taxon.full_name
+    #     sandpiper_taxonomy_id_to_full_name = cache # Roughly atomic
+    # if sandpiper_marker_id_to_name is None:
+    #     print('Caching marker names')
+    #     cache = {}
+    #     for marker in Marker.query.all():
+    #         cache[marker.id] = marker.marker
+    #     sandpiper_marker_id_to_name = cache
 
 
 @api.route('/sandpiper_stats', methods=['GET'])
@@ -296,35 +296,36 @@ def get_lat_lons(taxonomy_id, max_to_show):
             lat_lons[mykey] = {'lat_lon': [lat, lon], 'samples': {description: [sample_name]}}
     return list(lat_lons.values()), lat_lons_count
 
-@api.route('/otus/<string:acc>', methods=('GET',))
-def otus(acc):
-    global sandpiper_taxonomy_id_to_full_name, sandpiper_marker_id_to_name
+# @api.route('/otus/<string:acc>', methods=('GET',))
+# def otus(acc):
+#     global sandpiper_taxonomy_id_to_full_name, sandpiper_marker_id_to_name
 
-    # Doesn't usually cache anything, but useful to have here for testing
-    generate_cache()
+#     # Doesn't usually cache anything, but useful to have here for testing
+#     generate_cache()
 
-    run_id = NcbiMetadata.query.filter_by(acc=acc).first().id
-    if run_id is None:
-        return jsonify({ 'error': 'no run found for acc '+acc })
+#     run_id = NcbiMetadata.query.filter_by(acc=acc).first().id
+#     if run_id is None:
+#         return jsonify({ 'error': 'no run found for acc '+acc })
 
-    otus = OtuIndexed.query.filter_by(run_id=run_id).order_by(OtuIndexed.id).all()
-    print(otus[0].to_dict())
-    print(sandpiper_marker_id_to_name)
+#     otus = OtuIndexed.query.filter_by(run_id=run_id).order_by(OtuIndexed.id).all()
+#     print(len(otus), run_id)
+#     # print(otus[0].to_dict())
+#     # print(sandpiper_marker_id_to_name)
 
-    df = pd.DataFrame(
-        [[
-            # gene	sample	sequence	num_hits	coverage	taxonomy
-            sandpiper_marker_id_to_name[otu.marker_id],
-            acc,
-            otu.sequence,
-            otu.num_hits,
-            otu.coverage,
-            'Root; ' + sandpiper_taxonomy_id_to_full_name[otu.taxonomy_id]
-        ] for otu in otus],
-        columns=['gene','sample','sequence','num_hits','coverage','taxonomy']
-    )
-    response = make_response(df.to_csv(index=False, header=True, sep='\t'))
-    cd = 'attachment; filename=sandpiper_v{}_{}_condensed.csv'.format(__version__, acc)
-    response.headers['Content-Disposition'] = cd
-    response.mimetype = 'text/csv'
-    return response
+#     df = pd.DataFrame(
+#         [[
+#             # gene	sample	sequence	num_hits	coverage	taxonomy
+#             sandpiper_marker_id_to_name[otu.marker_id],
+#             acc,
+#             otu.sequence,
+#             otu.num_hits,
+#             otu.coverage,
+#             'Root; ' + sandpiper_taxonomy_id_to_full_name[otu.taxonomy_id]
+#         ] for otu in otus],
+#         columns=['gene','sample','sequence','num_hits','coverage','taxonomy']
+#     )
+#     response = make_response(df.to_csv(index=False, header=True, sep='\t'))
+#     cd = 'attachment; filename=sandpiper_v{}_{}_condensed.csv'.format(__version__, acc)
+#     response.headers['Content-Disposition'] = cd
+#     response.mimetype = 'text/csv'
+#     return response

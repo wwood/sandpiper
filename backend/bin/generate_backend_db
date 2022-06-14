@@ -37,9 +37,11 @@ import csv
 import subprocess
 import json
 import datetime
+import tempfile
 
 import extern
 import pandas as pd
+from tqdm import tqdm
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 from api.application import create_app
@@ -428,7 +430,7 @@ def add_host_predictions(db, run_accession_to_id, host_predictions_tsv):
     logging.info("Wrote {} host predictions to DB".format(num_host_predicted))
 
 
-def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id):
+def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id, db_path):
     # For each OTU in the input, create a new line in the otus_indexed table,
     # which is supposed to have better query performance when searhcing for
     # specific samples.
@@ -466,68 +468,71 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
 
         taxonomy_name_to_id[taxon] = next_taxonomy_id
         next_taxonomy_id += 1
-
-
-    for otu in otus:
-        # Do not add samples where the sample is not in the rest of the DB
-        if otu.sample_name in run_accession_to_id:
-            split_taxonomy = otu.taxonomy.split('; ')
-            try:
-                taxonomy_id = taxonomy_name_to_id[split_taxonomy[-1]]
-            except KeyError:
-                # Taxonomy didn't make it into any condensed profile, so hasn't been established.
-                i = len(split_taxonomy) - 1
-                taxons_to_add = []
-                while i >= 0:
-                    if split_taxonomy[i] in taxonomy_name_to_id:
-                        parent_id = taxonomy_name_to_id[split_taxonomy[i]]
-                        break
-                    taxons_to_add.append(split_taxonomy[i])
-                    i -= 1
-                if i == 0:
-                    raise Exception("Strangely didn't find any taxonomy in the table for {}".format(otu.taxonomy))
-                taxons_to_add = reversed(taxons_to_add)
-                
-                full_taxonomy = split_taxonomy[1:(i+1)] # skip first element as that is Root
-                for taxon in taxons_to_add:
-                    if split_taxonomy[1] == 'd__Eukaryota':
-                        level_id = 0
-                        level = 'phylum' # Not quite true but doesn't matter
-                    else:
-                        prefix = taxon.split('__')[0]
-                        level_id = ['d','p','c','o','f','g','s'].index(prefix)
-                        level = ['domain','phylum','class','order','family','genus','species'][level_id]
-                    
-                    # Insert the new taxonomy into the DB
-                    full_taxonomy.append(taxon)
-                    logging.debug("Adding full name {}".format(full_taxonomy))
-                    db.session.add(Taxonomy(
-                        id=next_taxonomy_id,
-                        taxonomy_level=level,
-                        parent_id=parent_id,
-                        name=taxon,
-                        full_name='; '.join(full_taxonomy)))
-
-                    taxonomy_name_to_id[taxon] = next_taxonomy_id
-                    parent_id = next_taxonomy_id
-                    next_taxonomy_id += 1
-                
-                taxonomy_id = parent_id
-
-            db.session.add(OtuIndexed(**{
-                'id': count + 1,
-                'run_id': run_accession_to_id[otu.sample_name],
-                'num_hits': otu.count,
-                'coverage': otu.coverage,
-                'taxonomy_id': taxonomy_name_to_id[split_taxonomy[-1]],
-                'marker_id': marker_name_to_id[otu.marker],
-                'sequence': otu.sequence
-            }))
-            count += 1
-            if count % 10000 == 0:
-                db.session.commit()
     db.session.commit()
-    logging.info("Wrote {} OTU lines to DB".format(count))
+
+    with tempfile.TemporaryDirectory() as my_tempdir:
+        # my_tempdir = '/tmp/'
+        with open(os.path.join(my_tempdir, 'otus_indexed.tsv'), 'w') as f:
+            for otu in tqdm(otus):
+                # Do not add samples where the sample is not in the rest of the DB
+                if otu.sample_name in run_accession_to_id:
+                    split_taxonomy = otu.taxonomy.split('; ')
+                    try:
+                        taxonomy_name_to_id[split_taxonomy[-1]]
+                    except KeyError:
+                        # Taxonomy didn't make it into any condensed profile, so hasn't been established.
+                        i = len(split_taxonomy) - 1
+                        taxons_to_add = []
+                        while i >= 0:
+                            if split_taxonomy[i] in taxonomy_name_to_id:
+                                parent_id = taxonomy_name_to_id[split_taxonomy[i]]
+                                break
+                            taxons_to_add.append(split_taxonomy[i])
+                            i -= 1
+                        if i == 0:
+                            raise Exception("Strangely didn't find any taxonomy in the table for {}".format(otu.taxonomy))
+                        taxons_to_add = reversed(taxons_to_add)
+                        
+                        full_taxonomy = split_taxonomy[1:(i+1)] # skip first element as that is Root
+                        for taxon in taxons_to_add:
+                            if split_taxonomy[1] == 'd__Eukaryota':
+                                level_id = 0
+                                level = 'phylum' # Not quite true but doesn't matter
+                            else:
+                                prefix = taxon.split('__')[0]
+                                level_id = ['d','p','c','o','f','g','s'].index(prefix)
+                                level = ['domain','phylum','class','order','family','genus','species'][level_id]
+                            
+                            # Insert the new taxonomy into the DB
+                            full_taxonomy.append(taxon)
+                            logging.debug("Adding full name {}".format(full_taxonomy))
+                            db.session.add(Taxonomy(
+                                id=next_taxonomy_id,
+                                taxonomy_level=level,
+                                parent_id=parent_id,
+                                name=taxon,
+                                full_name='; '.join(full_taxonomy)))
+
+                            taxonomy_name_to_id[taxon] = next_taxonomy_id
+                            parent_id = next_taxonomy_id
+                            next_taxonomy_id += 1
+
+                    f.write("\t".join([str(x) for x in [
+                        count + 1,
+                        run_accession_to_id[otu.sample_name],
+                        otu.count,
+                        otu.coverage,
+                        taxonomy_name_to_id[split_taxonomy[-1]],
+                        marker_name_to_id[otu.marker],
+                        otu.sequence
+                    ]])+"\n")
+                    count += 1
+    
+        logging.info("Importing {} OTU lines into DB".format(count))
+        extern.run("sqlite3 {}".format(db_path), stdin= \
+            '.separator "\\t"\n' \
+            ".import {} otus_indexed".format(f.name))
+        logging.info("Imported {} OTU lines into DB".format(OtuIndexed.query.count()))
 
     # drop the otus table since we don't need it anymore
     logging.info("Dropping old otus table ..")
@@ -540,7 +545,7 @@ if __name__ == '__main__':
     parent_parser.add_argument('--quiet', help='only output errors', action="store_true")
 
     parent_parser.add_argument('--singlem-db', help='sqlite file from a singlem db', required=True)
-    parent_parser.add_argument('--otu-table', help='OTU table of the singlem db', required=True)
+    # parent_parser.add_argument('--otu-table', help='OTU table of the singlem db', required=True) # Commented out for now since unsure it will be used.
     parent_parser.add_argument('--condensed-otu-table', help='condensed OTU table input', required=True)
     parent_parser.add_argument('-o', help='sqlite3 file to generate', required=True)
     parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files', required=True)
@@ -604,4 +609,5 @@ if __name__ == '__main__':
 
         add_host_predictions(db, run_accession_to_id, args.host_predictions_tsv)
 
-        index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id)
+        # Commented out for now since unsure it will be used.
+        # index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, sqlite_db_path)
