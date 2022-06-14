@@ -37,18 +37,18 @@ def generate_cache():
         sandpiper_stats_cache['sandpiper_total_terrabases'] = db.session.query(func.sum(NcbiMetadata.mbases)).scalar()/10**6
         sandpiper_stats_cache['sandpiper_num_runs'] = db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar() #NcbiMetadata.query.distinct(NcbiMetadata.acc).count()
         sandpiper_stats_cache['sandpiper_num_bioprojects'] = db.session.query(func.count(distinct(NcbiMetadata.bioproject))).scalar()
-    # if sandpiper_taxonomy_id_to_full_name is None:
-    #     print('Caching taxonomy names')
-    #     cache = {}
-    #     for taxon in Taxonomy.query.all():
-    #         cache[taxon.id] = taxon.full_name
-    #     sandpiper_taxonomy_id_to_full_name = cache # Roughly atomic
-    # if sandpiper_marker_id_to_name is None:
-    #     print('Caching marker names')
-    #     cache = {}
-    #     for marker in Marker.query.all():
-    #         cache[marker.id] = marker.marker
-    #     sandpiper_marker_id_to_name = cache
+    if sandpiper_taxonomy_id_to_full_name is None:
+        print('Caching taxonomy names')
+        cache = {}
+        for taxon in Taxonomy.query.all():
+            cache[taxon.id] = taxon.full_name
+        sandpiper_taxonomy_id_to_full_name = cache # Roughly atomic
+    if sandpiper_marker_id_to_name is None:
+        print('Caching marker names')
+        cache = {}
+        for marker in Marker.query.all():
+            cache[marker.id] = marker.marker
+        sandpiper_marker_id_to_name = cache
 
 
 @api.route('/sandpiper_stats', methods=['GET'])
@@ -319,7 +319,7 @@ def otus(acc):
             otu.sequence,
             otu.num_hits,
             otu.coverage,
-            'Root; ' + sandpiper_taxonomy_id_to_full_name[otu.taxonomy_id]
+            ('Root' if otu.taxonomy_id==0 else 'Root; ' + sandpiper_taxonomy_id_to_full_name[otu.taxonomy_id]) if otu.taxonomy_id in sandpiper_taxonomy_id_to_full_name else otu.taxonomy_id
         ] for otu in otus],
         columns=['gene','sample','sequence','num_hits','coverage','taxonomy']
     )

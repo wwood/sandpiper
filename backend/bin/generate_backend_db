@@ -527,6 +527,9 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
                         otu.sequence
                     ]])+"\n")
                     count += 1
+
+        logging.info("Committing taxonomy entries seen only in OTU table ..")
+        db.session.commit()
     
         logging.info("Importing {} OTU lines into DB".format(count))
         extern.run("sqlite3 {}".format(db_path), stdin= \
@@ -545,7 +548,7 @@ if __name__ == '__main__':
     parent_parser.add_argument('--quiet', help='only output errors', action="store_true")
 
     parent_parser.add_argument('--singlem-db', help='sqlite file from a singlem db', required=True)
-    # parent_parser.add_argument('--otu-table', help='OTU table of the singlem db', required=True) # Commented out for now since unsure it will be used.
+    parent_parser.add_argument('--otu-table', help='OTU table of the singlem db', required=True) # Commented out for now since unsure it will be used.
     parent_parser.add_argument('--condensed-otu-table', help='condensed OTU table input', required=True)
     parent_parser.add_argument('-o', help='sqlite3 file to generate', required=True)
     parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files', required=True)
@@ -610,4 +613,4 @@ if __name__ == '__main__':
         add_host_predictions(db, run_accession_to_id, args.host_predictions_tsv)
 
         # Commented out for now since unsure it will be used.
-        # index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, sqlite_db_path)
+        index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, sqlite_db_path)
