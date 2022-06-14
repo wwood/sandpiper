@@ -21,7 +21,7 @@ class BaseConfig:
         # SQLALCHEMY_DATABASE_URI = LYRA_DB_PATH
         
         ## For deployment
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///db/sra_20211215.mach1.sandpiper6.sqlite3'
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///db/sra_20211215.mach3.sandpiper12.sqlite3'
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO=True
