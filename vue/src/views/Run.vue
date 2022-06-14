@@ -48,12 +48,12 @@
         </div>
       </section>
 
-      <section class="section">
+      <!-- <section class="section">
         <div class="container is-large">
           <h3 class="title">Full SingleM profile</h3>
           The <a :href="full_profile_link">full SingleM OTU profile of {{ accession }}</a> is a tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.
         </div>
-      </section>
+      </section> -->
 
       <RunMetadata :mdata="metadata.metadata" />
     </div>
