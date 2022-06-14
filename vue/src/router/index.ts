@@ -5,6 +5,7 @@ import Search from '../views/Search.vue'
 import Run from '../views/Run.vue'
 import SearchResults from '../views/SearchResult.vue'
 import About from '../views/About.vue'
+import RunRandom from '../views/RunRandom.vue'
 
 Vue.use(VueRouter)
 
@@ -29,6 +30,12 @@ const routes = [
     path: '/run/:accession',
     name: 'Run',
     component: Run,
+    props: true
+  },
+  {
+    path: '/random_run',
+    name: 'RunRandom',
+    component: RunRandom,
     props: true
   },
   {

@@ -10,6 +10,8 @@ from flask import Blueprint, jsonify, request, make_response
 from sqlalchemy import select, distinct
 from sqlalchemy.sql import func
 from sqlalchemy.orm import joinedload, lazyload
+from sqlalchemy.sql.expression import func
+
 from .models import NcbiMetadata, ParsedSampleAttribute, db, Marker, OtuIndexed, CondensedProfile, Taxonomy, BiosampleAttribute
 import pandas as pd
 # from api.models import #for flask shell
@@ -296,36 +298,64 @@ def get_lat_lons(taxonomy_id, max_to_show):
             lat_lons[mykey] = {'lat_lon': [lat, lon], 'samples': {description: [sample_name]}}
     return list(lat_lons.values()), lat_lons_count
 
-# @api.route('/otus/<string:acc>', methods=('GET',))
-# def otus(acc):
-#     global sandpiper_taxonomy_id_to_full_name, sandpiper_marker_id_to_name
+@api.route('/otus/<string:acc>', methods=('GET',))
+def otus(acc):
+    global sandpiper_taxonomy_id_to_full_name, sandpiper_marker_id_to_name
 
-#     # Doesn't usually cache anything, but useful to have here for testing
-#     generate_cache()
+    # Doesn't usually cache anything, but useful to have here for testing
+    generate_cache()
 
-#     run_id = NcbiMetadata.query.filter_by(acc=acc).first().id
-#     if run_id is None:
-#         return jsonify({ 'error': 'no run found for acc '+acc })
+    run_id = NcbiMetadata.query.filter_by(acc=acc).first().id
+    if run_id is None:
+        return jsonify({ 'error': 'no run found for acc '+acc })
 
-#     otus = OtuIndexed.query.filter_by(run_id=run_id).order_by(OtuIndexed.id).all()
-#     print(len(otus), run_id)
-#     # print(otus[0].to_dict())
-#     # print(sandpiper_marker_id_to_name)
+    otus = OtuIndexed.query.filter_by(run_id=run_id).order_by(OtuIndexed.id).all()
 
-#     df = pd.DataFrame(
-#         [[
-#             # gene	sample	sequence	num_hits	coverage	taxonomy
-#             sandpiper_marker_id_to_name[otu.marker_id],
-#             acc,
-#             otu.sequence,
-#             otu.num_hits,
-#             otu.coverage,
-#             'Root; ' + sandpiper_taxonomy_id_to_full_name[otu.taxonomy_id]
-#         ] for otu in otus],
-#         columns=['gene','sample','sequence','num_hits','coverage','taxonomy']
-#     )
-#     response = make_response(df.to_csv(index=False, header=True, sep='\t'))
-#     cd = 'attachment; filename=sandpiper_v{}_{}_condensed.csv'.format(__version__, acc)
-#     response.headers['Content-Disposition'] = cd
-#     response.mimetype = 'text/csv'
-#     return response
+    df = pd.DataFrame(
+        [[
+            # gene	sample	sequence	num_hits	coverage	taxonomy
+            sandpiper_marker_id_to_name[otu.marker_id],
+            acc,
+            otu.sequence,
+            otu.num_hits,
+            otu.coverage,
+            'Root; ' + sandpiper_taxonomy_id_to_full_name[otu.taxonomy_id]
+        ] for otu in otus],
+        columns=['gene','sample','sequence','num_hits','coverage','taxonomy']
+    )
+    response = make_response(df.to_csv(index=False, header=True, sep='\t'))
+    cd = 'attachment; filename=sandpiper_v{}_{}_condensed.csv'.format(__version__, acc)
+    response.headers['Content-Disposition'] = cd
+    response.mimetype = 'text/csv'
+    return response
+
+# ?host=${host}&ecological=${ecological}&two_gbp=${two_gbp}
+@api.route('/random_run', methods=('GET',))
+def random_run():
+    host = request.args.get('host') == 'true'
+    ecological = request.args.get('ecological') == 'true'
+    two_gbp = request.args.get('two_gbp') == 'true'
+
+    stmt = select(NcbiMetadata.acc).order_by(func.random())
+    if host==True and ecological==True:
+        # Nothing to do
+        pass
+    elif host==True:
+        stmt = stmt.where(
+            NcbiMetadata.id == ParsedSampleAttribute.run_id).where(
+                ParsedSampleAttribute.host_or_not_mature=='host'
+            )
+    elif ecological==True:
+        stmt = stmt.where(
+            NcbiMetadata.id == ParsedSampleAttribute.run_id).where(
+                ParsedSampleAttribute.host_or_not_mature=='ecological'
+            )
+
+    if two_gbp == True:
+        stmt = stmt.where(NcbiMetadata.mbases >= 2000)
+
+    ran = db.session.execute(stmt).fetchone()
+
+    return jsonify({
+        'run': ran.acc
+    })

@@ -34,3 +34,7 @@ export function fetchGlobalDataByTaxonomy (taxonomy: string) {
 export function fetchTaxonomySearchHints (taxonomy: string) {
   return axios.get(`${API_URL}/taxonomy_search_hints/${taxonomy}`)
 }
+
+export function fetchRandomAccession(host: boolean, ecological: boolean, two_gbp: boolean) {
+  return axios.get(`${API_URL}/random_run?host=${host}&ecological=${ecological}&two_gbp=${two_gbp}`)
+}
