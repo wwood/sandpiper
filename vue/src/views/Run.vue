@@ -10,7 +10,12 @@
           </p>
 
           <div>
-            {{ metadata.metadata.organism }} | {{ metadata.metadata.librarysource.toLowerCase() }} | {{ metadata.metadata.mbases / 1000}} Gbp | {{ getNumReads }} million reads  | {{ metadata.metadata.avgspotlen }} bp average read length | {{ metadata.metadata.instrument }}
+            {{ metadata.metadata.organism }} | {{
+            metadata.metadata.librarysource.toLowerCase() }} | {{
+            metadata.metadata.mbases / 1000}} Gbp | {{ getNumReads }} million
+            reads  | {{ metadata.metadata.avgspotlen }} bp average read length |
+            {{ metadata.metadata.instrument }} | Released {{
+            metadata.metadata_parsed.release_month }}
             <br />
             NCBI: <a :href="bioproject_url">{{ bioproject_id }}</a> | <a :href="'http://www.ncbi.nlm.nih.gov/sra?term=' + accession">{{ accession }}</a>
             <br />
