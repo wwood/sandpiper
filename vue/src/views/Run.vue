@@ -29,13 +29,14 @@
           <div>
             <br />
             <div v-if="metadata.metadata.study_links.length===0">
-              <p>No linked publications recorded.</p>
+              <p>No linked publications recorded. A <a :href="scholar_search_url">search on Google Scholar</a> may find some.</p>
             </div>
             <div v-else>
               <ul v-for="link in metadata.metadata.study_links" v-bind:key="link.study_id">
                 <li v-if="link['database'].toLowerCase()==='pubmed'">PubMed <a :href="'https://www.ncbi.nlm.nih.gov/pubmed?term='+link['study_id']">{{ link['study_id'] }}</a></li>
                 <li v-else>{{ link['database'] }} {{ link['study_id'] }}</li>
               </ul>
+              A <a :href="scholar_search_url">search on Google Scholar</a> may find further publications.
             </div>
           </div>
         </div>
@@ -113,6 +114,10 @@ export default {
     },
     bioproject_url: function () {
       return 'https://www.ncbi.nlm.nih.gov/bioproject/' + this.metadata.metadata.bioproject
+    },
+    scholar_search_url: function () {
+      // Unclear whether including accession helps. 
+      return 'https://scholar.google.com/scholar?q=' + this.metadata.metadata.bioproject + ' OR ' + this.accession
     },
     getNumReads: function () {
       return Math.round(this.metadata.metadata.mbases / this.metadata.metadata.avgspotlen)

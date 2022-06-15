@@ -6,12 +6,8 @@
             <b-navbar-item tag="router-link" :to="{ path: '/' }">Home</b-navbar-item>
             <b-navbar-item tag="router-link" :to="{ path: '/Search' }">Search</b-navbar-item>
 
-            <!-- <b-navbar-item>
-            <b-navbar-dropdown label="Examples"> -->
-              <b-navbar-item tag="router-link" :to="{ path: '/Run/ERR2000810' }">Neanderthal</b-navbar-item>
-              <b-navbar-item tag="router-link" :to="{ path: '/Run/ERR1914274' }">Example 1</b-navbar-item>
-            <!-- </b-navbar-dropdown>
-            </b-navbar-item> -->
+            <b-navbar-item tag="router-link" :to="{ path: '/Run/SRR9841429' }">Example 1</b-navbar-item>
+            <b-navbar-item tag="router-link" :to="{ path: '/Run/ERR1914274' }">Example 2</b-navbar-item>
 
             <b-navbar-item tag="router-link" :to="{ path: '/About' }">About</b-navbar-item>
         </template>
