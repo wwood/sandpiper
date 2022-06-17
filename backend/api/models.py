@@ -182,11 +182,18 @@ class StudyLink(db.Model):
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     study_id = db.Column(db.String)
     database = db.Column(db.String)
+    label = db.Column(db.String)
+    url = db.Column(db.String)
 
     def to_displayable_dict(self):
-        return dict(
-            study_id=self.study_id,
-            database=self.database)
+        if self.database:
+            return dict(
+                study_id=self.study_id,
+                database=self.database)
+        else:
+            return dict(
+                label=self.label,
+                url=self.url)
 
 
 class NcbiMetadata(db.Model):

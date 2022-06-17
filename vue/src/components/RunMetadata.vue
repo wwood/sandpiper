@@ -59,15 +59,22 @@ export default {
           }
         } else if (section==='study_links' && key === 'study_links') {
           v.forEach(link => {
-            if (link['database'].toLowerCase() === 'pubmed'){
-              toReturn.push({
-                k: link['database'],
-                value: '<a href="https://www.ncbi.nlm.nih.gov/pubmed?term='+link['study_id']+'">'+link['study_id']+'</a>'
-              })
+            if (typeof link['database'] !== 'undefined') {
+              if (link['database'].toLowerCase() === 'pubmed'){
+                toReturn.push({
+                  k: link['database'],
+                  value: '<a href="https://www.ncbi.nlm.nih.gov/pubmed?term='+link['study_id']+'">'+link['study_id']+'</a>'
+                })
+              } else {
+                toReturn.push({
+                  k: link['database'],
+                  value: link['study_id']
+                })
+              }
             } else {
               toReturn.push({
-                k: link['database'],
-                value: link['study_id']
+                k: link.label,
+                value: '<a href="'+link.url+'">'+link.url+'</a>'
               })
             }
           })

@@ -368,7 +368,12 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
         })
 
         for h in json.loads(row.study_links):
-            db.session.add(StudyLink(run_id=run_id, study_id=h['id'], database=h['db']))
+            if 'db' in h and 'id' in h:
+                db.session.add(StudyLink(run_id=run_id, study_id=h['id'], database=h['db']))
+            elif 'label' in h and 'url':
+                db.session.add(StudyLink(run_id=run_id, label=h['label'], url=h['url']))
+            else:
+                raise Exception("Unexpected study link format: {}".format(h))
             num_study_links += 1
 
         num_kingfisher_annotated += 1

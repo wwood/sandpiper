@@ -28,16 +28,24 @@
 
           <div>
             <br />
-            <div v-if="metadata.metadata.study_links.length===0">
+            <div v-if="publications.length===0">
               <p>No linked publications recorded. A <a :href="scholar_search_url">search on Google Scholar</a> may find some.</p>
             </div>
             <div v-else>
-              <ul v-for="link in metadata.metadata.study_links" v-bind:key="link.study_id">
+              <ul v-for="link in publications" v-bind:key="link.study_id">
                 <li v-if="link['database'].toLowerCase()==='pubmed'">PubMed <a :href="'https://www.ncbi.nlm.nih.gov/pubmed?term='+link['study_id']">{{ link['study_id'] }}</a></li>
                 <li v-else>{{ link['database'] }} {{ link['study_id'] }}</li>
               </ul>
               A <a :href="scholar_search_url">search on Google Scholar</a> may find further publications.
             </div>
+          </div>
+
+          <div v-if="non_publication_study_links.length>0">
+            <br />
+            This run has links to other databases:
+            <ul v-for="link in non_publication_study_links" v-bind:key="link.label">
+              <li><b-icon icon="link-variant" size="is-small" /><a :href="link.url">{{link.label}}</a></li>
+            </ul>
           </div>
         </div>
       </section>
@@ -134,6 +142,16 @@ export default {
     },
     full_profile_link: function () {
       return api_url() + '/otus/' + this.accession
+    },
+    publications: function () {
+      return this.metadata.metadata.study_links.filter(function (link) {
+        return (typeof link['database'] !== 'undefined')
+      })
+    },
+    non_publication_study_links: function () {
+      return this.metadata.metadata.study_links.filter(function (link) {
+        return (typeof link['label'] !== 'undefined')
+      })
     }
   },
   created () {
