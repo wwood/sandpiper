@@ -69,10 +69,10 @@
           <!-- </div> -->
           <l-map style="height: 900px" :zoom="zoom" :center="center">
             <l-tile-layer :url="url" :attribution="attribution" />
-              <l-marker v-for="markerLatLng in this.lat_lons" v-bind:key="markerLatLng[0]" :lat-lng="markerLatLng['lat_lon']">
-                <l-popup :content="html_for_map_popup(markerLatLng)" :options="{ interactive: true }">
-                </l-popup>
-              </l-marker>
+            <l-marker v-for="markerLatLng in this.lat_lons" v-bind:key="markerLatLng[0]" :lat-lng="markerLatLng['lat_lon']">
+              <l-popup :content="html_for_map_popup(markerLatLng)" :options="{ interactive: true }">
+              </l-popup>
+            </l-marker>
           </l-map>
         </div>
       </section>
