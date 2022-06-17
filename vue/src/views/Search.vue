@@ -12,10 +12,8 @@
           <template #empty>No results found</template>
         </b-autocomplete>
       </b-field>
-      <b-button type="is-primary" @click="search_by_taxonomy">Search</b-button>
-      <br />
-      <br />
-      <p>Taxonomy annotations derived from <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version 06-RS202.</p>
+      <p>Taxonomy annotations are derived from <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version 06-RS202.</p>
+      <br /><b-button type="is-primary" @click="search_by_taxonomy">Search</b-button>
     </section>
 
     <section class="section"  @keyup.enter="search_by_accession">
@@ -23,8 +21,6 @@
         <b-input v-model="accession"></b-input>
       </b-field>
       <b-button type="is-primary" @click="search_by_accession">Search</b-button>
-      <br />
-      <br />
     </section>
 
 
@@ -35,8 +31,6 @@
         <b-switch v-model="random_choice_two_gbp">2+ Gbp</b-switch>
       </b-field>
       <b-button type="is-primary" @click="search_by_random">Search</b-button>
-      <br />
-      <br />
     </section>
 
   </section>

@@ -1,12 +1,12 @@
 <template>
   <div>
-    <section class="section is-small container">
+    <section class="section is-small container has-text-justified">
       <h1 class="title">Team</h1>
       <p>This website, and SingleM itself, is the result of a collaboration between <a href="https://research.qut.edu.au/cmr/team/ben-woodcroft/">Ben Woodcroft</a>, Rossen Zhao, Mitchell Cunningham, Samuel Aroney, <a href="https://findanexpert.unimelb.edu.au/profile/753413-linda-blackall">Linda Blackall</a> and <a href="https://research.qut.edu.au/cmr/team/gene-tyson/">Gene Tyson</a>.</p><br />
       <p>Most of us are at the <a href="https://research.qut.edu.au/cmr/">Centre for Microbiome Research</a>, School of Biomedical Sciences, Queensland University of Technology (<a href="qut.edu.au">QUT</a>), Translational Research Institute, Woolloongabba, Australia. Mitchell Cunningham and Linda Blackall are at the School of BioSciences, The University of Melbourne, Victoria, Australia.</p>
     </section>
 
-    <section class="section is-small container">
+    <section class="section is-small container has-text-justified">
       <h1 class="title">How Sandpiper {{ version }} was built</h1>
       <p>The data underlying Sandpiper was generated using the <a href="https://github.com/wwood/singlem">SingleM</a> pipeline, applied to public metagenome datasets listed in the <a href="https://www.ncbi.nlm.nih.gov/sra">NCBI SRA</a> that were designated as metagenomic, or derived from "metagenomic" organisms such as "soil metagenome". This list of public metagenomes which was generated on {{ scrape_date }}.</p><br />
 
@@ -22,7 +22,7 @@
 
     </section>
 
-    <section class="section is-small container">
+    <section class="section is-small container has-text-justified">
       <h1 class="title">Acknowledgements</h1>
       <p>Development of Sandpiper and SingleM was funded through Australian Research Council Future Fellow (#FT210100521) and Discovery Early Career Research Award (#DE160100248) grants, as well as the <a href="https://emerge-bii.github.io/">EMERGE</a> National Science Foundation (NSF) Biology Integration Institute (#2022070). Cloud computing was generously contributed by Amazon Web Services (AWS) and Google Cloud (GCP).</p>
       <br />

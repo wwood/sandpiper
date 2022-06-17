@@ -20,9 +20,14 @@
               <div>
                 <a href="#matching-samples">
                   <p class="heading">Matching Samples</p>
-                  <p class="title"> {{ total_num_results.toLocaleString("en-US") }}</p>
+                  <p class="title">{{ total_num_results.toLocaleString("en-US") }}</p>
                 </a>
-                <p>runs total</p>
+                <p>
+                  <!-- add nbsp here so the 3 blocks of text are aligned with the title -->
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                  runs total
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                  </p>
               </div>
             </div>
           </div>
@@ -108,7 +113,7 @@
             {{ props.row.organism }}
           </b-table-column>
 
-          <b-table-column field='collection_year' label='Year' v-slot="props" centered sortable>
+          <b-table-column field='collection_year' label='Sampling year' v-slot="props" centered sortable>
             {{ props.row.collection_year }}
           </b-table-column>
 

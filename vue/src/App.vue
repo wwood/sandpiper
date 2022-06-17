@@ -76,8 +76,5 @@
   .footer-image {
     height: 50%;
   }
-  div {
-    text-align: justify;
-  }
 }
 </style>

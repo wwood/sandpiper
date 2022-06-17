@@ -11,7 +11,6 @@
 
           <div>
             {{ metadata.metadata.organism }} | {{
-            metadata.metadata.librarysource.toLowerCase() }} | {{
             metadata.metadata.mbases / 1000}} Gbp | {{ getNumReads }} million
             reads  | {{ metadata.metadata.avgspotlen }} bp average read length |
             {{ metadata.metadata.instrument }} | Released {{
@@ -21,7 +20,7 @@
             <br />
           </div>
 
-          <div>
+          <div class="has-text-justified">
             <br />
             <p>{{ metadata.metadata.study_abstract }}</p>
           </div>

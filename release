@@ -83,6 +83,7 @@ if __name__ == '__main__':
         f.write('__scrape_date__ = "{}"\n'.format(args.scrape_date))
     logging.info("Version file is now: {}".format(open(version_file).read()))
 
+    print(extern.run('git commit -am "v{}"'.format(args.version)))
     print(extern.run('git tag v{}'.format(args.version)))
 
     logging.info("Now run git push && git push --tags")
