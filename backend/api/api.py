@@ -124,7 +124,6 @@ def fetch_metadata(sample_name):
     if metadata == [] or metadata is None:
         return jsonify({ "error": 'No metadata found for '+sample_name+'. This likely means that this run was not included when the list of runs to analyse was gathered ('+__scrape_date__+').' })
     meta = metadata[0]
-    print(meta.releasedate.year, ' month ', meta.releasedate.month)
     return jsonify({ 
         'metadata': meta.to_displayable_dict(),
         'metadata_parsed': {
