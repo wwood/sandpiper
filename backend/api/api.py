@@ -327,7 +327,7 @@ def otus(acc):
         columns=['gene','sample','sequence','num_hits','coverage','taxonomy']
     )
     response = make_response(df.to_csv(index=False, header=True, sep='\t'))
-    cd = 'attachment; filename=sandpiper_v{}_{}_condensed.csv'.format(__version__, acc)
+    cd = 'attachment; filename=sandpiper_v{}_{}.otu_table.csv'.format(__version__, acc)
     response.headers['Content-Disposition'] = cd
     response.mimetype = 'text/csv'
     return response
