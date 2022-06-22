@@ -95,8 +95,16 @@ export default {
   },
   computed: {
     center: function () {
-      if (this.lat_lon() !== null) {
-        return latLng(0, this.lat_lon()[1])
+      const lat_lon = this.lat_lon()
+      if (lat_lon !== null) {
+        // Near the poles, the map is too small and so the marker can be hidden
+        if (lat_lon[0] > 45) {
+          return latLng(45.0, lat_lon[1])
+        } else if (lat_lon[0] < -45) {
+          return latLng(-45.0, lat_lon[1])
+        } else {
+          return latLng(0, lat_lon[1])
+        }
       } else {
         return latLng(0, 0)
       }
