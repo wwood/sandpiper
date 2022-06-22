@@ -63,22 +63,23 @@
             <a class="bd-anchor-link" href="#geographic-distribution"># </a>
             <span class="bd-anchor-name">Geographic distribution</span>
           </h2>
-          <!-- <div class="section"> -->
-            <div v-if="this.num_lat_lon_runs < 1000">
-              {{ this.num_lat_lon_runs.toLocaleString("en-US") }} runs have relative abundance > 1% and associated latitude/longitude metadata.
-            </div>
-            <div v-else>
-              1,000+ runs have relative abundance > 1% and associated latitude/longitude metadata.
-            </div>
-            <br /><p>{{ (total_num_results - num_lat_lon_runs).toLocaleString("en-US") }} other runs are not shown on this map.</p><br />
-          <!-- </div> -->
-          <l-map style="height: 900px" :zoom="zoom" :center="center">
+          
+          <div v-if="this.num_lat_lon_runs < 1000">
+            {{ this.num_lat_lon_runs.toLocaleString("en-US") }} runs have relative abundance > 1% and associated latitude/longitude metadata.
+          </div>
+          <div v-else>
+            1,000+ runs have relative abundance > 1% and associated latitude/longitude metadata.
+          </div>
+          <br /><p>{{ (total_num_results - num_lat_lon_runs).toLocaleString("en-US") }} other runs are not shown on this map.</p><br />
+          
+          <l-map style="height: 900px" :zoom.sync="zoom" :center="center">
             <l-tile-layer :url="url" :attribution="attribution" />
             <l-marker v-for="markerLatLng in this.lat_lons" v-bind:key="markerLatLng[0]" :lat-lng="markerLatLng['lat_lon']">
               <l-popup :content="html_for_map_popup(markerLatLng)" :options="{ interactive: true }">
               </l-popup>
             </l-marker>
           </l-map>
+          <div @click="reset_map()"><b-icon icon="refresh" size="is-small" /> reset zoom</div>
         </div>
       </section>
 
@@ -169,6 +170,8 @@ Icon.Default.mergeOptions({
   shadowUrl: require('leaflet/dist/images/marker-shadow.png')
 })
 
+const default_zoom = 1.5
+
 export default {
   name: 'SearchResults',
   props: ['taxonomy'],
@@ -198,7 +201,7 @@ export default {
       attribution:
         '&copy; <a target="_blank" href="http://osm.org/copyright">OpenStreetMap</a> contributors',
       center: latLng(0, 0),
-      zoom: 1.5
+      zoom: default_zoom
     }
   },
   created () {
@@ -207,6 +210,9 @@ export default {
     this.fetchGlobalData()
   },
   methods: {
+    reset_map: function () {
+      this.zoom = default_zoom
+    },
     fetchGlobalData () {
       fetchGlobalDataByTaxonomy(this.taxonomy)
         .then(response => {

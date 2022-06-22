@@ -1,10 +1,12 @@
 <template>
   <div>
     <div v-if="lat_lon() !== null">
-      <l-map :style="map_style" :zoom="zoom" :center="center">
+      <!-- I cannot get center.sync to reset when reset_map() is clicked, oh well -->
+      <l-map :style="map_style" :zoom.sync="zoom" :center.sync="center">
         <l-tile-layer :url="url" :attribution="attribution" />
         <l-marker :lat-lng="lat_lon()" />
       </l-map>
+      <div @click="reset_map()"><b-icon icon="refresh" size="is-small" /> reset zoom</div>
       <br />
     </div>
 
@@ -76,6 +78,8 @@ Icon.Default.mergeOptions({
   shadowUrl: require('leaflet/dist/images/marker-shadow.png')
 })
 
+const default_zoom = 0.5
+
 export default {
   name: 'RunMetadata',
   props: ['mdata','mdata_parsed'],
@@ -90,11 +94,27 @@ export default {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       attribution:
         '&copy; <a target="_blank" href="http://osm.org/copyright">OpenStreetMap</a> contributors',
-      zoom: 0.5
+      zoom: default_zoom,
+      center: latLng(0, 0),
+      bounds: null
     }
   },
+  mounted () {
+    this.center = this.get_default_map_center()
+  },
   computed: {
-    center: function () {
+    map_style: function () {
+      const style = 'height: 300px; width: '
+      // Make the width fit for smaller screens, but max out the width.
+      if (window.innerWidth < 600) {
+        return style+'100%'
+      } else {
+        return style+'550px'
+      }
+    },
+  },
+  methods: {
+    get_default_map_center: function () {
       const lat_lon = this.lat_lon()
       if (lat_lon !== null) {
         // Near the poles, the map is too small and so the marker can be hidden
@@ -109,17 +129,12 @@ export default {
         return latLng(0, 0)
       }
     },
-    map_style: function () {
-      const style = 'height: 300px; width: '
-      // Make the width fit for smaller screens, but max out the width.
-      if (window.innerWidth < 600) {
-        return style+'100%'
-      } else {
-        return style+'550px'
-      }
+    reset_map: function () {
+      // Setting the center here doesn't appear to have any effect
+      this.center = this.get_default_map_center()
+      // Zoom works though
+      this.zoom = default_zoom
     },
-  },
-  methods: {
     santiseAttributeName(name) {
       return name.replace(/_/g, ' ').replace(/ sam$/,'')
     },
