@@ -70,8 +70,8 @@
 
   .sandpiperbackground {
     background-image: url("./assets/sandpiper.jpg");
-    background-size: cover;
-    height: 1000px
+    background-size: 100%;
+    // height: 1000px
   }
   .footer-image {
     height: 50%;

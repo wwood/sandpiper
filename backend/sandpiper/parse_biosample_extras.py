@@ -12,8 +12,8 @@ import iso8601
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 
-actually_missing = set([s.lower() for s in [
-    'missing','not applicable','NA','Missing','Not collected','not provided','Missing: Not provided']])
+ACTUALLY_MISSING = set([s.lower() for s in [
+    'missing','not applicable','NA','Missing','Not collected','not provided','Missing: Not provided','', 'uncalculated','not applicable','no applicable']])
 
 def validate_lat_lon(lat, lon):
     if lat >= -90 and lat <= 90 and lon >= -180 and lon <= 180:
@@ -37,7 +37,7 @@ def parse_json_to_lat_lon_dict(j):
     ]
 
     for attr in j['attributes']:
-        if attr['k'] in biosample_keys_for_lat_long_parsing and attr['v'].lower() not in actually_missing:
+        if attr['k'] in biosample_keys_for_lat_long_parsing and attr['v'].lower() not in ACTUALLY_MISSING:
             lat_long_dict[attr['k']] = attr['v']
 
     return lat_long_dict
@@ -104,7 +104,7 @@ def parse_two_part_lat_lon(sample_name, lat_input, lon_input):
         return False, False
 
 def parse_temp(acc, temp):
-    if temp.lower() in actually_missing:
+    if temp.lower() in ACTUALLY_MISSING:
         return ''
     
     endings = ['°C','C','°c','c',' celcius']
@@ -127,7 +127,7 @@ def parse_temp(acc, temp):
             return ''
 
 def parse_depth(acc, depth):
-    if depth.lower() in actually_missing:
+    if depth.lower() in ACTUALLY_MISSING:
         return ''
     
     depth2 = depth
@@ -155,7 +155,7 @@ def parse_depth(acc, depth):
         return ''
 
 def parse_date(acc, date):
-    if date.lower() in actually_missing:
+    if date.lower() in ACTUALLY_MISSING:
         return ''
 
     try:
@@ -250,12 +250,12 @@ def parse_attribute_fields(j, extra_sample_keys):
     result_hash = {}
 
     for attr in j['attributes']:
-        if attr['k'] in extra_sample_keys and attr['v'].lower() not in actually_missing:
+        if attr['k'] in extra_sample_keys and attr['v'].lower() not in ACTUALLY_MISSING:
             if attr['k'] in parsing_hash:
                 # Special parsing function
                 result_hash[attr['k']] = parsing_hash[attr['k']](j['acc'], attr['v'])
             else:
-                # Just output as-is (except if actually_missing)
+                # Just output as-is (except if ACTUALLY_MISSING)
                 result_hash[attr['k']] = [attr['v']]
     return result_hash
 

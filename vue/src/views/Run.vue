@@ -3,26 +3,26 @@
     <div v-if="metadata !== null">
       <section class="section">
         <div class="container" v-if="metadata !== null">
-          <h1 class="title">{{ metadata.metadata.study_title }}</h1>
+          <h1 class="title">{{ metadata.metadata_parsed.study_title }}</h1>
 
           <p class="subtitle">
             Sample {{ sample_name_mature }}
           </p>
 
           <div>
-            {{ metadata.metadata.organism }} | {{
-            metadata.metadata.mbases / 1000}} Gbp | {{ getNumReads }} million
-            reads  | {{ metadata.metadata.avgspotlen }} bp average read length |
-            {{ metadata.metadata.instrument }} | Released {{
+            {{ metadata.metadata_parsed.organism }} | {{
+            metadata.metadata_parsed.mbases / 1000}} Gbp | {{ getNumReads }} million
+            reads |
+            {{ metadata.metadata_parsed.instrument }} | Released {{
             metadata.metadata_parsed.release_month }}
             <br />
-            NCBI: <a :href="bioproject_url">{{ bioproject_id }}</a> | <a :href="'http://www.ncbi.nlm.nih.gov/sra?term=' + accession">{{ accession }}</a>
+            NCBI: <a :href="bioproject_url">{{ metadata.metadata_parsed.bioproject }}</a> | <a :href="'http://www.ncbi.nlm.nih.gov/sra?term=' + accession">{{ accession }}</a>
             <br />
           </div>
 
           <div class="has-text-justified">
             <br />
-            <p>{{ metadata.metadata.study_abstract }}</p>
+            <p>{{ metadata.metadata_parsed.study_abstract }}</p>
           </div>
 
           <div>
@@ -68,7 +68,11 @@
         </div>
       </section>
 
-      <RunMetadata :mdata="metadata.metadata" />
+      <section class="section">
+        <div class="container is-large">
+          <RunMetadata :mdata="metadata.metadata" :mdata_parsed="metadata.metadata_parsed" />
+        </div>
+      </section>
     </div>
 
     <div v-else>
@@ -116,28 +120,26 @@ export default {
     RunMetadata
   },
   computed: {
-    bioproject_id: function () {
-      return this.metadata.metadata.bioproject
-    },
     bioproject_url: function () {
-      return 'https://www.ncbi.nlm.nih.gov/bioproject/' + this.metadata.metadata.bioproject
+      return 'https://www.ncbi.nlm.nih.gov/bioproject/' + this.metadata.metadata_parsed.bioproject
     },
     scholar_search_url: function () {
       // Unclear whether including accession helps. 
-      return 'https://scholar.google.com/scholar?q=' + this.metadata.metadata.bioproject + ' OR ' + this.accession
+      return 'https://scholar.google.com/scholar?q=' + this.metadata.metadata_parsed.bioproject + ' OR ' + this.accession
     },
     getNumReads: function () {
-      return Math.round(this.metadata.metadata.mbases / this.metadata.metadata.avgspotlen)
+      return Math.round(this.metadata.metadata_parsed.mbases / this.metadata.metadata_parsed.avgspotlen)
     },
     sunburst_tree: function () {
       return this.condensed_tree.condensed
     },
     sample_name_mature: function () {
-      if (this.metadata.metadata.sample_name_sam !== null) {
-        return this.metadata.metadata.sample_name_sam
-      } else {
-        return this.metadata.metadata.sample_name
-      }
+      return this.metadata.metadata_parsed.sample_name
+      // if (this.metadata.metadata_parsed.sample_name_sam !== null) {
+      //   return this.metadata.metadata.sample_name_sam
+      // } else {
+      //   return this.metadata.metadata.sample_name
+      // }
     },
     full_profile_link: function () {
       return api_url() + '/otus/' + this.accession

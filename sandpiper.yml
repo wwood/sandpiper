@@ -19,6 +19,7 @@ dependencies:
   - graftm
   - tqdm
   - snakemake
+  - mamba
 
   - numpy
   - typing_extensions=4.1 #4.2 gives an Attribute error when flast starts

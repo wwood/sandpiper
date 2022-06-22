@@ -1,4 +1,4 @@
-SANDPIPER_VERSION: '14_test'
+SANDPIPER_VERSION: '15_test'
 
 KINGFISHER_METADATA_DATE: '20220616'
 ACCESSIONS_FILE: '../test/data/6_runs/8_runs.accessions'

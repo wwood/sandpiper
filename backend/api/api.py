@@ -6,13 +6,14 @@ api.py
 from email import header
 import re
 
-from flask import Blueprint, jsonify, request, make_response
+from flask import Blueprint, jsonify, request, make_response, current_app
+
 from sqlalchemy import select, distinct
 from sqlalchemy.sql import func
 from sqlalchemy.orm import joinedload, lazyload
 from sqlalchemy.sql.expression import func
 
-from .models import NcbiMetadata, ParsedSampleAttribute, db, Marker, OtuIndexed, CondensedProfile, Taxonomy, BiosampleAttribute
+from .models import NcbiMetadata, ParsedSampleAttribute, db, Marker, OtuIndexed, CondensedProfile, Taxonomy
 import pandas as pd
 # from api.models import #for flask shell
 from .version import __version__, __gtdb_version__, __scrape_date__
@@ -21,16 +22,24 @@ import os, sys
 sys.path = [os.environ['HOME']+'/git/singlem-local'] + [os.environ['HOME']+'/git/singlem'] + sys.path
 from singlem.condense import WordNode
 
+sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
+from sandpiper.biosample_attributes import *
+from sandpiper.parse_biosample_extras import ACTUALLY_MISSING
+
 api = Blueprint('api', __name__)
 
 sandpiper_stats_cache = None
 sandpiper_taxonomy_id_to_full_name = None
 sandpiper_marker_id_to_name = None
+biosample_attribute_definitions = None
+ncbi_metadata_infos = None
 
 def generate_cache():
     global sandpiper_stats_cache
     global sandpiper_taxonomy_id_to_full_name
     global sandpiper_marker_id_to_name
+    global biosample_attribute_definitions
+    global ncbi_metadata_infos
 
     if sandpiper_stats_cache is None or len(sandpiper_stats_cache) != 3:
         sandpiper_stats_cache = {}
@@ -49,6 +58,10 @@ def generate_cache():
         for marker in Marker.query.all():
             cache[marker.id] = marker.marker
         sandpiper_marker_id_to_name = cache
+    if biosample_attribute_definitions is None:
+        biosample_attribute_definitions = BioSampleAttributes(current_app.logger).attributes
+    if ncbi_metadata_infos is None:
+        ncbi_metadata_infos = NcbiMetadataExtraInfos().extra_info
 
 
 @api.route('/sandpiper_stats', methods=['GET'])
@@ -120,15 +133,81 @@ def wordnode_json(wordnode, order, depth):
 
 @api.route('/metadata/<string:sample_name>', methods=('GET',))
 def fetch_metadata(sample_name):
+    global biosample_attribute_definitions
+
+    # Doesn't usually cache anything, but useful to have here for testing
+    generate_cache()
+
     metadata = NcbiMetadata.query.filter_by(acc=sample_name).all()
     if metadata == [] or metadata is None:
         return jsonify({ "error": 'No metadata found for '+sample_name+'. This likely means that this run was not included when the list of runs to analyse was gathered ('+__scrape_date__+').' })
     meta = metadata[0]
+
+    metadata_dict = meta.to_displayable_dict()
+    
+    metadata_parsed = {
+        'release_month': meta.releasedate.strftime('%B %Y'),
+        'latitude': metadata_dict['parsed_sample_attributes']['latitude'],
+        'longitude': metadata_dict['parsed_sample_attributes']['longitude'],
+    }
+
+    # Change format to be classification => [[name, description], [name, description], ..]
+    # for fields that are known already
+    d2 = {}
+    for info in ncbi_metadata_infos.values():
+        if info.name in metadata_dict and metadata_dict[info.name] is not None:
+            if str(metadata_dict[info.name]).lower().strip() in ACTUALLY_MISSING:
+                # Do not display missing / fake data
+                continue
+
+            if info.name in ['sample_name', 'sample_name_sam', 'study_title',
+                'organism','mbases','instrument','bioproject','avgspotlen']:
+                metadata_parsed[info.name] = metadata_dict[info.name]
+            elif info.name == 'study_abstract':
+                metadata_parsed[info.name] = metadata_dict[info.name]
+                continue # No need to repeat this in the metadata table when it is up the top.
+
+            to_add = {
+                'k': info.name.replace('_', ' '), 
+                'v': metadata_dict[info.name], 
+                'description': info.description, 
+                'is_custom': False}
+            if info.classification in d2:
+                d2[info.classification].append(to_add)
+            else:
+                d2[info.classification] = [to_add]
+            del metadata_dict[info.name]
+
+    # Give the biosample attributes a more friendly name, and annotate them as
+    # being custom or not.
+    biosample_dict = []
+    sam_regex = re.compile('_sam$')
+
+    for bs in metadata_dict['biosample_attributes']:
+        k_original = bs['k']
+        k = sam_regex.sub('', k_original)
+        v = bs['v']
+
+        if str(v).lower().strip() in ACTUALLY_MISSING:
+            # Do not display missing / fake data
+            continue    
+        
+        if k in biosample_attribute_definitions:
+            biosample_dict.append({ 
+                'k': biosample_attribute_definitions[k].name, 
+                'v': v,
+                'is_custom': False,
+                'description': biosample_attribute_definitions[k].description })
+        else:
+            # Submitters can upload custom attributes
+            biosample_dict.append({ 'k': k.replace('_',' '), 'v': v, 'is_custom': True, 'description': None })
+
+    d2[SAMPLE_INFO_TYPE_METADATA].extend(biosample_dict)
+    d2['study_links'] = metadata_dict['study_links']
+
     return jsonify({ 
-        'metadata': meta.to_displayable_dict(),
-        'metadata_parsed': {
-            'release_month': meta.releasedate.strftime('%B %Y')
-        }})
+        'metadata': d2,
+        'metadata_parsed': metadata_parsed})
 
 def taxonomy_search_fail_json(reason):
     return jsonify({ 'taxon': reason })

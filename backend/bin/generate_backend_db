@@ -268,9 +268,11 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
 
                 # Write biosample attributes
                 for attribute in attributes:
-                    attribute['run_id'] = last_metadata_id
-                    db.session.add(BiosampleAttribute(**attribute))
-                    attribute_count += 1
+                    # Don't record bases/bytes as these aren't really biosample attributes
+                    if attribute['k'] not in ('bases','bytes'):
+                        attribute['run_id'] = last_metadata_id
+                        db.session.add(BiosampleAttribute(**attribute))
+                        attribute_count += 1
 
                 # Parsed data
                 j['attributes'] = attributes

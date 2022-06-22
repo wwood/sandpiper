@@ -10,7 +10,11 @@
       <p>We gratefully acknowledge the large collective effort expended
       in administering, gathering, sequencing and uploading these datasets into
       the public domain.</p>
+
+      <br /><p>Get started exploring metagenomes with <router-link to="/Search">search</router-link>.</p>
     </section>
+
+    <section class="section container is-large" />
   </div>
 </template>
 
