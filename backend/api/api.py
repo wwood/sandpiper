@@ -168,7 +168,7 @@ def fetch_metadata(sample_name):
                 continue # No need to repeat this in the metadata table when it is up the top.
 
             to_add = {
-                'k': info.name.replace('_', ' '), 
+                'k': info.nice_name, 
                 'v': metadata_dict[info.name], 
                 'description': info.description, 
                 'is_custom': False}

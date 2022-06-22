@@ -135,10 +135,8 @@ export default {
       // Zoom works though
       this.zoom = default_zoom
     },
-    santiseAttributeName(name) {
-      return name.replace(/_/g, ' ').replace(/ sam$/,'')
-    },
-    // Data to be put in the general metadata
+    // Data to be put in the general metadata. This method is actually mostly
+    // dead code now, but kept as it is used in one place
     gatherMetadata (section) {
       const toReturn = []
       Object.keys(this.mdata).forEach(key => {
@@ -146,7 +144,7 @@ export default {
         if (section==='general') {
           if (!['biosample_attributes','study_links','parsed_sample_attributes','study_abstract','study_title'].includes(key) && v !== null) {
             toReturn.push({
-              k: this.santiseAttributeName(key),
+              k: key,
               value: v
             })
           }
