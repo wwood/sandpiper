@@ -2,7 +2,7 @@
   <div>
     <section class="section is-small container has-text-justified">
       <h1 class="title">Team</h1>
-      <p>This website, and SingleM itself, is the result of a collaboration between <a href="https://research.qut.edu.au/cmr/team/ben-woodcroft/">Ben Woodcroft</a>, Rossen Zhao, Mitchell Cunningham, Samuel Aroney, <a href="https://findanexpert.unimelb.edu.au/profile/753413-linda-blackall">Linda Blackall</a> and <a href="https://research.qut.edu.au/cmr/team/gene-tyson/">Gene Tyson</a>.</p><br />
+      <p>This website, and SingleM itself, is the result of a collaboration between <a href="https://research.qut.edu.au/cmr/team/ben-woodcroft/">Ben Woodcroft</a>, Rossen Zhao, Mitchell Cunningham, Joshua Mitchell, Samuel Aroney, <a href="https://findanexpert.unimelb.edu.au/profile/753413-linda-blackall">Linda Blackall</a> and <a href="https://research.qut.edu.au/cmr/team/gene-tyson/">Gene Tyson</a>.</p><br />
       <p>Most of us are at the <a href="https://research.qut.edu.au/cmr/">Centre for Microbiome Research</a>, School of Biomedical Sciences, Queensland University of Technology (<a href="qut.edu.au">QUT</a>), Translational Research Institute, Woolloongabba, Australia. Mitchell Cunningham and Linda Blackall are at the School of BioSciences, The University of Melbourne, Victoria, Australia.</p>
     </section>
 
