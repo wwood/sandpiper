@@ -13,7 +13,7 @@ import iso8601
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 
 ACTUALLY_MISSING = set([s.lower() for s in [
-    'missing','not applicable','NA','Missing','Not collected','not provided','Missing: Not provided','', 'uncalculated','not applicable','no applicable']])
+    'missing','not applicable','NA','Missing','Not collected','not provided','Missing: Not provided','', 'uncalculated','not applicable','no applicable','unspecified']])
 
 def validate_lat_lon(lat, lon):
     if lat >= -90 and lat <= 90 and lon >= -180 and lon <= 180:

@@ -8,6 +8,13 @@ import 'leaflet/dist/leaflet.css'
 
 import Buefy from 'buefy'
 import 'buefy/dist/buefy.css'
+
+import VueGtag from "vue-gtag";
+
+Vue.use(VueGtag, {
+  config: { id: "G-X1CBD2T8XH" }
+});
+
 Vue.use(Buefy)
 
 Vue.config.productionTip = process.env.NODE_ENV === 'production'
