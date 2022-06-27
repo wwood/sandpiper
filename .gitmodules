@@ -1,0 +1,3 @@
+[submodule "public_sequencing_metadata_corrections"]
+	path = public_sequencing_metadata_corrections
+	url = ./public_sequencing_metadata_corrections

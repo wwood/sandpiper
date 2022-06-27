@@ -131,6 +131,38 @@ def wordnode_json(wordnode, order, depth):
         j['children'] = [wordnode_json(child, order+i, depth+1) for i, child in enumerate(sorted_children)]
     return j
 
+@api.route('/full_profile/<string:sample_name>', methods=('GET',))
+def fetch_full_profile(sample_name):
+    global sandpiper_taxonomy_id_to_full_name, sandpiper_marker_id_to_name
+
+    # Doesn't usually cache anything, but useful to have here for testing
+    generate_cache()
+
+    run_id = NcbiMetadata.query.filter_by(acc=sample_name).first().id
+    if run_id is None:
+        return jsonify({ 'error': 'no run found for acc '+sample_name })
+
+    otus = OtuIndexed.query.filter_by(run_id=run_id, marker_id=1).order_by(OtuIndexed.id).all()
+
+    root = WordNode(None, 'Root')
+    taxons_to_wordnode = {root.word: root}
+
+    for (i, otu) in enumerate(otus):
+        taxonomy = ('Root' if otu.taxonomy_id==0 else 'Root; ' + sandpiper_taxonomy_id_to_full_name[otu.taxonomy_id]) if otu.taxonomy_id in sandpiper_taxonomy_id_to_full_name else otu.taxonomy_id
+        taxons = taxonomy.split('; ')+['OTU '+str(i+1)]
+
+        last_taxon = root
+        wn = None
+        for tax in taxons:
+            if tax not in taxons_to_wordnode:
+                wn = WordNode(last_taxon, tax)
+                last_taxon.children[tax] = wn
+                taxons_to_wordnode[tax] = wn #TODO: Problem when there is non-unique labels? Require full taxonomy used?
+            last_taxon = taxons_to_wordnode[tax]
+        last_taxon.coverage = otu.coverage
+
+    return jsonify({ 'otus': wordnode_json(root, 0, 0), 'sample_name': sample_name })    
+
 @api.route('/metadata/<string:sample_name>', methods=('GET',))
 def fetch_metadata(sample_name):
     global biosample_attribute_definitions

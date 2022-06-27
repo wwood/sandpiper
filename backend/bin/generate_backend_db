@@ -217,7 +217,7 @@ def iterate_condensed_profile_split_taxonomy(entries):
 
         yield row, species_aware_taxonomies
 
-def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_json_files):
+def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_json_files, corrections):
     '''Load metadata including directly parsed metadata, using only samples in the condensed otu table'''
 
     # Only load metadata for samples that are in the DB
@@ -231,10 +231,23 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
         with open(path) as f:
             for line in f:
                 j = json.loads(line)
+
                 acc = j['acc']
                 if acc not in samples_of_interest:
                     logging.debug("Skipping {}".format(acc))
                     continue
+
+                # Some odd (old?) runs do not have an associated bioproject e.g. SRR2001402
+                if 'bioproject' in j and j['bioproject'] in corrections:
+                    for (field, correction) in corrections[j['bioproject']].items():
+                        if field in j:
+                            if j[field] == correction['old_value']:
+                                j[field] = correction['corrected_value']
+                                logging.debug("Correcting {} from {} to {}".format(field, correction['old_value'], correction['corrected_value']))
+                            else:
+                                logging.debug("For acc {} Did not find expected old value {} in {}".format(acc, correction['old_value'], j[field]))
+
+
                 attributes = j['attributes']
 
                 del j['attributes']
@@ -243,7 +256,7 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                 # loaddate = db.Column(db.DateTime, nullable=False)
                 # collection_date_sam = db.Column(db.DateTime, nullable=False)
                 for d in ['releasedate','loaddate','collection_date_sam']:
-                    if d in j and j[d].lower() not in actually_missing:
+                    if d in j and j[d].lower() not in ACTUALLY_MISSING:
                         try:
                             j[d] = iso8601.parse_date(j[d])
                         except iso8601.ParseError:
@@ -293,8 +306,7 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                     'latitude': lat_lon[0],
                     'longitude': lat_lon[1]
                 }))
-
-
+                
                 if last_metadata_id % 10000 == 0:
                     db.session.commit()
 
@@ -548,6 +560,20 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
     logging.info("Dropping old otus table ..")
     Otu.__table__.drop(db.session.connection())
 
+def read_corrections():
+    with open(os.path.join(os.path.dirname(__file__), '../../public_sequencing_metadata_corrections/corrections.json')) as f:
+        corrections = json.load(f)
+    # Convert corrections to a dict with key of bioproject
+    corrections_by_bioproject = {}
+    for correction in corrections:
+        # Corrections should be dict of table name to correction info
+        table_corrections = {}
+        for cor in correction['corrections']:
+            table_corrections[cor['field']] = cor
+        corrections_by_bioproject[correction['bioproject']] = table_corrections
+
+    return corrections_by_bioproject
+
 if __name__ == '__main__':
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument('--debug', help='output debug information', action="store_true")
@@ -578,6 +604,9 @@ if __name__ == '__main__':
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
+    # Read corrections in
+    corrections = read_corrections()
+
     blacklist = set()
     if args.run_blacklist:
         with open(args.run_blacklist) as f:
@@ -604,7 +633,7 @@ if __name__ == '__main__':
 
         # Create sample metadata table, restricting it to just those samples
         # that we have condensed profiles for.
-        run_accession_to_id = create_sample_metadata(db, args.condensed_otu_table, blacklist, args.metadata_json_files)
+        run_accession_to_id = create_sample_metadata(db, args.condensed_otu_table, blacklist, args.metadata_json_files, corrections)
         
         taxonomy_name_to_id = fill_condensed_and_taxonomy_tables(db, args.condensed_otu_table, blacklist, run_accession_to_id)
 
