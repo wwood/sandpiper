@@ -1,18 +1,20 @@
 
 rule all:
     input:
-        '{version}/backend_db/done'.format(version=config['SANDPIPER_VERSION'])
+        '{test_or_prod}/{version}/backend_db/done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
 
 rule gather_kingfisher_metadata:
     input:
         accessions=config['ACCESSIONS_FILE']
     output:
-        metadata='{version}/kingfisher_metadata/{date}/kingfisher_metadata.csv'.format(
+        metadata='{test_or_prod}/kingfisher_metadata/{date}/kingfisher_metadata.csv'.format(
             date=config['KINGFISHER_METADATA_DATE'],
-            version=config['SANDPIPER_VERSION']),
-        done='{version}/kingfisher_metadata/{date}/done'.format(
+            test_or_prod=config['TEST_OR_PROD']),
+        done='{test_or_prod}/kingfisher_metadata/{date}/done'.format(
             date=config['KINGFISHER_METADATA_DATE'],
-            version=config['SANDPIPER_VERSION'])
+            test_or_prod=config['TEST_OR_PROD'])
     conda:
         'envs/kingfisher.yml'
     shell:
@@ -21,13 +23,15 @@ rule gather_kingfisher_metadata:
 
 rule generate_backend_db:
     input:
-        kingfisher_metadata='{version}/kingfisher_metadata/{date}/kingfisher_metadata.csv'.format(
+        kingfisher_metadata='{test_or_prod}/kingfisher_metadata/{date}/kingfisher_metadata.csv'.format(
             date=config['KINGFISHER_METADATA_DATE'],
-            version=config['SANDPIPER_VERSION'])
+            test_or_prod=config['TEST_OR_PROD'])
     output:
-        '{version}/backend_db/done'.format(version=config['SANDPIPER_VERSION'])
+        '{test_or_prod}/{version}/backend_db/done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
         'TMPDIR=. ./bin/generate_backend_db --singlem-db ../test/data/5_s3_runs/5_s3_runs.sdb/otus.sqlite3 --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o db/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --metadata-json-files ../sra_metadata/sra_metadata_20220209/* --run-blacklist db/metagenome_assembly_acc_list.csv --host-predictions-tsv ~/m/big_data_microbiome/1_organism_prediction_20220202/sra_20211215.mach1-2.predictions.csv.gz --kingfisher-annotate-path-list <(echo $SNAKE_WORKING_DIR/{input.kingfisher_metadata}) --otu-table <(pigz -cd {config[OTU_TABLE]}) && ' \
-        'touch $SNAKE_WORKING_DIR/{config[SANDPIPER_VERSION]}/backend_db/done'
+        'touch $SNAKE_WORKING_DIR/{config[TEST_OR_PROD]}/{config[SANDPIPER_VERSION]}/backend_db/done'

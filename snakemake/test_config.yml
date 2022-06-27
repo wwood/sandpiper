@@ -1,7 +1,9 @@
 SANDPIPER_VERSION: '15_test'
 
-KINGFISHER_METADATA_DATE: '20220616'
+KINGFISHER_METADATA_DATE: '20220627'
 ACCESSIONS_FILE: '../test/data/6_runs/8_runs.accessions'
 
 CONDENSED_OTU_TABLE: '../test/data/6_runs/8_runs.condensed.csv.gz'
 OTU_TABLE: '../test/data/6_runs/8_runs.otu_table.csv.gz'
+
+TEST_OR_PROD: 'test'

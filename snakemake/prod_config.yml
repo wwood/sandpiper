@@ -1,7 +1,9 @@
-SANDPIPER_VERSION: '14'
+SANDPIPER_VERSION: '15'
 
-KINGFISHER_METADATA_DATE: '20220616'
+KINGFISHER_METADATA_DATE: '20220627'
 ACCESSIONS_FILE: ../sra_metadata/sra_metadata_20220209.accessions
 
 CONDENSED_OTU_TABLE: '~/m/msingle/mess/93_sra_20211215/sra_20211215.mach3.sdb.condense10pct.mach2.csv.gz'
 OTU_TABLE: '~/m/msingle/mess/93_sra_20211215/sra_20211215.mach3.otu_table.tsv.gz'
+
+TEST_OR_PROD: 'prod'

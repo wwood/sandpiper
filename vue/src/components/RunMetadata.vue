@@ -1,48 +1,44 @@
 <template>
   <div>
-    <div v-if="lat_lon() !== null">
-      <!-- I cannot get center.sync to reset when reset_map() is clicked, oh well -->
-      <l-map :style="map_style" :zoom.sync="zoom" :center.sync="center">
-        <l-tile-layer :url="url" :attribution="attribution" />
-        <l-marker :lat-lng="lat_lon()" />
-      </l-map>
-      <div @click="reset_map()"><b-icon icon="refresh" size="is-small" /> reset zoom</div>
-      <br />
+    &nbsp;
+    <div class="container">
+      <section>
+        <h3 class="title">Submitter information</h3>
+        <RunMetadataTable :table_data="this.mdata.contact_metadata"  />
+      </section>
     </div>
 
-    <div v-for="name_key in [
-      ['Submitter information',this.mdata.contact_metadata],
-      ['Sample information',this.mdata.sample_info_metadata],
-      ['Sequencing information', this.mdata.sequencing_metadata],
-      ['Other identifiers', this.mdata.identity_metadata]
-      ]
-      " v-bind:key="name_key[0]">
+    &nbsp;
+    <div class="container">
+      <section>
+        <h3 class="title">Sample information</h3>
+        <div v-if="lat_lon() !== null">
+          <!-- I cannot get center.sync to reset when reset_map() is clicked, oh well -->
+          <l-map :style="map_style" :zoom.sync="zoom" :center.sync="center">
+            <l-tile-layer :url="url" :attribution="attribution" />
+            <l-marker :lat-lng="lat_lon()" />
+          </l-map>
+          <div @click="reset_map()"><b-icon icon="refresh" size="is-small" /> reset zoom</div>
+          <br />
+        </div>
+        <RunMetadataTable :table_data="this.mdata.sample_info_metadata"  />
+      </section>
+    </div>
 
-      &nbsp;
-      <div class="container">
-        <section>
-          <h3 class="title">{{ name_key[0] }}</h3>
-          <b-table :data="name_key[1]" :striped="true" detailed :show-detail-icon="false">
-            <b-table-column field="is_custom" label="" align="centre" v-slot="props" width="20">
-              <span v-if="!props.row.is_custom" @click="props.toggleDetails(props.row)"><b-icon icon="information-outline" /></span>
-            </b-table-column>
-            <b-table-column field="k" label="" v-slot="props" width="300">
-              <div @click="props.toggleDetails(props.row)"><b>{{ props.row.k }}</b></div>
-            </b-table-column>
-            <b-table-column field="v" label="" v-slot="props" >
-              {{ props.row.v }}
-            </b-table-column>
-            <template #detail="props">
-              <div v-if="props.row.is_custom === true">
-                "{{props.row.k}}" is a custom attribute that is not defined by NCBI.
-              </div>
-              <div v-else>
-                "{{props.row.k}}" is {{props.row.description}}
-              </div>
-            </template>
-          </b-table>
-        </section>
-      </div>
+    &nbsp;
+    <div class="container">
+      <section>
+        <h3 class="title">Sequencing information</h3>
+        <RunMetadataTable :table_data="this.mdata.sequencing_metadata"  />
+      </section>
+    </div>
+
+    &nbsp;
+    <div class="container">
+      <section>
+        <h3 class="title">Other identifiers</h3>
+        <RunMetadataTable :table_data="this.mdata.identity_metadata"  />
+      </section>
     </div>
 
     &nbsp;
@@ -71,6 +67,8 @@ import { LMap, LTileLayer, LMarker } from 'vue2-leaflet'
 // Make the marker appear https://vue2-leaflet.netlify.app/quickstart/#marker-icons-are-missing
 import { Icon, latLng } from 'leaflet'
 
+import RunMetadataTable from '@/components/RunMetadataTable.vue'
+
 delete Icon.Default.prototype._getIconUrl
 Icon.Default.mergeOptions({
   iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
@@ -86,7 +84,8 @@ export default {
   components: {
     LMap,
     LTileLayer,
-    LMarker
+    LMarker,
+    RunMetadataTable
   },
   data () {
     return {
