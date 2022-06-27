@@ -26,7 +26,7 @@
             <b-table-column field="is_custom" label="" align="centre" v-slot="props" width="20">
               <span v-if="!props.row.is_custom" @click="props.toggleDetails(props.row)"><b-icon icon="information-outline" /></span>
             </b-table-column>
-            <b-table-column field="k" label="" v-slot="props" >
+            <b-table-column field="k" label="" v-slot="props" width="300">
               <div @click="props.toggleDetails(props.row)"><b>{{ props.row.k }}</b></div>
             </b-table-column>
             <b-table-column field="v" label="" v-slot="props" >

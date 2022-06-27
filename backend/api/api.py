@@ -165,7 +165,7 @@ def fetch_full_profile(sample_name):
 
 @api.route('/metadata/<string:sample_name>', methods=('GET',))
 def fetch_metadata(sample_name):
-    global biosample_attribute_definitions
+    global biosample_attribute_definitions, ncbi_metadata_infos
 
     # Doesn't usually cache anything, but useful to have here for testing
     generate_cache()
@@ -182,6 +182,13 @@ def fetch_metadata(sample_name):
         'latitude': metadata_dict['parsed_sample_attributes']['latitude'],
         'longitude': metadata_dict['parsed_sample_attributes']['longitude'],
     }
+
+    read_length_summary = None
+    if meta.read1_length_average is not None and meta.read2_length_average is not None:
+        read_length_summary = '%.0fx%.0fbp reads' % (meta.read1_length_average, meta.read2_length_average)
+    elif meta.read1_length_average is not None:
+        read_length_summary = '%.0fbp reads' % meta.read1_length_average
+    metadata_parsed['read_length_summary'] = read_length_summary
 
     # Change format to be classification => [[name, description], [name, description], ..]
     # for fields that are known already

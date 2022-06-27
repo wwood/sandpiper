@@ -86,7 +86,11 @@ class NcbiMetadataExtraInfos:
         ['organisation_contact_name', 'organsation: contact name', CONTACT_TYPE_METADATA,'Part of submitter contact details'],
         ['study_title',SAMPLE_INFO_TYPE_METADATA,'Title of the study the sequencing is associated with'],
         ['study_abstract', SAMPLE_INFO_TYPE_METADATA,'Abstract of associated study'],
-        ['design_description', SEQUENCING_TYPE_METADATA,'Free-form description of the methods used to create the sequencing library; a brief \'materials and methods\' section.']
+        ['design_description', SEQUENCING_TYPE_METADATA,'Free-form description of the methods used to create the sequencing library; a brief \'materials and methods\' section.'],
+        ['read1_length_average', SEQUENCING_TYPE_METADATA,'Average length of the first read in the paired-end library, or the average length of all reads if the library is unpaired.'],
+        ['read1_length_stdev', SEQUENCING_TYPE_METADATA,'Standard deviation of the length of the first read in the paired-end library, or the standard deviation of all reads if the library is unpaired.'],
+        ['read2_length_average', SEQUENCING_TYPE_METADATA,'Average length of the second read in the paired-end library, or the average length of all reads if the library is unpaired.'],
+        ['read2_length_stdev', SEQUENCING_TYPE_METADATA,'Standard deviation of the length of the second read in the paired-end library, or the standard deviation of all reads if the library is unpaired.'],
     ]
     
     def __init__(self):

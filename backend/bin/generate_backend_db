@@ -306,7 +306,7 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                     'latitude': lat_lon[0],
                     'longitude': lat_lon[1]
                 }))
-                
+
                 if last_metadata_id % 10000 == 0:
                     db.session.commit()
 
@@ -352,7 +352,11 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
             # # meta.organisation_contact_name = row.organisation_contact_name
             study_title = bindparam('study_title'), #row.study_title,
             study_abstract = bindparam('study_abstract'), #row.study_abstract,
-            design_description = bindparam('design_description') #row.design_description
+            design_description = bindparam('design_description'), #row.design_description
+            read1_length_average = bindparam('read1_length_average'), #row.read1_length_average
+            read1_length_stdev = bindparam('read1_length_stdev'), #row.read1_length_stdev
+            read2_length_average = bindparam('read2_length_average'), #row.read2_length_average
+            read2_length_stdev = bindparam('read2_length_stdev'), #row.read2_length_stdev
             )
     )
     update_bindparams = []
@@ -378,7 +382,11 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
             'organisation_contact_name': row.organisation_contact_name,
             'study_title': row.study_title,
             'study_abstract': row.study_abstract,
-            'design_description': row.design_description
+            'design_description': row.design_description,
+            'read1_length_average': float(row.read1_length_average) if row.read1_length_average else None,
+            'read1_length_stdev': float(row.read1_length_stdev) if row.read1_length_stdev else None,
+            'read2_length_average': float(row.read2_length_average) if row.read2_length_average else None,
+            'read2_length_stdev': float(row.read2_length_stdev) if row.read2_length_stdev else None,
         })
 
         for h in json.loads(row.study_links):

@@ -269,6 +269,10 @@ class NcbiMetadata(db.Model):
     study_title = db.Column(db.String)
     study_abstract = db.Column(db.String)
     design_description = db.Column(db.String)
+    read1_length_average = db.Column(db.Float)
+    read1_length_stdev = db.Column(db.Float)
+    read2_length_average = db.Column(db.Float)
+    read2_length_stdev = db.Column(db.Float)
 
     study_links = db.relationship('StudyLink', backref='ncbi_metadata', foreign_keys=[StudyLink.run_id])
     biosample_attributes = db.relationship('BiosampleAttribute', backref='ncbi_metadata', foreign_keys=[BiosampleAttribute.run_id])
@@ -318,6 +322,10 @@ class NcbiMetadata(db.Model):
                     study_title=self.study_title,
                     study_abstract=self.study_abstract,
                     design_description=self.design_description,
+                    read1_length_average=self.read1_length_average,
+                    read1_length_stdev=self.read1_length_stdev,
+                    read2_length_average=self.read2_length_average,
+                    read2_length_stdev=self.read2_length_stdev,
                     study_links=[study_link.to_displayable_dict() for study_link in self.study_links],
                     biosample_attributes=[{'k': x.k, 'v': x.v} for x in self.biosample_attributes if x.k != 'primary_search'],
                     parsed_sample_attributes=self.parsed_sample_attributes[0].to_displayable_dict())

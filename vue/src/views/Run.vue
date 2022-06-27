@@ -12,7 +12,7 @@
           <div>
             {{ metadata.metadata_parsed.organism }} | {{
             metadata.metadata_parsed.mbases / 1000}} Gbp | {{ getNumReads }} million
-            reads |
+            reads {{ read_length_mature }}|
             {{ metadata.metadata_parsed.instrument }} | Released {{
             metadata.metadata_parsed.release_month }}
             <br />
@@ -144,6 +144,13 @@ export default {
       // } else {
       //   return this.metadata.metadata.sample_name
       // }
+    },
+    read_length_mature: function () {
+      if (this.metadata.metadata_parsed.read_length_summary === null) {
+        return ''
+      } else {
+        return '| ' + this.metadata.metadata_parsed.read_length_summary + ' '
+      }      
     },
     full_profile_link: function () {
       return api_url() + '/otus/' + this.accession
