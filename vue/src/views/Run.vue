@@ -111,6 +111,9 @@ import { api_url, fetchRunMetadata, fetchRunCondensed } from '@/api'
 
 export default {
   name: 'Run',
+  title () {
+    return `Run ${this.accession} - Sandpiper`
+  },
   data: function () {
     return {
       condensed_tree: null,

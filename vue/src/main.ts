@@ -11,6 +11,9 @@ import 'buefy/dist/buefy.css'
 
 import VueGtag from "vue-gtag";
 
+import titleMixin from './mixins/titleMixin'
+Vue.mixin(titleMixin)
+
 Vue.use(VueGtag, {
   config: { id: "G-X1CBD2T8XH" }
 });
