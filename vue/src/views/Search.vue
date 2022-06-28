@@ -42,6 +42,7 @@ import debounce from 'lodash/debounce'
 
 export default {
   name: 'Search',
+  title: 'Search - Sandpiper',
   data () {
     return {
       taxonomy: 'c__Bog-38',

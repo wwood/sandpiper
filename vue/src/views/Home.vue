@@ -23,6 +23,7 @@ import { fetchSandpiperStats } from '@/api'
 
 export default {
   name: 'Home',
+  title: 'Sandpiper',
   data: function () {
     return {
       num_terrabases: null,

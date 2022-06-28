@@ -74,6 +74,9 @@ import { api_url, fetchRunMetadata, fetchOtus } from '@/api'
 
 export default {
   name: 'Run',
+  title () {
+    return `OTUs of ${this.accession} - Sandpiper`
+  },
   data: function () {
     return {
       otu_tree: null,
