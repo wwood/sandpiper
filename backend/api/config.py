@@ -16,6 +16,7 @@ class BaseConfig:
     else:        
         ## For deployment
         SQLALCHEMY_DATABASE_URI = 'sqlite:///db/sandpiper_14.sqlite3'
+    print("Connecting to db {}".format(SQLALCHEMY_DATABASE_URI))
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO=True

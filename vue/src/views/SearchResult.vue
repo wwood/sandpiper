@@ -174,7 +174,9 @@ const default_zoom = 1.5
 
 export default {
   name: 'SearchResults',
-  title: 'Search result - Sandpiper',
+  title () {
+    return `Runs with ${this.taxonomy} - Sandpiper`
+  },
   props: ['taxonomy'],
   components: {
     LMap,
