@@ -54,7 +54,7 @@ class NcbiMetadataExtraInfos:
         ['platform', SEQUENCING_TYPE_METADATA, 'Name of the sequencing platform (i.e. ILLUMINA)'],
         ['sample_acc', 'sample accession', IDENTIFIERS_TYPE_METADATA, 'SRA Sample accession in the form of SRS######## (ERS or DRS for INSDC partners)'],
         ['biosample', 'biosample accession', IDENTIFIERS_TYPE_METADATA, 'BioSample accession in the form of SAMN######## (SAMEA##### or SAMD##### for INSDC partners)'],
-        ['organism', SAMPLE_INFO_TYPE_METADATA, 'Scientific name of the organism that was sequenced (as found in the NCBI Taxonomy Browser)'],
+        ['organism', 'organism / metagenome type', SAMPLE_INFO_TYPE_METADATA, 'Scientific name of the organism that was sequenced (as found in the NCBI Taxonomy Browser), or class of metagenome.'],
         ['sra_study', 'sra study accession', IDENTIFIERS_TYPE_METADATA, 'SRA Study accession in the form of SRP######## (ERP or DRP for INSDC partners)'],
         ['releasedate', 'release date', CONTACT_TYPE_METADATA, 'The date on which the data was released'],
         ['bioproject', 'bioproject accession', IDENTIFIERS_TYPE_METADATA, 'BioProject accession in the form of PRJNA######## (PRJEB####### or PRJDB###### for INSDC partners)'],
