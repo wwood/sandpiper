@@ -582,6 +582,43 @@ def read_corrections():
 
     return corrections_by_bioproject
 
+def add_host_prediction_counts_to_taxonomy(db, db_path):
+    with tempfile.NamedTemporaryFile(prefix='sandpiper_generate_taxonomy') as f:
+        tax_count = db.session.query(Taxonomy).count()
+        logging.info("Caching {} host sample counts in taxonomy ..".format(tax_count))
+        for taxonomy in tqdm(Taxonomy.query.all(), total=tax_count):
+            num_host_runs = NcbiMetadata.query. \
+                join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
+                join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='host'). \
+                count()
+            num_ecological_runs = NcbiMetadata.query. \
+                join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
+                join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='ecological'). \
+                count()
+                
+            # id = db.Column(db.Integer, primary_key=True)
+            # taxonomy_level = db.Column(db.String, nullable=False)
+            # parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
+            # name = db.Column(db.String, nullable=False, index=True)
+            # full_name = db.Column(db.String, nullable=False)
+            # host_sample_count = db.Column(db.Integer)
+            # ecological_sample_count = db.Column(db.Integer)
+            f.write(("\t".join([str(x) for x in [
+                taxonomy.id,
+                taxonomy.taxonomy_level,
+                taxonomy.parent_id,
+                taxonomy.name,
+                taxonomy.full_name,
+                num_host_runs,
+                num_ecological_runs
+            ]])+"\n").encode())
+        f.flush()
+        extern.run("sqlite3 {}".format(db_path), stdin= \
+            'delete from taxonomies;\n' \
+            '.separator "\\t"\n' \
+            ".import {} taxonomies".format(f.name))
+        logging.info("Imported {} taxonomies with host prediction counts".format(Taxonomy.query.count()))
+
 if __name__ == '__main__':
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument('--debug', help='output debug information', action="store_true")
@@ -656,5 +693,6 @@ if __name__ == '__main__':
 
         add_host_predictions(db, run_accession_to_id, args.host_predictions_tsv)
 
-        # Commented out for now since unsure it will be used.
         index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, sqlite_db_path)
+
+        add_host_prediction_counts_to_taxonomy(db, sqlite_db_path)

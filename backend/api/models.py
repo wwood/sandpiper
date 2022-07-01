@@ -115,6 +115,8 @@ class Taxonomy(db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
     name = db.Column(db.String, nullable=False, index=True)
     full_name = db.Column(db.String, nullable=False)
+    host_sample_count = db.Column(db.Integer)
+    ecological_sample_count = db.Column(db.Integer)
 
     condensed_profiles = db.relationship('CondensedProfile', back_populates='taxonomy', foreign_keys=[CondensedProfile.taxonomy_id])
     condensed_profile_domains = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.domain_id])
