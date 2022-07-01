@@ -65,10 +65,12 @@
           </h2>
           
           <div v-if="this.num_lat_lon_runs < 1000">
-            {{ this.num_lat_lon_runs.toLocaleString("en-US") }} runs have relative abundance > 1% and associated latitude/longitude metadata.
+            {{ this.num_lat_lon_runs.toLocaleString("en-US") }} runs have relative abundance >= 
+            {{ parseFloat((this.lat_lons_min_relabund*100).toPrecision(2))}}% and associated latitude/longitude metadata.
           </div>
           <div v-else>
-            1,000+ runs have relative abundance > 1% and associated latitude/longitude metadata.
+            1,000+ runs have associated latitude/longitude metadata. The 1000 runs with relative abundance 
+            >= {{ parseFloat((this.lat_lons_min_relabund*100).toPrecision(2))}}% are shown below.
           </div>
           <br /><p>{{ (total_num_results - num_lat_lon_runs).toLocaleString("en-US") }} other runs are not shown on this map.</p><br />
           
@@ -199,6 +201,7 @@ export default {
       error_message: null,
 
       lat_lons: null,
+      lat_lons_min_relabund: null,
       num_lat_lon_runs: null,
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       attribution:
@@ -225,6 +228,7 @@ export default {
             this.taxonomy_level = response.data.taxonomy_level
             this.total_num_results = response.data.total_num_results
             this.lat_lons = response.data.lat_lons
+            this.lat_lons_min_relabund = response.data.lat_lons_min_relabund
             this.num_lat_lon_runs = response.data.num_lat_lon_runs
             this.num_host_runs = response.data.num_host_runs
             this.num_ecological_runs = response.data.num_ecological_runs

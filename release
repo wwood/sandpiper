@@ -43,7 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--quiet', help='only output errors', action="store_true")
 
     parser.add_argument('--version', required=True, help='e.g. 0.0.6')
-    parser.add_argument('--gtdb-version', required=True, help='e.g. r202')
+    parser.add_argument('--gtdb-version', required=True, help='e.g. 06-RS202')
     parser.add_argument('--scrape-date', required=True, help='e.g. Dec 15, 2021')
 
     args = parser.parse_args()

@@ -271,13 +271,14 @@ def taxonomy_search_global_data(taxon):
     # lat_lons are commented out for now because it is too slow to query and
     # render. SQL needs better querying i.e. in batch, and multiple
     # annotations at a single location need to be collapsed.
-    lat_lons, lat_lons_count = get_lat_lons(taxonomy.id, 1000)
+    lat_lons, lat_lons_count, min_lat_lon_relabund = get_lat_lons(taxonomy.id, 1000)
     return jsonify({ 
         'total_num_results': total_num_hits,
         'taxon_name': taxonomy.name.split('__')[-1],
         'lineage': taxonomy.split_taxonomy(),
         'taxonomy_level': taxonomy.taxonomy_level,
         'lat_lons': lat_lons,
+        'lat_lons_min_relabund': min_lat_lon_relabund,
         'num_lat_lon_runs': lat_lons_count,
         'num_host_runs': num_host_runs,
         'num_ecological_runs': num_ecological_runs,
@@ -397,7 +398,7 @@ def taxonomy_search_hints(taxon):
 
 def get_lat_lons(taxonomy_id, max_to_show):
     lat_lon_db_entries = db.session.execute(
-        select(NcbiMetadata.acc, ParsedSampleAttribute.latitude, ParsedSampleAttribute.longitude, NcbiMetadata.study_title).where(
+        select(NcbiMetadata.acc, ParsedSampleAttribute.latitude, ParsedSampleAttribute.longitude, NcbiMetadata.study_title, CondensedProfile.relative_abundance).where(
             CondensedProfile.taxonomy_id == taxonomy_id).where(
             NcbiMetadata.id == ParsedSampleAttribute.run_id).where(
             NcbiMetadata.id == CondensedProfile.run_id).where(
@@ -406,7 +407,8 @@ def get_lat_lons(taxonomy_id, max_to_show):
 
     lat_lons = {}
     lat_lons_count = 0
-    for (sample_name, lat, lon, description) in lat_lon_db_entries:
+    min_lat_lon_relabund = None
+    for (sample_name, lat, lon, description, _relabund) in lat_lon_db_entries:
         lat_lons_count += 1
         mykey = '%s %s' % (lat, lon)
         if mykey in lat_lons:
@@ -416,7 +418,8 @@ def get_lat_lons(taxonomy_id, max_to_show):
                 lat_lons[mykey]['samples'][description] = [sample_name]
         else:
             lat_lons[mykey] = {'lat_lon': [lat, lon], 'samples': {description: [sample_name]}}
-    return list(lat_lons.values()), lat_lons_count
+    min_lat_lon_relabund = lat_lon_db_entries[-1][4] # sorted by descending, so last one is the min
+    return list(lat_lons.values()), lat_lons_count, min_lat_lon_relabund
 
 @api.route('/otus/<string:acc>', methods=('GET',))
 def otus(acc):
