@@ -7,7 +7,7 @@ import os
 class BaseConfig:
     DEBUG = True
 
-    LYRA_DB_PATH = 'sqlite:///db/sandpiper_15.sqlite3'
+    LYRA_DB_PATH = 'sqlite:///db/sandpiper_16.sqlite3'
 
     if os.path.exists(os.path.join(os.path.dirname(__file__), 'running_on_lyra')):
         SQLALCHEMY_DATABASE_URI = LYRA_DB_PATH

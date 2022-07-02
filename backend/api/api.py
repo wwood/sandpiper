@@ -260,14 +260,8 @@ def taxonomy_search_global_data(taxon):
     if total_num_hits == 0:
         # This happens when there's a taxonomy in the full table that didn't make it into any condensed table
         return taxonomy_search_fail_json('"'+taxon+'" is a known taxonomy, however no records of it are recorded in Sandpiper.')
-    num_host_runs = NcbiMetadata.query. \
-        join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
-        join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='host'). \
-        count()
-    num_ecological_runs = NcbiMetadata.query. \
-        join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
-        join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='ecological'). \
-        count()
+    num_host_runs = taxonomy.host_sample_count
+    num_ecological_runs = taxonomy.ecological_sample_count
     # lat_lons are commented out for now because it is too slow to query and
     # render. SQL needs better querying i.e. in batch, and multiple
     # annotations at a single location need to be collapsed.
