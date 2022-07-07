@@ -18,7 +18,17 @@
       <p>For more complicated analyses, such as searching for OTUs that cannot be easily isolated through their taxonomy (e.g. if they are novel), a more bespoke search procedure based on the OTU sequences themselves might be more appropriate. These kinds of analyses cannot currently be done on the sandpiper website, but in such cases please <a :href="'mailto:'+decode('o.jbbqpebsg@dhg.rqh.nh')">get in touch</a> with us.</p><br />
 
       <h2 class="subtitle">Analyses downstream</h2>
-      <p>Each metagenome was predicted as either host-associated or ecological based upon a machine learning algorithm (a simple Gradient Boosting one, achieving ~90% accuracy), using the "organism" metadata field recorded at NCBI as the target for prediction, and the condensed profile as the input data. We anticipate that predictions based on microbial community profiles will become an increasingly important method for characterising microbiomes in the future, and we hope that future versions of this website will provide more detailed predictions about each community.</p>
+      <p>Each metagenome was predicted as either host-associated or ecological based upon a machine learning algorithm (a simple Gradient Boosting one, achieving ~90% accuracy), using the "organism" metadata field recorded at NCBI as the target for prediction, and the condensed profile as the input data. We anticipate that predictions based on microbial community profiles will become an increasingly important method for characterising microbiomes in the future, and we hope that future versions of this website will provide more detailed predictions about each community.</p><br />
+
+      <h2 class="subtitle">Metadata corrections</h2>
+      <p>Sandpiper uses data from the <a
+      href="https://www.ncbi.nlm.nih.gov/sra">NCBI SRA</a> and associated
+      databases to add metadata to each sequence dataset. Many times, this
+      metadata is incorrect, vague or missing. If you notice something like
+      this, we are collecting and correcting them in <a
+      href="https://github.com/wwood/public_sequencing_metadata_corrections">public
+      repository</a>. Any corrections submitted there (or submitted directly upstream e.g. to
+      NCBI) are appreciated.</p><br />
 
     </section>
 
