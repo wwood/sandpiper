@@ -14,7 +14,17 @@
             metadata.metadata_parsed.mbases / 1000}} Gbp | {{ getNumReads }} million
             reads {{ read_length_mature }}|
             {{ metadata.metadata_parsed.instrument }} | Released {{
-            metadata.metadata_parsed.release_month }}
+            metadata.metadata_parsed.release_month }} | 
+            <span v-if="metadata.metadata_parsed.num_related_runs == 0">No related runs here.</span>
+            <span v-else>
+              <router-link :to="{ name: 'Project', query: { model_bioproject: metadata.metadata_parsed.bioproject }}">
+                <span v-if="metadata.metadata_parsed.num_related_runs == 1">1 related run</span>
+                <span v-else>1
+                  {{ metadata.metadata_parsed.num_related_runs }} related runs
+                </span>
+               </router-link>
+              </span>
+      <!-- {{ related_runs_short }}  -->
             <br />
             NCBI: <a :href="bioproject_url">{{ metadata.metadata_parsed.bioproject }}</a> | <a :href="'http://www.ncbi.nlm.nih.gov/sra?term=' + accession">{{ accession }}</a>
             <br />

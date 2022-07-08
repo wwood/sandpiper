@@ -7,6 +7,7 @@ import Otus from '../views/Otus.vue'
 import SearchResults from '../views/SearchResult.vue'
 import About from '../views/About.vue'
 import RunRandom from '../views/RunRandom.vue'
+import Project from '../views/Project.vue'
 
 Vue.use(VueRouter)
 
@@ -31,6 +32,12 @@ const routes = [
     path: '/run/:accession',
     name: 'Run',
     component: Run,
+    props: true
+  },
+  {
+    path: '/project',
+    name: 'Project',
+    component: Project,
     props: true
   },
   {

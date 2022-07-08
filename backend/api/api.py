@@ -181,6 +181,7 @@ def fetch_metadata(sample_name):
         'release_month': meta.releasedate.strftime('%B %Y'),
         'latitude': metadata_dict['parsed_sample_attributes']['latitude'],
         'longitude': metadata_dict['parsed_sample_attributes']['longitude'],
+        'num_related_runs': related_run_count(meta.bioproject)-1,
     }
 
     read_length_summary = None
@@ -476,3 +477,35 @@ def random_run():
     return jsonify({
         'run': ran.acc
     })
+
+@api.route('/project', methods=('GET',))
+def project():
+    projects = []
+    # if request.args.get('bioproject') is not None:
+    #     projects.extend(NcbiMetadata.query.filter_by(bioproject=request.args.get('bioproject')).all())
+    if request.args.get('model_bioproject') is not None:
+        # Match for new samples based on the study abstract, which JGI keeps constant, I think
+        example_run = NcbiMetadata.query.filter_by(bioproject=request.args.get('model_bioproject')).first()
+        if example_run is None:
+            return jsonify({ 'error': 'no run found for bioproject '+request.args.get('model_bioproject') })
+        projects.extend(NcbiMetadata.query.filter_by(study_abstract=example_run.study_abstract).all())
+    if projects == []:
+        return jsonify({ 'error': 'No runs found' })
+    else:
+        return jsonify({
+            'study_abstract': projects[0].study_abstract,
+            'projects': [{
+                'acc': p.acc,
+                'study_title': p.study_title,
+                'sample_name': p.sample_name,
+                'library_name': p.library_name,
+                'experiment_title': p.experiment_title,
+            } for p in projects]
+        })
+
+def related_run_count(model_bioproject):
+    example_run = NcbiMetadata.query.filter_by(bioproject=model_bioproject).first()
+    if example_run is None:
+        return 0
+    return NcbiMetadata.query.filter_by(study_abstract=example_run.study_abstract).count()
+        
