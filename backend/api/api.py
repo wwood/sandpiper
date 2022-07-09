@@ -292,7 +292,7 @@ def taxonomy_search_run_data(taxon):
                     'relative_abundance': round(c.relative_abundance*100,2),
                     'coverage': round(c.filled_coverage, 2),
                     'organism': c.organism.replace(' metagenome',''),
-                    'collection_year': c.collection_year,}
+                    'release_year': c.releasedate.strftime('%Y'),}
                     for c in condensed_profile_hits],                
             }
         })
@@ -309,9 +309,10 @@ def taxonomy_search_csv(taxon):
                 c.acc,
                 round(c.relative_abundance*100,2),
                 round(c.filled_coverage, 2),
-                c.organism]
+                c.organism,
+                c.releasedate.strftime('%Y'),]
                 for c in condensed_profile_hits],
-            columns=['sample', 'relative_abundance', 'coverage', 'organism']
+            columns=['sample', 'relative_abundance', 'coverage', 'organism', 'release_year']
         )
         response = make_response(df.to_csv(index=False, header=True))
         cd = 'attachment; filename=sandpiper_v{}_{}_condensed.csv'.format(__version__, taxon)
@@ -335,7 +336,7 @@ def taxonomy_search_core(taxon, args, no_limit=False):
     page = int(page) if page is not None else 0
     page_size = int(page_size) if page_size is not None else 100
 
-    if sort_field not in ['relative_abundance', 'coverage']:
+    if sort_field not in ['relative_abundance', 'coverage', 'release_year']:
         return False, jsonify({ 'error': 'invalid sort field' })
     if sort_direction not in ['asc', 'desc']:
         return False, jsonify({ 'error': 'invalid sort direction' })
@@ -350,10 +351,9 @@ def taxonomy_search_core(taxon, args, no_limit=False):
             CondensedProfile.relative_abundance,
             CondensedProfile.filled_coverage,
             NcbiMetadata.organism,
-            ParsedSampleAttribute.collection_year,
+            NcbiMetadata.releasedate
             # TODO: Add experiment title here, not currently in DB
-        ).where(CondensedProfile.run_id == NcbiMetadata.id).where(
-            NcbiMetadata.id == ParsedSampleAttribute.run_id)
+        ).where(CondensedProfile.run_id == NcbiMetadata.id)
         
         if sort_field == 'relative_abundance':
             if sort_direction == 'desc':
@@ -365,6 +365,11 @@ def taxonomy_search_core(taxon, args, no_limit=False):
                 hits_query = stmt.order_by(CondensedProfile.filled_coverage.desc())
             else:
                 hits_query = stmt.order_by(CondensedProfile.filled_coverage.asc())
+        elif sort_field == 'release_year':
+            if sort_direction == 'desc':
+                hits_query = stmt.order_by(NcbiMetadata.releasedate.desc())
+            else:
+                hits_query = stmt.order_by(NcbiMetadata.releasedate.asc())
 
         if not no_limit:
             hits_query = hits_query.limit(page_size).offset((page-1)*page_size)

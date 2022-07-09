@@ -8,7 +8,7 @@
           <div class="has-text-justified">
             <br />
             <p>{{ metadata.study_abstract }}</p>
-          </div>
+          </div><br />
 
           <b-table :data="metadata.projects" :striped="true">
             <b-table-column field="Run" label="Run" v-slot="props" width="300">
