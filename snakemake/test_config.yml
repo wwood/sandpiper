@@ -3,6 +3,8 @@ SANDPIPER_VERSION: '17_test'
 KINGFISHER_METADATA_DATE: '20220627'
 ACCESSIONS_FILE: '../test/data/6_runs/accessions'
 
+JSON_METADATA_FILES: '../test/data/6_runs/metadata_each_line.json'
+
 CONDENSED_OTU_TABLE: '../test/data/6_runs/condensed.csv.gz'
 OTU_TABLE: '../test/data/6_runs/otu_table.csv.gz'
 

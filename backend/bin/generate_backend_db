@@ -41,6 +41,7 @@ import tempfile
 
 import extern
 import pandas as pd
+from pytz import country_names
 from tqdm import tqdm
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
@@ -256,7 +257,7 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                 # loaddate = db.Column(db.DateTime, nullable=False)
                 # collection_date_sam = db.Column(db.DateTime, nullable=False)
                 for d in ['releasedate','loaddate','collection_date_sam']:
-                    if d in j and j[d].lower() not in ACTUALLY_MISSING:
+                    if d in j and j[d] is not None and j[d].lower() not in ACTUALLY_MISSING:
                         try:
                             j[d] = iso8601.parse_date(j[d])
                         except iso8601.ParseError:
@@ -619,6 +620,28 @@ def add_host_prediction_counts_to_taxonomy(db, db_path):
             ".import {} taxonomies".format(f.name))
         logging.info("Imported {} taxonomies with host prediction counts".format(Taxonomy.query.count()))
 
+def add_bioproject_associated_publications(db, tsv_path):
+    df = pd.read_csv(tsv_path, sep='\t')
+    logging.info("Adding {} bioproject associated publications to DB".format(df.shape[0]))
+    count_added = 0
+    for i, row in tqdm(df.iterrows(), total=df.shape[0]):
+        runs = NcbiMetadata.query.filter_by(bioproject=row['bioproject']).all()
+        for run in runs:
+            current_study_links = StudyLink.query.filter_by(run_id=run.id).all()
+            already_there = False
+            # Remove duplicate links that are already recorded e.g. SRR9113719
+            for link in current_study_links:
+                if link.database.lower() == 'pubmed' and link.study_id == str(row['id']):
+                    already_there = True
+            if not already_there:
+                db.session.add(StudyLink(
+                    run_id=run.id,
+                    database=row['db'],
+                    study_id=row['id']))
+                count_added += 1
+    db.session.commit()
+    logging.info("Added {} bioproject associated publications to DB".format(count_added))
+
 if __name__ == '__main__':
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument('--debug', help='output debug information', action="store_true")
@@ -634,6 +657,7 @@ if __name__ == '__main__':
     parent_parser.add_argument('--kingfisher-annotate-path', help='kingfisher annotate TSV output')
     parent_parser.add_argument('--kingfisher-annotate-path-list', help='kingfisher annotate TSV outputs listed in this file, one per line')
     parent_parser.add_argument('--host-predictions-tsv', help='host predictions TSV output', required=True)
+    parent_parser.add_argument('--bioproject-associated-publications', help='tsv from bioprjoect_metadata.py', required=True)
 
     args = parent_parser.parse_args()
 
@@ -690,6 +714,8 @@ if __name__ == '__main__':
                     file_path = line.strip()
                     logging.info("Adding metadata from {} ..".format(file_path))
                     add_metadata_from_kingfisher_annotate(db, run_accession_to_id, file_path)
+
+        add_bioproject_associated_publications(db, args.bioproject_associated_publications)
 
         add_host_predictions(db, run_accession_to_id, args.host_predictions_tsv)
 
