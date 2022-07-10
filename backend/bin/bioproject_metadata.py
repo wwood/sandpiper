@@ -58,10 +58,10 @@ if __name__ == '__main__':
     # Read in list of bioproject IDs
     bioproject_ids = []
     for path in args.metadata_json_files:
-        j1 = json.load(open(path))
-        for j in j1:
-                if 'bioproject' in j:
-                    bioproject_ids.append(j['bioproject'])
+        for line in open(path):
+            j = json.loads(line)
+            if 'bioproject' in j:
+                bioproject_ids.append(j['bioproject'])
     logging.info("Found %d bioproject IDs to annotate", len(bioproject_ids))
 
     print('\t'.join(['bioproject','db','id']))
