@@ -3,6 +3,8 @@ SANDPIPER_VERSION: '17'
 KINGFISHER_METADATA_DATE: '20220627'
 ACCESSIONS_FILE: ../sra_metadata/sra_metadata_20220209.accessions
 
+BIOPROJECT_METADATA_DATE: '20220711'
+
 JSON_METADATA_FILES: '../sra_metadata/sra_metadata_20220209/*'
 
 CONDENSED_OTU_TABLE: '~/m/msingle/mess/93_sra_20211215/sra_20211215.mach3.sdb.condense10pct.mach2.csv.gz'

@@ -23,20 +23,33 @@ rule gather_kingfisher_metadata:
 
 rule gather_bioproject_pubs:
     output:
-        bioproject_publications='{test_or_prod}/gather_bioproject_pubs/{date}/bioproject_publications.csv'.format(
-            date=config['KINGFISHER_METADATA_DATE'],
-            test_or_prod=config['TEST_OR_PROD']),
         done='{test_or_prod}/gather_bioproject_pubs/{date}/done'.format(
-            date=config['KINGFISHER_METADATA_DATE'],
+            date=config['BIOPROJECT_METADATA_DATE'],
             test_or_prod=config['TEST_OR_PROD'])
     shell:
-        "../backend/bin/bioproject_metadata.py --meta {config[JSON_METADATA_FILES]} > {output.bioproject_publications} && " \
+        "../backend/bin/bioproject_metadata.py --meta {config[JSON_METADATA_FILES]} --output-directory {config[TEST_OR_PROD]}/gather_bioproject_pubs/{config[BIOPROJECT_METADATA_DATE]} && " \
+        "touch {output.done}"
+
+rule process_bioproject_pubs:
+    input:
+        '{test_or_prod}/gather_bioproject_pubs/{date}/done'.format(
+            date=config['BIOPROJECT_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD'])
+    output:
+        bioproject_publications='{test_or_prod}/process_bioproject_pubs/{date}/bioproject_publications.csv'.format(
+            date=config['BIOPROJECT_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD']),
+        done='{test_or_prod}/process_bioproject_pubs/{date}/done'.format(
+            date=config['BIOPROJECT_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD'])
+    shell:
+        "../backend/bin/bioproject_metadata_process.py --xml-directory {config[TEST_OR_PROD]}/gather_bioproject_pubs/{config[BIOPROJECT_METADATA_DATE]} > {output.bioproject_publications} && " \
         "touch {output.done}"
 
 rule generate_backend_db:
     input:
-        bioproject_publications='{test_or_prod}/gather_bioproject_pubs/{date}/bioproject_publications.csv'.format(
-            date=config['KINGFISHER_METADATA_DATE'],
+        bioproject_publications='{test_or_prod}/process_bioproject_pubs/{date}/bioproject_publications.csv'.format(
+            date=config['BIOPROJECT_METADATA_DATE'],
             test_or_prod=config['TEST_OR_PROD']),
         kingfisher_metadata='{test_or_prod}/kingfisher_metadata/{date}/kingfisher_metadata.csv'.format(
             date=config['KINGFISHER_METADATA_DATE'],
