@@ -8,7 +8,7 @@ import re
 
 from flask import Blueprint, jsonify, request, make_response, current_app
 
-from sqlalchemy import select, distinct
+from sqlalchemy import select, distinct, or_
 from sqlalchemy.sql import func
 from sqlalchemy.orm import joinedload, lazyload
 from sqlalchemy.sql.expression import func
@@ -514,3 +514,34 @@ def related_run_count(model_bioproject):
         return 0
     return NcbiMetadata.query.filter_by(study_abstract=example_run.study_abstract).count()
         
+@api.route('/accession/<string:acc>', methods=('GET',))
+def accession(acc):
+    acc = acc.strip()
+    # If it is a bioproject, then return that and a model bioproject
+    bioproject_example = NcbiMetadata.query.filter(or_(
+        NcbiMetadata.bioproject==acc,
+        NcbiMetadata.sra_study==acc
+    )).first()
+    if bioproject_example is not None:
+        return jsonify({
+            #   const result_type = response.data.result_type
+            #   const acc = response.data.accession
+            'result_type': 'project',
+            'accession': bioproject_example.bioproject,
+        })
+    
+    run_example = NcbiMetadata.query.filter(or_(
+        NcbiMetadata.acc == acc,
+        NcbiMetadata.experiment == acc,
+        NcbiMetadata.biosample == acc,
+        NcbiMetadata.sample_acc == acc,
+    )).first()
+    if run_example is not None:
+        return jsonify({
+            'result_type': 'run',
+            'accession': run_example.acc,
+        })
+    else:
+        return jsonify({ 
+            'result_type': 'fail',
+            'error': 'No accession identified when searching for "'+acc+'". Please let us know if you believe this is a valid identifier.' })

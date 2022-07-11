@@ -46,3 +46,7 @@ export function fetchTaxonomySearchHints (taxonomy: string) {
 export function fetchRandomAccession(host: boolean, ecological: boolean, two_gbp: boolean) {
   return axios.get(`${API_URL}/random_run?host=${host}&ecological=${ecological}&two_gbp=${two_gbp}`)
 }
+
+export function fetchAccession(accession: string) {
+  return axios.get(`${API_URL}/accession/${accession}`)
+}

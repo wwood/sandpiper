@@ -8,6 +8,7 @@ import SearchResults from '../views/SearchResult.vue'
 import About from '../views/About.vue'
 import RunRandom from '../views/RunRandom.vue'
 import Project from '../views/Project.vue'
+import Accession from '../views/Accession.vue'
 
 Vue.use(VueRouter)
 
@@ -50,6 +51,12 @@ const routes = [
     path: '/random_run',
     name: 'RunRandom',
     component: RunRandom,
+    props: true
+  },
+  {
+    path: '/accession/:accession',
+    name: 'Accession',
+    component: Accession,
     props: true
   },
   {

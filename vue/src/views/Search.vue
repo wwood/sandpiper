@@ -17,7 +17,7 @@
     </section>
 
     <section class="section"  @keyup.enter="search_by_accession">
-      <b-field label="Search for run accession">
+      <b-field label="Search for run/sample/project accession">
         <b-input v-model="accession"></b-input>
       </b-field>
       <b-button type="is-primary" @click="search_by_accession">Search</b-button>
@@ -98,7 +98,7 @@ export default {
     }, 500),
 
     search_by_accession () {
-      this.$router.push({ name: 'Run', params: { accession: this.accession } })
+      this.$router.push({ name: 'Accession', params: { accession: this.accession } })
     },
 
     search_by_random () {
