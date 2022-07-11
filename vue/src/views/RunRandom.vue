@@ -1,6 +1,6 @@
 <template>
   <div>
-    <section class="section">
+    <section class="section container">
       Randomly choosing an accession ..
     </section>
   </div>

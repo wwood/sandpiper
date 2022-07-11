@@ -19,7 +19,7 @@
             <span v-else>
               <router-link :to="{ name: 'Project', query: { model_bioproject: metadata.metadata_parsed.bioproject }}">
                 <span v-if="metadata.metadata_parsed.num_related_runs == 1">1 related run</span>
-                <span v-else>1
+                <span v-else>
                   {{ metadata.metadata_parsed.num_related_runs }} related runs
                 </span>
                </router-link>
