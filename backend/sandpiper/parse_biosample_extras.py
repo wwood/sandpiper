@@ -70,6 +70,9 @@ def parse_lat_lon_sam(lat_lon_sam):
 def parse_two_part_lat_lon(sample_name, lat_input, lon_input):
     geoloc_lat_regex = re.compile('^([0-9.-]+) {0,1}([NSns])$')
     geoloc_lon_regex = re.compile('^([0-9.-]+) {0,1}([EWew])$')
+    # e.g. S 12°37.707′
+    sexigesimal_regex_lat1 = re.compile('^([NSns]) ([0-9]+)°([0-9.]+)′$')
+    sexigesimal_regex_lon1 = re.compile('^([EWew]) ([0-9]+)°([0-9.]+)′$')
 
     try:
         lat = float(lat_input)
@@ -82,19 +85,43 @@ def parse_two_part_lat_lon(sample_name, lat_input, lon_input):
         except ValueError:
             matches_lat = geoloc_lat_regex.match(lat_input)
             matches_lon = geoloc_lon_regex.match(lon_input)
-            if matches_lat is None or matches_lon is None:
-                logging.warning("Unexpected 2 part value for %s: %s" % (sample_name, [lat_input, lon_input]))
-                return False, False
-            try:
-                lat = float(matches_lat.group(1))
-                lon = float(matches_lon.group(1))
-                if matches_lat.group(2) in ['S','s']:
-                    lat = -lat
-                if matches_lon.group(2) in ['W','w']:
-                    lon = -lon
-            except ValueError:
-                logging.warning("Unexpected 2 part value for %s: %s" % (sample_name, [lat_input, lon_input]))
-                return False, False
+            if matches_lat is not None and matches_lon is not None:
+                try:
+                    lat = float(matches_lat.group(1))
+                    lon = float(matches_lon.group(1))
+                    if matches_lat.group(2) in ['S','s']:
+                        lat = -lat
+                    if matches_lon.group(2) in ['W','w']:
+                        lon = -lon
+                except ValueError:
+                    logging.warning("Unexpected (type 1) 2 part value for %s: %s" % (sample_name, [lat_input, lon_input]))
+                    return False, False
+            else:
+                # Try sexigesimal
+                matches_lat = sexigesimal_regex_lat1.match(lat_input)
+                matches_lon = sexigesimal_regex_lon1.match(lon_input)
+                if matches_lat is not None and matches_lon is not None:
+                    try:
+                        lat_degrees = float(matches_lat.group(2))
+                        lon_degrees = float(matches_lon.group(2))
+                        lat_minutes = float(matches_lat.group(3))
+                        lon_minutes = float(matches_lon.group(3))
+
+                        lat = lat_degrees + lat_minutes / 60
+                        lon = lon_degrees + lon_minutes / 60
+
+                        if matches_lat.group(1) in ['S','s']:
+                            lat = -lat
+                        if matches_lon.group(1) in ['W','w']:
+                            lon = -lon
+                    except ValueError:
+                        logging.warning("Unexpected (type 2) 2 part value for %s: %s" % (sample_name, [lat_input, lon_input]))
+                        return False, False
+
+                else:
+                    logging.warning("Unexpected (type 3) 2 part value for %s: %s" % (sample_name, [lat_input, lon_input]))
+                    return False, False
+                    
 
 
     if lat and lon and validate_lat_lon(lat, lon):

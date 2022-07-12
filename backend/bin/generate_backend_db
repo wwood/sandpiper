@@ -303,6 +303,7 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                 # Parsed data
                 j['attributes'] = attributes
                 lat_lon = parse_lat_lons(j['acc'], parse_json_to_lat_lon_dict(j))
+                # logging.info("Parsed lat_lon to {}".format(lat_lon))
                 collection_year, collection_month = parse_extra_sample_attributes(j, ['collection_date_sam'])
                 if collection_year == '': collection_year = None
                 if collection_month == '': collection_month = None
@@ -715,6 +716,7 @@ if __name__ == '__main__':
         # Create sample metadata table, restricting it to just those samples
         # that we have condensed profiles for.
         run_accession_to_id = create_sample_metadata(db, args.condensed_otu_table, blacklist, args.metadata_json_files, corrections)
+        raise Exception()
         
         taxonomy_name_to_id = fill_condensed_and_taxonomy_tables(db, args.condensed_otu_table, blacklist, run_accession_to_id)
 

@@ -519,7 +519,7 @@ def accession(acc):
     acc = acc.strip()
     # If it is a bioproject, then return that and a model bioproject
     bioproject_example = NcbiMetadata.query.filter(or_(
-        NcbiMetadata.bioproject==acc,
+        NcbiMetadata.bioproject==acc, # These columns need to be indexed
         NcbiMetadata.sra_study==acc
     )).first()
     if bioproject_example is not None:
@@ -531,8 +531,8 @@ def accession(acc):
         })
     
     run_example = NcbiMetadata.query.filter(or_(
-        NcbiMetadata.acc == acc,
-        NcbiMetadata.experiment == acc,
+        NcbiMetadata.acc == acc, 
+        NcbiMetadata.experiment == acc, # These columns need to be indexed
         NcbiMetadata.biosample == acc,
         NcbiMetadata.sample_acc == acc,
     )).first()
