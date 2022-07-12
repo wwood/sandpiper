@@ -228,6 +228,7 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
     last_metadata_id = 0
     attribute_count = 0
     run_accession_to_id = {}
+    num_corrections = 0
     for path in metadata_json_files:
         with open(path) as f:
             for line in f:
@@ -241,12 +242,23 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                 # Some odd (old?) runs do not have an associated bioproject e.g. SRR2001402
                 if 'bioproject' in j and j['bioproject'] in corrections:
                     for (field, correction) in corrections[j['bioproject']].items():
+                        num_corrections += 1
                         if field in j:
                             if j[field] == correction['old_value']:
                                 j[field] = correction['corrected_value']
-                                logging.debug("Correcting {} from {} to {}".format(field, correction['old_value'], correction['corrected_value']))
+                                logging.info("Correcting '{}' from '{}' to '{}'".format(field, correction['old_value'], correction['corrected_value']))
                             else:
-                                logging.debug("For acc {} Did not find expected old value {} in {}".format(acc, correction['old_value'], j[field]))
+                                raise Exception("For acc {} Did not find expected old value {} in {}".format(acc, correction['old_value'], j[field]))
+                        elif field in [kv['k'] for kv in j['attributes']]:
+                            for i, kv in enumerate(j['attributes']):
+                                if kv['k'] == field:
+                                    if kv['v'] == correction['old_value']:
+                                        j['attributes'][i]['v'] = correction['corrected_value']
+                                        logging.info("Correcting '{}' from '{}' to '{}'".format(field, correction['old_value'], correction['corrected_value']))
+                                    else:
+                                        raise Exception("For acc {} Did not find expected old value '{}' in '{}'".format(acc, correction['old_value'], kv['v']))
+                        else:
+                            raise Exception("Unexpected correction field encountered: {}".format(field))
 
 
                 attributes = j['attributes']
@@ -312,7 +324,7 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                     db.session.commit()
 
     db.session.commit()
-    logging.info("Wrote {} metadata and {} attribute rows to DB".format(last_metadata_id, attribute_count))
+    logging.info("Wrote {} metadata and {} attribute rows to DB, with {} corrections".format(last_metadata_id, attribute_count, num_corrections))
 
     return run_accession_to_id
 
