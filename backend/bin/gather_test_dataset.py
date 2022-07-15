@@ -66,25 +66,25 @@ WHERE
   acc IN ('{}')
     """.format('\',\''.join(accessions))
 
-    # logging.info("Running biqquery ..")
-    # j = extern.run('bq query --use_legacy_sql=false --format json', stdin=sql)
-    # j2 = json.loads(j)
-    # with open(os.path.join(test_data_directory, 'metadata_each_line.json'), 'w') as f:
-    #     for e in j2:
-    #         f.write(json.dumps(e)+'\n')
-    # logging.info("Finished bigquery gathering of metadata")
+    logging.info("Running biqquery ..")
+    j = extern.run('bq query --use_legacy_sql=false --format json', stdin=sql)
+    j2 = json.loads(j)
+    with open(os.path.join(test_data_directory, 'metadata_each_line.json'), 'w') as f:
+        for e in j2:
+            f.write(json.dumps(e)+'\n')
+    logging.info("Finished bigquery gathering of metadata")
 
-    # logging.info("Gathering OTU tables ..")
-    # otu_table_files = []
-    # for accession in accessions:
-    #     t = tempfile.NamedTemporaryFile()
-    #     otu_table_files.append(t)
-    #     extern.run("curl https://sandpiper.qut.edu.au/api/otus/{} >{}".format(accession, t.name))
+    logging.info("Gathering OTU tables ..")
+    otu_table_files = []
+    for accession in accessions:
+        t = tempfile.NamedTemporaryFile()
+        otu_table_files.append(t)
+        extern.run("curl https://sandpiper.qut.edu.au/api/otus/{} >{}".format(accession, t.name))
     
-    # logging.info("Gathering OTU tables into 1 file ..")
-    # extern.run("singlem summarise --input-otu-tables {} --output-otu-table /dev/stdout |gzip >{}".format(
-    #     ' '.join([t.name for t in otu_table_files]),
-    #     os.path.join(test_data_directory, 'otu_table.csv.gz')))
+    logging.info("Gathering OTU tables into 1 file ..")
+    extern.run("singlem summarise --input-otu-tables {} --output-otu-table /dev/stdout |gzip >{}".format(
+        ' '.join([t.name for t in otu_table_files]),
+        os.path.join(test_data_directory, 'otu_table.csv.gz')))
 
     logging.info("Condensing OTU tables ..")
     extern.run("singlem condense --input-otu-table <(zcat {}) --metapackage ~/git/singlem/db/S3.metapackage_20211101.smpkg --output-otu-table /dev/stdout |gzip >{}".format(

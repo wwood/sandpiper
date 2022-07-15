@@ -13,7 +13,7 @@ import iso8601
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 
 ACTUALLY_MISSING = set([s.lower() for s in [
-    'missing','not applicable','NA','Missing','Not collected','not provided','Missing: Not provided','', 'uncalculated','not applicable','no applicable','unspecified']])
+    'missing','not applicable','NA','Missing','Not collected','not provided','Missing: Not provided','', 'uncalculated','not applicable','no applicable','unspecified','restricted access']])
 
 def validate_lat_lon(lat, lon):
     if lat >= -90 and lat <= 90 and lon >= -180 and lon <= 180:
@@ -67,12 +67,26 @@ def parse_lat_lon_sam(lat_lon_sam):
     else:
         logging.warning("Unvalidated lat_lon_sam value: %s" % lat_lon_sam)
 
+def degrees_minutes_to_decimal(degrees, minutes, seconds=0):
+    if seconds == '':
+        seconds = 0
+    return float(degrees) + float(minutes) / 60.0 + float(seconds) / 3600.0
+
 def parse_two_part_lat_lon(sample_name, lat_input, lon_input):
-    geoloc_lat_regex = re.compile('^([0-9.-]+) {0,1}([NSns])$')
-    geoloc_lon_regex = re.compile('^([0-9.-]+) {0,1}([EWew])$')
+    geoloc_lat_regex = re.compile('^([0-9.-]+)[°\?]{0,1} {0,1}([NSns])$')
+    geoloc_lon_regex = re.compile('^([0-9.-]+)[°\?]{0,1} {0,1}([EWew])$')
     # e.g. S 12°37.707′
-    sexigesimal_regex_lat1 = re.compile('^([NSns]) ([0-9]+)°([0-9.]+)′$')
-    sexigesimal_regex_lon1 = re.compile('^([EWew]) ([0-9]+)°([0-9.]+)′$')
+    sexigesimal_regex_lat1 = re.compile('^([NSns]) ([0-9]+)[°\?]([0-9.]+)[\'′]$')
+    sexigesimal_regex_lon1 = re.compile('^([EWew]) ([0-9]+)[°\?]([0-9.]+)[\'′]$')
+    # e.g. 52?09'50.8N
+    sexigesimal_regex_lat2 = re.compile('^([0-9]+)[°\?]([0-9.]+)[\'′]([0-9.]*)([NSns])$')
+    sexigesimal_regex_lon2 = re.compile('^([0-9]+)[°\?]([0-9.]+)[\'′]([0-9.]*)([EWew])$')
+    # e.g.  ERR2824916: ["S33°28'21.68", "O70°38'50.06"] -> Actually that one is fail
+    sexigesimal_regex_lat3 = re.compile('^([NSns])([0-9]+)[°\?]([0-9.]+)[\'′]([0-9.]*)$')
+    sexigesimal_regex_lon3 = re.compile('^([EWew])([0-9]+)[°\?]([0-9.]+)[\'′]([0-9.]*)$')
+    # e.g. ERR5173566: ['N 43.8047886', 'E 15.9637432']
+    geoloc_lat_regex2 = re.compile('^([NSns]) {0,1}([0-9.-]+)[°\?]{0,1}$')
+    geoloc_lon_regex2 = re.compile('^([EWew]) {0,1}([0-9.-]+)[°\?]{0,1}$')
 
     try:
         lat = float(lat_input)
@@ -98,29 +112,59 @@ def parse_two_part_lat_lon(sample_name, lat_input, lon_input):
                     return False, False
             else:
                 # Try sexigesimal
-                matches_lat = sexigesimal_regex_lat1.match(lat_input)
-                matches_lon = sexigesimal_regex_lon1.match(lon_input)
-                if matches_lat is not None and matches_lon is not None:
+                matches_lat1 = sexigesimal_regex_lat1.match(lat_input)
+                matches_lon1 = sexigesimal_regex_lon1.match(lon_input)
+                if matches_lat1 is not None and matches_lon1 is not None:
                     try:
-                        lat_degrees = float(matches_lat.group(2))
-                        lon_degrees = float(matches_lon.group(2))
-                        lat_minutes = float(matches_lat.group(3))
-                        lon_minutes = float(matches_lon.group(3))
+                        lat = degrees_minutes_to_decimal(matches_lat1.group(2), matches_lat1.group(3))
+                        lon = degrees_minutes_to_decimal(matches_lon1.group(2), matches_lon1.group(3))
 
-                        lat = lat_degrees + lat_minutes / 60
-                        lon = lon_degrees + lon_minutes / 60
-
-                        if matches_lat.group(1) in ['S','s']:
-                            lat = -lat
-                        if matches_lon.group(1) in ['W','w']:
-                            lon = -lon
+                        if matches_lat1.group(1) in ['S','s']: lat = -lat
+                        if matches_lon1.group(1) in ['W','w']: lon = -lon
                     except ValueError:
                         logging.warning("Unexpected (type 2) 2 part value for %s: %s" % (sample_name, [lat_input, lon_input]))
                         return False, False
-
                 else:
-                    logging.warning("Unexpected (type 3) 2 part value for %s: %s" % (sample_name, [lat_input, lon_input]))
-                    return False, False
+                    matches_lat2 = sexigesimal_regex_lat2.match(lat_input)
+                    matches_lon2 = sexigesimal_regex_lon2.match(lon_input)
+                    if matches_lat2 is not None and matches_lon2 is not None:
+                        try:
+                            lat = degrees_minutes_to_decimal(matches_lat2.group(1), matches_lat2.group(2), matches_lat2.group(3))
+                            lon = degrees_minutes_to_decimal(matches_lon2.group(1), matches_lon2.group(2), matches_lon2.group(3))
+
+                            if matches_lat2.group(4) in ['S','s']: lat = -lat
+                            if matches_lon2.group(4) in ['W','w']: lon = -lon
+                        except ValueError:
+                            logging.warning("Unexpected (type 4) 2 part value for %s: %s" % (sample_name, [lat_input, lon_input]))
+                            return False, False
+                    else:
+                        matches_lat3 = sexigesimal_regex_lat3.match(lat_input)
+                        matches_lon3 = sexigesimal_regex_lon3.match(lon_input)
+                        if matches_lat3 is not None and matches_lon3 is not None:
+                            try:
+                                lat = degrees_minutes_to_decimal(matches_lat3.group(2), matches_lat3.group(3), matches_lat3.group(4))
+                                lon = degrees_minutes_to_decimal(matches_lon3.group(2), matches_lon3.group(3), matches_lon3.group(4))
+
+                                if matches_lat3.group(1) in ['S','s']: lat = -lat
+                                if matches_lon3.group(1) in ['W','w']: lon = -lon
+                            except ValueError:
+                                logging.warning("Unexpected (type 5) 2 part value for %s: %s" % (sample_name, [lat_input, lon_input]))
+                                return False, False
+                        else:
+                            matches_lat4 = geoloc_lat_regex2.match(lat_input)
+                            matches_lon4 = geoloc_lon_regex2.match(lon_input)
+                            if matches_lat4 is not None and matches_lon4 is not None:
+                                try:
+                                    lat = float(matches_lat4.group(2))
+                                    lon = float(matches_lon4.group(2))
+                                    if matches_lat4.group(1) in ['S','s']: lat = -lat
+                                    if matches_lon4.group(1) in ['W','w']: lon = -lon
+                                except ValueError:
+                                    logging.warning("Unexpected (type 6) 2 part value for %s: %s" % (sample_name, [lat_input, lon_input]))
+                                    return False, False
+                            else:
+                                logging.warning("Unexpected (no regex match) 2 part value for %s: %s" % (sample_name, [lat_input, lon_input]))
+                                return False, False
                     
 
 
