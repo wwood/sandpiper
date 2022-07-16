@@ -92,13 +92,13 @@ class CondensedProfile(db.Model):
     relative_abundance = db.Column(db.Float, nullable=False, index=True)
     taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False, index=True)
 
-    domain_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
-    phylum_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
-    class_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
-    family_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
-    genus_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
-    species_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+    # domain_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+    # phylum_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+    # class_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+    # order_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+    # family_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+    # genus_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
+    # species_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
 
     ncbi_metadata = db.relationship("NcbiMetadata", back_populates="condensed_profiles")
     taxonomy = db.relationship("Taxonomy", back_populates="condensed_profiles", foreign_keys=[taxonomy_id])
@@ -106,7 +106,7 @@ class CondensedProfile(db.Model):
 
 class Taxonomy(db.Model):
     # Not used here but this is the logical place to put it since it is used in the condensed profile, plus maybe otus in the future
-    taxonomy_level_columns = ['domain_id','phylum_id','class_id','order_id','family_id','genus_id','species_id']
+    # taxonomy_level_columns = ['domain_id','phylum_id','class_id','order_id','family_id','genus_id','species_id']
 
     #     "CREATE TABLE taxonomies (id INTEGER PRIMARY KEY, taxonomy_level TEXT, parent_id INTEGER, name TEXT); \n"
     __tablename__ = 'taxonomies'
@@ -119,13 +119,13 @@ class Taxonomy(db.Model):
     ecological_sample_count = db.Column(db.Integer)
 
     condensed_profiles = db.relationship('CondensedProfile', back_populates='taxonomy', foreign_keys=[CondensedProfile.taxonomy_id])
-    condensed_profile_domains = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.domain_id])
-    condensed_profile_phyla = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.phylum_id])
-    condensed_profile_classes = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.class_id])
-    condensed_profile_orders = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.order_id])
-    condensed_profile_families = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.family_id])
-    condensed_profile_genera = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.genus_id])
-    condensed_profile_species = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.species_id])
+    # condensed_profile_domains = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.domain_id])
+    # condensed_profile_phyla = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.phylum_id])
+    # condensed_profile_classes = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.class_id])
+    # condensed_profile_orders = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.order_id])
+    # condensed_profile_families = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.family_id])
+    # condensed_profile_genera = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.genus_id])
+    # condensed_profile_species = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.species_id])
 
     otus = db.relationship('OtuIndexed', back_populates='taxonomy', foreign_keys=[OtuIndexed.taxonomy_id])
 
@@ -157,8 +157,8 @@ class ParsedSampleAttribute(db.Model):
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     collection_year = db.Column(db.Integer)
     collection_month = db.Column(db.Integer)
-    latitude = db.Column(db.Float)
-    longitude = db.Column(db.Float)
+    latitude = db.Column(db.Float, index=True)
+    longitude = db.Column(db.Float, index=True)
     depth = db.Column(db.Float)
     temperature = db.Column(db.Float)
     host_or_not_prediction = db.Column(db.String)

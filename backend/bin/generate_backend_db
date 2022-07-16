@@ -220,8 +220,8 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
                 taxons_to_wordnode[taxon_name].get_full_coverage() / total_coverage,
                 taxonomy_name_to_id[taxon_name],
             ]
-            for (idx, column_name) in zip(taxonomy_ids_here[:(taxon_level_index+1)], Taxonomy.taxonomy_level_columns):
-                to_print.append(idx)
+            # for (idx, column_name) in zip(taxonomy_ids_here[:(taxon_level_index+1)], Taxonomy.taxonomy_level_columns):
+            #     to_print.append(idx)
             print('\t'.join(map(str, to_print)), file=tf)
 
             count += 1
@@ -700,8 +700,17 @@ def add_bioproject_associated_publications(db, tsv_path):
                     database=row['db'],
                     study_id=row['id']))
                 count_added += 1
+            if count_added % 500 == 0:
+                db.session.commit()
     db.session.commit()
     logging.info("Added {} bioproject associated publications to DB".format(count_added))
+
+def index_condensed_profiles_multi_column(db, db_path):
+    # This vastly speeds up search by taxonomy
+    logging.info("Indexing condensed profiles tax+relabund ..")
+    extern.run("sqlite3 {}".format(db_path), stdin= \
+        'create index condensed_profiles_taxonomy_id_relative_abundance on condensed_profiles (taxonomy_id, relative_abundance);')
+    logging.info("Indexed condensed profiles tax+relabund")
 
 if __name__ == '__main__':
     parent_parser = argparse.ArgumentParser(add_help=False)
@@ -783,3 +792,5 @@ if __name__ == '__main__':
         index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, sqlite_db_path)
 
         add_host_prediction_counts_to_taxonomy(db, sqlite_db_path)
+
+        index_condensed_profiles_multi_column(db, sqlite_db_path)
