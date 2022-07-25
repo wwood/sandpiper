@@ -483,6 +483,12 @@ def random_run():
         'run': ran.acc
     })
 
+def related_run_query(example_run):
+    if example_run.study_abstract is None or example_run.study_abstract == '':
+        return NcbiMetadata.query.filter_by(study_title=example_run.study_title)
+    else:
+        return NcbiMetadata.query.filter_by(study_abstract=example_run.study_abstract)
+
 @api.route('/project', methods=('GET',))
 def project():
     projects = []
@@ -493,7 +499,7 @@ def project():
         example_run = NcbiMetadata.query.filter_by(bioproject=request.args.get('model_bioproject')).first()
         if example_run is None:
             return jsonify({ 'error': 'no run found for bioproject '+request.args.get('model_bioproject') })
-        projects.extend(NcbiMetadata.query.filter_by(study_abstract=example_run.study_abstract).all())
+        projects.extend(related_run_query(example_run).all())
     if projects == []:
         return jsonify({ 'error': 'No runs found' })
     else:
@@ -512,7 +518,7 @@ def related_run_count(model_bioproject):
     example_run = NcbiMetadata.query.filter_by(bioproject=model_bioproject).first()
     if example_run is None:
         return 0
-    return NcbiMetadata.query.filter_by(study_abstract=example_run.study_abstract).count()
+    return related_run_query(example_run).count()
         
 @api.route('/accession/<string:acc>', methods=('GET',))
 def accession(acc):
