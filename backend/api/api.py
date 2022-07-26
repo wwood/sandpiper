@@ -503,6 +503,8 @@ def project():
     if projects == []:
         return jsonify({ 'error': 'No runs found' })
     else:
+        # Sort projects by run acc, numerically after removing the SRR/DRR/etc prefix
+        projects.sort(key=lambda x: int(x.acc[3:]))
         return jsonify({
             'study_abstract': projects[0].study_abstract,
             'projects': [{
@@ -511,6 +513,7 @@ def project():
                 'sample_name': p.sample_name,
                 'library_name': p.library_name,
                 'experiment_title': p.experiment_title,
+                'gbp': round(p.mbases/1000, 2),
             } for p in projects]
         })
 

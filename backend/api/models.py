@@ -268,7 +268,7 @@ class NcbiMetadata(db.Model):
     organisation_city = db.Column(db.String)
     organisation_country = db.Column(db.String)
     organisation_contact_name = db.Column(db.String)
-    study_title = db.Column(db.String)
+    study_title = db.Column(db.String, index=True)
     study_abstract = db.Column(db.String, index=True)
     design_description = db.Column(db.String)
     read1_length_average = db.Column(db.Float)

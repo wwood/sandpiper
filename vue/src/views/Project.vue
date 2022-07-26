@@ -10,18 +10,25 @@
             <p>{{ metadata.study_abstract }}</p>
           </div><br />
 
-          <b-table :data="metadata.projects" :striped="true">
-            <b-table-column field="Run" label="Run" v-slot="props" width="300">
+          <b-table
+            :data="metadata.projects"
+            :striped="true" 
+            :sort-icon="'arrow-up'">
+
+            <b-table-column field="acc" label="Run" v-slot="props" width="300" sortable>
               <b><router-link :to="{ name: 'Run', params: { accession: props.row.acc }}">{{ props.row.acc }}</router-link></b>
             </b-table-column>
-            <b-table-column field="Sample" label="Sample" v-slot="props" >
+            <b-table-column field="sample_name" label="Sample" v-slot="props" sortable centered>
               {{ props.row.sample_name }}
             </b-table-column>
-            <b-table-column field="Library" label="Library" v-slot="props" >
+            <b-table-column field="library_name" label="Library" v-slot="props" sortable centered>
               {{ props.row.library_name }}
             </b-table-column>
-            <b-table-column field="Experiment" label="Experiment" v-slot="props" >
+            <b-table-column field="experiment_title" label="Experiment" v-slot="props" sortable centered>
               {{ props.row.experiment_title }}
+            </b-table-column>
+            <b-table-column field="gbp" label="Gbp" v-slot="props" sortable numeric centered>
+              {{ props.row.gbp }}
             </b-table-column>
           </b-table>
 
