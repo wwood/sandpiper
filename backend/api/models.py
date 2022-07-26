@@ -268,8 +268,8 @@ class NcbiMetadata(db.Model):
     organisation_city = db.Column(db.String)
     organisation_country = db.Column(db.String)
     organisation_contact_name = db.Column(db.String)
-    study_title = db.Column(db.String, index=True)
-    study_abstract = db.Column(db.String, index=True)
+    study_title = db.Column(db.String, index=True) # Index because /project matches via title when abstract is not available
+    study_abstract = db.Column(db.String, index=True) # Index for /project
     design_description = db.Column(db.String)
     read1_length_average = db.Column(db.Float)
     read1_length_stdev = db.Column(db.Float)
@@ -297,7 +297,7 @@ class NcbiMetadata(db.Model):
                     biosample=self.biosample,
                     organism=self.organism,
                     sra_study=self.sra_study,
-                    releasedate=self.releasedate,
+                    releasedate=self.releasedate.strftime('%-d %B %Y') if self.releasedate else None,
                     bioproject=self.bioproject,
                     mbytes=self.mbytes,
                     loaddate=self.loaddate,
@@ -305,7 +305,7 @@ class NcbiMetadata(db.Model):
                     mbases=self.mbases,
                     insertsize=self.insertsize,
                     library_name=self.library_name,
-                    collection_date_sam=self.collection_date_sam,
+                    collection_date_sam=self.collection_date_sam.strftime('%-d %B %Y') if self.collection_date_sam else None,
                     geo_loc_name_country_calc=self.geo_loc_name_country_calc,
                     geo_loc_name_country_continent_calc=self.geo_loc_name_country_continent_calc,
                     geo_loc_name_sam=self.geo_loc_name_sam,
