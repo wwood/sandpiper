@@ -50,6 +50,7 @@ from api.application import create_app
 # from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import update, bindparam
+from sqlalchemy.orm import selectinload
 
 from api.models import *
 
@@ -681,28 +682,75 @@ def add_host_prediction_counts_to_taxonomy(db, db_path):
             ".import {} taxonomies".format(f.name))
         logging.info("Imported {} taxonomies with host prediction counts".format(Taxonomy.query.count()))
 
-def add_bioproject_associated_publications(db, tsv_path):
+def add_bioproject_associated_publications(db_path, tsv_path):
     df = pd.read_csv(tsv_path, sep='\t')
     logging.info("Adding {} bioproject associated publications to DB".format(df.shape[0]))
     count_added = 0
-    for i, row in tqdm(df.iterrows(), total=df.shape[0]):
-        runs = NcbiMetadata.query.filter_by(bioproject=row['bioproject']).all()
-        for run in runs:
-            current_study_links = StudyLink.query.filter_by(run_id=run.id).all()
-            already_there = False
-            # Remove duplicate links that are already recorded e.g. SRR9113719
-            for link in current_study_links:
-                if link.database is not None and link.database.lower() == 'pubmed' and link.study_id == str(row['id']):
-                    already_there = True
-            if not already_there:
-                db.session.add(StudyLink(
-                    run_id=run.id,
-                    database=row['db'],
-                    study_id=row['id']))
-                count_added += 1
-            if count_added % 500 == 0:
-                db.session.commit()
-    db.session.commit()
+    first_id_to_add = StudyLink.query.count()
+    # id = db.Column(db.Integer, primary_key=True)
+    # run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
+    # study_id = db.Column(db.String)
+    # database = db.Column(db.String)
+    # label = db.Column(db.String)
+    # url = db.Column(db.String)
+
+    logging.info("Caching known bioproject associated publications ..")
+    run_id_to_study_link_data = {}
+    for link in StudyLink.query.all():
+        if link.run_id not in run_id_to_study_link_data:
+            run_id_to_study_link_data[link.run_id] = []
+        run_id_to_study_link_data[link.run_id].append(link)
+    bioproject_to_run_ids = {}
+    for row in NcbiMetadata.query.all():
+        if row.bioproject in bioproject_to_run_ids:
+            bioproject_to_run_ids[row.bioproject].append(row.id)
+        else:
+            bioproject_to_run_ids[row.bioproject] = [row.id]
+
+    logging.info("Finding new bioproject associated publications to add ..")
+    seen_bioproject_extras = set()
+    with tempfile.NamedTemporaryFile(prefix='sandpiper_bioprojects_new') as f:
+        for _, row in tqdm(df.iterrows(), total=df.shape[0]):
+            key = '|'.join([row['bioproject'], row['id'], row['db']])
+            if key in seen_bioproject_extras:
+                continue
+            else:
+                seen_bioproject_extras.add(key)
+            if row.bioproject not in bioproject_to_run_ids:
+                logging.warning("Bioproject {} not found in DB".format(row.bioproject))
+                continue
+            run_ids = bioproject_to_run_ids[row.bioproject]
+            for run_id in run_ids:
+                try:
+                    current_study_links = run_id_to_study_link_data[link.run_id]
+                except KeyError:
+                    current_study_links = []
+                already_there = False
+                # Remove duplicate links that are already recorded e.g. SRR9113719
+                for link in current_study_links:
+                    if link.database is not None and link.database.lower() == 'pubmed' and link.study_id == str(row['id']):
+                        already_there = True
+                if not already_there:
+                    count_added += 1
+                    f.write(("\t".join([str(x) for x in [
+                        first_id_to_add+count_added,
+                        run_id,
+                        row['id'],
+                        row['db'],
+                        '',
+                        ''
+                    ]])+"\n").encode())
+    
+        f.flush()
+        logging.info("Importing {} new bioproject associated publications to DB".format(count_added))
+        # Import and set empty values as NULL
+        extern.run("sqlite3 {}".format(db_path), stdin= \
+            '.separator "\\t"\n' \
+            ".import {} study_links \n ".format(f.name)) + \
+            "UPDATE study_links SET label=NULL WHERE label='';\n " \
+            "UPDATE study_links SET url=NULL WHERE url='';\n "
+        logging.info("Imported {} bioproject associated publications".format(count_added))
+
     logging.info("Added {} bioproject associated publications to DB".format(count_added))
 
 def index_condensed_profiles_multi_column(db, db_path):
@@ -785,7 +833,7 @@ if __name__ == '__main__':
                     logging.info("Adding metadata from {} ..".format(file_path))
                     add_metadata_from_kingfisher_annotate(db, run_accession_to_id, file_path)
 
-        add_bioproject_associated_publications(db, args.bioproject_associated_publications)
+        add_bioproject_associated_publications(sqlite_db_path, args.bioproject_associated_publications)
 
         add_host_predictions(db, run_accession_to_id, args.host_predictions_tsv)
 
