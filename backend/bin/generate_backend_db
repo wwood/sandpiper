@@ -557,7 +557,7 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
             for otu in tqdm(otus):
                 # Do not add samples where the sample is not in the rest of the DB
                 if otu.sample_name in run_accession_to_id:
-                    split_taxonomy = otu.taxonomy.split('; ')
+                    split_taxonomy = [t for t in otu.taxonomy.split('; ') if t != '']
                     try:
                         taxonomy_name_to_id[split_taxonomy[-1]]
                     except KeyError:
