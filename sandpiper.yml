@@ -25,3 +25,7 @@ dependencies:
   - typing_extensions=4.1 #4.2 gives an Attribute error when flast starts
 
   - biopython
+  - pip
+  - pip:
+    - zenodo_backpack # Not on conda as of writing.
+

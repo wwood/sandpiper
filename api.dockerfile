@@ -16,8 +16,8 @@ RUN pip install --user --no-cache-dir \
     'Flask~=2.1.1' \
     'uWSGI~=2.0.20' \
     'iso8601~=1.0.2' \
-    # seems to be running from dev branch
-    git+https://github.com/wwood/singlem.git@dev
+    'zenodo-backpack~=0.2.0' \
+    git+https://github.com/wwood/singlem.git
 
 COPY backend /sandpiper
 

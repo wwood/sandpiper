@@ -9,5 +9,6 @@ JSON_METADATA_FILES: '../test/data/6_runs/metadata_each_line.json'
 
 CONDENSED_OTU_TABLE: '../test/data/6_runs/condensed.csv.gz'
 OTU_TABLE: '../test/data/6_runs/otu_table.csv.gz'
+HOST_OR_NOT_PREDICTION_GZ: '../test/data/6_runs/host_or_not_preds.tsv.gz'
 
 TEST_OR_PROD: 'test'

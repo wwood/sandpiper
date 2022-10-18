@@ -524,11 +524,11 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
 
     # Get a list of the marker IDs
     marker_name_to_id = {}
-    for marker in Marker.query.all():
+    for marker in db.session.query(Marker).all():
         marker_name_to_id[marker.marker] = marker.id
     logging.info("Loaded {} markers".format(len(marker_name_to_id)))
 
-    next_taxonomy_id = Taxonomy.query.count() + 1
+    next_taxonomy_id = db.session.query(Taxonomy).count() + 1
     logging.info("Next taxonomy ID is {}".format(next_taxonomy_id))
 
     # Put Eukaryotes in as a special case, as these are never in the condensed
@@ -543,7 +543,7 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
         db.session.add(Taxonomy(
             id=next_taxonomy_id,
             taxonomy_level=level,
-            parent_id=Taxonomy.query.filter_by(taxonomy_level='root').first().id,
+            parent_id=db.session.query(Taxonomy).filter_by(taxonomy_level='root').first().id,
             name=taxon,
             full_name=taxon))
 
@@ -616,7 +616,7 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
         extern.run("sqlite3 {}".format(db_path), stdin= \
             '.separator "\\t"\n' \
             ".import {} otus_indexed".format(f.name))
-        logging.info("Imported {} OTU lines into DB".format(OtuIndexed.query.count()))
+        logging.info("Imported {} OTU lines into DB".format(db.session.query(OtuIndexed).count()))
 
     # drop the otus table since we don't need it anymore
     logging.info("Dropping old otus table ..")
@@ -649,12 +649,12 @@ def add_host_prediction_counts_to_taxonomy(db, db_path):
     with tempfile.NamedTemporaryFile(prefix='sandpiper_generate_taxonomy') as f:
         tax_count = db.session.query(Taxonomy).count()
         logging.info("Caching {} host sample counts in taxonomy ..".format(tax_count))
-        for taxonomy in tqdm(Taxonomy.query.all(), total=tax_count):
-            num_host_runs = NcbiMetadata.query. \
+        for taxonomy in tqdm(db.session.query(Taxonomy).all(), total=tax_count):
+            num_host_runs = db.session.query(NcbiMetadata). \
                 join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
                 join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='host'). \
                 count()
-            num_ecological_runs = NcbiMetadata.query. \
+            num_ecological_runs = db.session.query(NcbiMetadata). \
                 join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
                 join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='ecological'). \
                 count()
@@ -680,13 +680,13 @@ def add_host_prediction_counts_to_taxonomy(db, db_path):
             'delete from taxonomies;\n' \
             '.separator "\\t"\n' \
             ".import {} taxonomies".format(f.name))
-        logging.info("Imported {} taxonomies with host prediction counts".format(Taxonomy.query.count()))
+        logging.info("Imported {} taxonomies with host prediction counts".format(db.session.query(Taxonomy).count()))
 
-def add_bioproject_associated_publications(db_path, tsv_path):
+def add_bioproject_associated_publications(db, db_path, tsv_path):
     df = pd.read_csv(tsv_path, sep='\t')
     logging.info("Adding {} bioproject associated publications to DB".format(df.shape[0]))
     count_added = 0
-    first_id_to_add = StudyLink.query.count()
+    first_id_to_add = db.session.query(StudyLink).count()
     # id = db.Column(db.Integer, primary_key=True)
     # run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     # study_id = db.Column(db.String)
@@ -696,12 +696,12 @@ def add_bioproject_associated_publications(db_path, tsv_path):
 
     logging.info("Caching known bioproject associated publications ..")
     run_id_to_study_link_data = {}
-    for link in StudyLink.query.all():
+    for link in db.session.query(StudyLink).all():
         if link.run_id not in run_id_to_study_link_data:
             run_id_to_study_link_data[link.run_id] = []
         run_id_to_study_link_data[link.run_id].append(link)
     bioproject_to_run_ids = {}
-    for row in NcbiMetadata.query.all():
+    for row in db.session.query(NcbiMetadata).all():
         if row.bioproject in bioproject_to_run_ids:
             bioproject_to_run_ids[row.bioproject].append(row.id)
         else:
@@ -711,7 +711,7 @@ def add_bioproject_associated_publications(db_path, tsv_path):
     seen_bioproject_extras = set()
     with tempfile.NamedTemporaryFile(prefix='sandpiper_bioprojects_new') as f:
         for _, row in tqdm(df.iterrows(), total=df.shape[0]):
-            key = '|'.join([row['bioproject'], row['id'], row['db']])
+            key = '|'.join([row['bioproject'], str(row['id']), row['db']])
             if key in seen_bioproject_extras:
                 continue
             else:
@@ -833,7 +833,7 @@ if __name__ == '__main__':
                     logging.info("Adding metadata from {} ..".format(file_path))
                     add_metadata_from_kingfisher_annotate(db, run_accession_to_id, file_path)
 
-        add_bioproject_associated_publications(sqlite_db_path, args.bioproject_associated_publications)
+        add_bioproject_associated_publications(db, sqlite_db_path, args.bioproject_associated_publications)
 
         add_host_predictions(db, run_accession_to_id, args.host_predictions_tsv)
 
