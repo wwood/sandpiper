@@ -7,7 +7,8 @@ import os
 class BaseConfig:
     DEBUG = True
 
-    LYRA_DB_PATH = 'sqlite:///db/sandpiper_20.sqlite3'
+    # Recently, it because required somehow that the DB path is an absolute path
+    LYRA_DB_PATH = 'sqlite:///'+os.path.join(os.path.dirname(__file__), '../db/sandpiper_20.sqlite3')
     PROD_DB_PATH = LYRA_DB_PATH
 
     if os.path.exists(os.path.join(os.path.dirname(__file__), 'running_on_lyra')):
