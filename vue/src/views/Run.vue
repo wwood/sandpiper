@@ -13,8 +13,14 @@
             {{ metadata.metadata_parsed.organism }} | {{
             metadata.metadata_parsed.mbases / 1000}} Gbp | {{ getNumReads }} million
             reads {{ read_length_mature }}|
-            {{ metadata.metadata_parsed.instrument }} | Released {{
-            metadata.metadata_parsed.release_month }} | 
+            {{ metadata.metadata_parsed.instrument }} | 
+            <span v-if="metadata.metadata_parsed.collection_time !== null">
+              Collected {{ metadata.metadata_parsed.collection_time }}, released {{ metadata.metadata_parsed.release_month }}
+            </span>
+            <span v-else>
+              Released {{ metadata.metadata_parsed.release_month }}
+            </span>
+             | 
             <span v-if="metadata.metadata_parsed.num_related_runs == 0">No related runs here.</span>
             <span v-else>
               <router-link :to="{ name: 'Project', query: { model_bioproject: metadata.metadata_parsed.bioproject }}">

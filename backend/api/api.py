@@ -178,7 +178,8 @@ def fetch_metadata(sample_name):
     metadata_dict = meta.to_displayable_dict()
     
     metadata_parsed = {
-        'release_month': meta.releasedate.strftime('%B %Y'),
+        'collection_time': metadata_dict['parsed_sample_attributes']['collection_year'],
+        'release_month': meta.releasedate.strftime('%Y'),
         'latitude': metadata_dict['parsed_sample_attributes']['latitude'],
         'longitude': metadata_dict['parsed_sample_attributes']['longitude'],
         'num_related_runs': related_run_count(meta.bioproject)-1,
