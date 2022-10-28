@@ -113,6 +113,30 @@ def fetch_condensed(sample_name):
 
     return jsonify({ 'condensed': wordnode_json(root, 0, 0), 'sample_name': sample_name })
 
+@api.route('/condensed_csv/<string:sample_name>', methods=('GET',))
+def fetch_condensed_csv(sample_name):
+    condensed = db.session.execute(
+        select(CondensedProfile.coverage, Taxonomy.full_name).join(CondensedProfile.ncbi_metadata).
+            filter(NcbiMetadata.acc == sample_name).filter(CondensedProfile.taxonomy_id==Taxonomy.id)
+        ).fetchall()
+    if len(condensed) is None:
+        return jsonify({ sample_name: 'no condensed data found' })
+    
+    df = pd.DataFrame(
+        [[
+            sample_name,
+            d.coverage,
+            'Root; '+d.full_name if d.full_name != 'Root' else d.full_name
+        ] for d in condensed],
+        columns=['sample', 'coverage', 'taxonomy']
+    )
+    response = make_response(df.to_csv(index=False, header=True, sep='\t'))
+    cd = 'attachment; filename=sandpiper_v{}_{}_condensed.csv'.format(__version__, sample_name)
+    response.headers['Content-Disposition'] = cd
+    response.mimetype = 'text/csv'
+    return response
+
+
 def wordnode_json(wordnode, order, depth):
     r = re.compile('^.__(.+)')
     matches = r.match(wordnode.word)
@@ -337,7 +361,7 @@ def taxonomy_search_csv(taxon):
             columns=['sample', 'relative_abundance', 'coverage', 'organism', 'release_year']
         )
         response = make_response(df.to_csv(index=False, header=True))
-        cd = 'attachment; filename=sandpiper_v{}_{}_condensed.csv'.format(__version__, taxon)
+        cd = 'attachment; filename=sandpiper_v{}_{}_sample_coverage.csv'.format(__version__, taxon)
         response.headers['Content-Disposition'] = cd
         response.mimetype = 'text/csv'
         return response

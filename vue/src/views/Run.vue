@@ -86,9 +86,12 @@
 
       <section class="section">
         <div class="container is-large">
-          <h3 class="title">Full SingleM profile</h3>
+          <h3 class="title">Download</h3>
+
+          <p>The taxonomic profile of this sample can be downloaded in <a :href="profile_csv_link">tab-separated "SingleM condensed" format</a>. In this format the coverage of each lineage is the coverage assigned to that taxon and not more specifically e.g. species coverage does not count towards genus coverage.</p>
+          <br />
           
-          <p>The <a :href="full_profile_link">full SingleM OTU profile of {{ accession }}</a> is a tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.</p>
+          <p>The <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> is a tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.</p>
           <!-- <br /> -->
 
           <!-- <p>See a <a :href="'/otus/' + accession">visualisation</a></p> -->
@@ -180,6 +183,9 @@ export default {
     },
     full_profile_link: function () {
       return api_url() + '/otus/' + this.accession
+    },
+    profile_csv_link: function () {
+      return api_url() + '/condensed_csv/' + this.accession
     },
     publications: function () {
       return this.metadata.metadata.study_links.filter(function (link) {
