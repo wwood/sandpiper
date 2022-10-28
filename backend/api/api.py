@@ -77,6 +77,7 @@ def sandpiper_stats():
         'num_bioprojects': sandpiper_stats_cache['sandpiper_num_bioprojects'],
         'version': __version__,
         'scrape_date': __scrape_date__,
+        'gtdb_version': __gtdb_version__,
     })
 
 @api.route('/markers/', methods=('GET',))

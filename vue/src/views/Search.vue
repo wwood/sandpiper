@@ -12,7 +12,7 @@
           <template #empty>No results found</template>
         </b-autocomplete>
       </b-field>
-      <p>Taxonomy annotations are derived from <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version 06-RS202.</p>
+      <p>Taxonomy annotations are derived from <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version {{ gtdb_version }}.</p>
       <br /><b-button type="is-primary" @click="search_by_taxonomy">Search</b-button>
     </section>
 
@@ -37,7 +37,7 @@
 </template>
 
 <script>
-import { fetchTaxonomySearchHints } from '@/api'
+import { fetchTaxonomySearchHints, fetchSandpiperStats } from '@/api'
 import debounce from 'lodash/debounce'
 
 export default {
@@ -45,6 +45,8 @@ export default {
   title: 'Search - Sandpiper',
   data () {
     return {
+      gtdb_version: null,
+
       taxonomy: 'c__Bog-38',
       autocomplete_taxons: [],
       selected: null,
@@ -55,6 +57,12 @@ export default {
       random_choice_ecological: true,
       random_choice_two_gbp: true
     }
+  },
+
+  created () {
+    // fetch the data when the view is created and the data is
+    // already being observed
+    this.fetchData()
   },
 
   watch: {
@@ -72,6 +80,13 @@ export default {
   },
   
   methods: {
+    fetchData () {
+      fetchSandpiperStats()
+        .then(response => {
+          const r = response.data
+          this.gtdb_version = r.gtdb_version
+        })
+    },
     search_by_taxonomy () {
       this.$router.push({ name: 'SearchResults', params: { taxonomy: this.taxonomy } })
     },
