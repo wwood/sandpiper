@@ -201,6 +201,10 @@ def fetch_metadata(sample_name):
     meta = metadata[0]
 
     metadata_dict = meta.to_displayable_dict()
+
+    host_mature = metadata_dict['parsed_sample_attributes']['host_or_not_mature']
+    if host_mature == 'host':
+        host_mature = 'Eukaryote host-associated'
     
     metadata_parsed = {
         'collection_time': metadata_dict['parsed_sample_attributes']['collection_year'],
@@ -208,6 +212,7 @@ def fetch_metadata(sample_name):
         'latitude': metadata_dict['parsed_sample_attributes']['latitude'],
         'longitude': metadata_dict['parsed_sample_attributes']['longitude'],
         'num_related_runs': related_run_count(meta.bioproject)-1,
+        'host_or_not_mature': host_mature,
     }
 
     read_length_summary = None

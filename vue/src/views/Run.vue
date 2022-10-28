@@ -10,8 +10,9 @@
           </p>
 
           <div>
-            {{ metadata.metadata_parsed.organism }} | {{
-            metadata.metadata_parsed.mbases / 1000}} Gbp | 
+            {{ metadata.metadata_parsed.organism }} | 
+            {{ metadata.metadata_parsed.host_or_not_mature }} |
+            {{ metadata.metadata_parsed.mbases / 1000}} Gbp | 
             <span v-if="getNumReads==0">
               <1 million reads
             </span>

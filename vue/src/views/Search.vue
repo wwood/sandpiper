@@ -26,7 +26,7 @@
 
     <section class="section"  @keyup.enter="search_by_random">
       <b-field label="Inspect a randomly chosen run">
-        <b-switch v-model="random_choice_host">Host-associated</b-switch>
+        <b-switch v-model="random_choice_host">Eukaryote host-associated</b-switch>
         <b-switch v-model="random_choice_ecological">Ecological</b-switch>
         <b-switch v-model="random_choice_two_gbp">2+ Gbp</b-switch>
       </b-field>
