@@ -52,7 +52,7 @@ export default {
       // console.log(order + '==' + depth)
       const baseColors = ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00', '#cab2d6', '#6a3d9a']
 
-      const base = baseColors[order]
+      const base = baseColors[order % baseColors.length]
       const colorScale = scaleLinear()
         .domain([1, 12])
         .range([base, 'white'])
