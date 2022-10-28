@@ -43,6 +43,7 @@
             <div v-else>
               <ul v-for="link in publications" v-bind:key="link.study_id">
                 <li v-if="link['database'].toLowerCase()==='pubmed'">PubMed <a :href="'https://www.ncbi.nlm.nih.gov/pubmed?term='+link['study_id']">{{ link['study_id'] }}</a></li>
+                <li v-else-if="link['database'].toLowerCase()==='doi'">DOI <a :href="'https://doi.org/'+link['study_id']">{{ link['study_id'] }}</a></li>
                 <li v-else>{{ link['database'] }} {{ link['study_id'] }}</li>
               </ul>
               A <a :href="scholar_search_url">search on Google Scholar</a> may find further publications.

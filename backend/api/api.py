@@ -243,7 +243,27 @@ def fetch_metadata(sample_name):
             biosample_dict.append({ 'k': k.replace('_',' '), 'v': v, 'is_custom': True, 'description': None })
 
     d2[SAMPLE_INFO_TYPE_METADATA].extend(biosample_dict)
-    d2['study_links'] = metadata_dict['study_links']
+
+    # Some are double e.g. https://sandpiper.qut.edu.au/run/SRR9224309 has 2 PubMed study_links
+    final_study_links = []
+    for study_link_pair in metadata_dict['study_links']:
+        print(study_link_pair)
+        if 'database' in study_link_pair:
+            db = study_link_pair['database']
+            study_id = study_link_pair['study_id']
+            if db == 'ePubmed': db = 'pubmed'
+            if db == 'eDOI': db = 'DOI'
+            new_link = {
+                'database': db,
+                'study_id': study_id,
+            }
+            if new_link not in final_study_links:
+                final_study_links.append(new_link)
+        else:
+            # label / url type
+            if study_link_pair not in final_study_links:
+                final_study_links.append(study_link_pair)
+    d2['study_links'] = final_study_links
 
     return jsonify({ 
         'metadata': d2,
