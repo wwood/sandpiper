@@ -11,8 +11,14 @@
 
           <div>
             {{ metadata.metadata_parsed.organism }} | {{
-            metadata.metadata_parsed.mbases / 1000}} Gbp | {{ getNumReads }} million
-            reads {{ read_length_mature }}|
+            metadata.metadata_parsed.mbases / 1000}} Gbp | 
+            <span v-if="getNumReads==0">
+              <1 million reads
+            </span>
+            <span v-else>
+              {{ getNumReads }} million reads
+            </span>
+            {{ read_length_mature }}|
             {{ metadata.metadata_parsed.instrument }} | 
             <span v-if="metadata.metadata_parsed.collection_time !== null">
               Collected {{ metadata.metadata_parsed.collection_time }}, released {{ metadata.metadata_parsed.release_month }}
