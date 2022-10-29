@@ -352,7 +352,7 @@ def taxonomy_search_run_data(taxon):
 
 @api.route('/taxonomy_search_csv/<string:taxon>', methods=('GET',))
 def taxonomy_search_csv(taxon):
-    worked, condensed_profile_hits = taxonomy_search_core(taxon, request.args, no_limit=True)
+    worked, condensed_profile_hits = taxonomy_search_core(taxon, request.args, no_limit=True, include_extras=True)
 
     if worked:
         df = pd.DataFrame(
@@ -361,9 +361,11 @@ def taxonomy_search_csv(taxon):
                 round(c.relative_abundance*100,2),
                 round(c.filled_coverage, 2),
                 c.organism,
-                c.releasedate.strftime('%Y'),]
+                c.releasedate.strftime('%Y'),
+                c.host_or_not_mature]
                 for c in condensed_profile_hits],
-            columns=['sample', 'relative_abundance', 'coverage', 'organism', 'release_year']
+            columns=['sample', 'relative_abundance', 'coverage', 'organism', 'release_year', 
+            'eukaryotic_host_association']
         )
         response = make_response(df.to_csv(index=False, header=True))
         cd = 'attachment; filename=sandpiper_v{}_{}_sample_coverage.csv'.format(__version__, taxon)
@@ -373,7 +375,7 @@ def taxonomy_search_csv(taxon):
     else:
         return condensed_profile_hits # Really returning a JSON indicating the failure
 
-def taxonomy_search_core(taxon, args, no_limit=False):
+def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
     '''Returns (bool, iterable|json) where bool is whether it worked (True)
     or not (False) and iterable is the data to render. json is the error if
     it failed.'''
@@ -397,14 +399,27 @@ def taxonomy_search_core(taxon, args, no_limit=False):
         return False, taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy, or no records of this taxon are recorded in Sandpiper.')
     else:
         # Query for samples that contain this taxon
-        stmt = select(
-            NcbiMetadata.acc,
-            CondensedProfile.relative_abundance,
-            CondensedProfile.filled_coverage,
-            NcbiMetadata.organism,
-            NcbiMetadata.releasedate
-            # TODO: Add experiment title here, not currently in DB
-        ).where(CondensedProfile.run_id == NcbiMetadata.id)
+        if include_extras:
+            stmt = select(
+                NcbiMetadata.acc,
+                CondensedProfile.relative_abundance,
+                CondensedProfile.filled_coverage,
+                NcbiMetadata.organism,
+                NcbiMetadata.releasedate,
+                # TODO: Add experiment title here, not currently in DB
+                ParsedSampleAttribute.host_or_not_mature,
+            ).where(CondensedProfile.run_id == NcbiMetadata.id
+            ).where(ParsedSampleAttribute.run_id == NcbiMetadata.id)
+        else:
+            stmt = select(
+                NcbiMetadata.acc,
+                CondensedProfile.relative_abundance,
+                CondensedProfile.filled_coverage,
+                NcbiMetadata.organism,
+                NcbiMetadata.releasedate
+                # TODO: Add experiment title here, not currently in DB
+            ).where(CondensedProfile.run_id == NcbiMetadata.id)
+
         
         if sort_field == 'relative_abundance':
             if sort_direction == 'desc':
