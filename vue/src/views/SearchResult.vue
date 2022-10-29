@@ -38,7 +38,7 @@
                   <p class="heading">Host-association</p>
                   <p class="title"> {{ Math.round((num_host_runs/(num_host_runs+num_ecological_runs)*100)) }}%</p>
                 </a>
-                <p>of runs are host-associated</p>
+                <p>of runs are eukaryote host-associated</p>
               </div>
             </div>
           </div>
