@@ -50,7 +50,7 @@
                   <p class="title" v-if="num_lat_lon_runs < 1000">{{ num_lat_lon_runs.toLocaleString("en-US") }}</p>
                   <p class="title" v-else>1000+</p>
                 </a>
-                <p>runs with >1% relative abundance and lat/lon.</p>
+                <p>runs with lat/lon.</p>
               </div>
             </div>
           </div>
