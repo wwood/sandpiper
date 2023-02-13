@@ -89,6 +89,7 @@ class CondensedProfile(db.Model):
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     coverage = db.Column(db.Float, nullable=False, index=True)
     filled_coverage = db.Column(db.Float, nullable=False, index=True)
+    # relative_abundance is a filled coverage
     relative_abundance = db.Column(db.Float, nullable=False, index=True)
     taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False, index=True)
 
@@ -331,3 +332,25 @@ class NcbiMetadata(db.Model):
                     study_links=[study_link.to_displayable_dict() for study_link in self.study_links],
                     biosample_attributes=[{'k': x.k, 'v': x.v} for x in self.biosample_attributes if x.k != 'primary_search'],
                     parsed_sample_attributes=self.parsed_sample_attributes[0].to_displayable_dict())
+
+class Tag(db.Model):
+    __tablename__ = 'tags'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, unique=True, nullable=False)
+    description = db.Column(db.String, nullable=False)
+
+    def to_displayable_dict(self):
+        return dict(
+            name=self.name,
+            description=self.description)
+
+class RunTag(db.Model):
+    __tablename__ = 'run_tags'
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False)
+    tag_id = db.Column(db.Integer, db.ForeignKey('tags.id'), nullable=False)
+
+    def to_displayable_dict(self):
+        return dict(
+            run_id=self.run_id,
+            tag_id=self.tag_id)

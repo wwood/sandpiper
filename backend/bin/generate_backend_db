@@ -49,7 +49,7 @@ from api.application import create_app
 
 # from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import update, bindparam
+from sqlalchemy import update, bindparam, select, insert, func
 from sqlalchemy.orm import selectinload
 
 from api.models import *
@@ -754,11 +754,45 @@ def add_bioproject_associated_publications(db, db_path, tsv_path):
     logging.info("Added {} bioproject associated publications to DB".format(count_added))
 
 def index_condensed_profiles_multi_column(db, db_path):
+    
     # This vastly speeds up search by taxonomy
     logging.info("Indexing condensed profiles tax+relabund ..")
     extern.run("sqlite3 {}".format(db_path), stdin= \
         'create index condensed_profiles_taxonomy_id_relative_abundance on condensed_profiles (taxonomy_id, relative_abundance);')
     logging.info("Indexed condensed profiles tax+relabund")
+
+def add_enriched_community_tags(db, db_path):
+    # Add enriched community TAG
+    logging.info("Adding enriched community tag ..")
+    # An enriched community is one with >50% of a single genus
+
+    # Create the enriched community tag
+    db.session.add(Tag(
+        name = 'enriched_community',
+        description = 'Enriched community, one with a single genus comprising >50%% relative abundance'))
+    db.session.commit()
+    enriched_communities_tag_id = db.session.query(Tag).filter(Tag.name == 'enriched_community').one().id
+
+    # select all runs with a condensed profile with a genus > 50%
+    
+    # enriched_communities = db.session.execute(select(CondensedProfile).filter(CondensedProfile.relative_abundance > 0.5)).all()
+    enriched_communities_stmt = select(CondensedProfile.run_id).filter(CondensedProfile.relative_abundance > 0.5).distinct()
+    # Require that the taxonomy_level is genus
+    enriched_communities_stmt = enriched_communities_stmt.join(CondensedProfile.taxonomy).where(Taxonomy.taxonomy_level == 'genus') # TODO: Change to genus for prod
+    enriched_communities = list(db.session.execute(enriched_communities_stmt).scalars())
+    logging.info("Found {} enriched communities. Adding tags..".format(len(enriched_communities)))
+
+    # Add TagRun entries for each enriched community
+    to_insert = []
+    for run_id in enriched_communities:
+        to_insert.append({'run_id': run_id, 'tag_id': enriched_communities_tag_id})
+    if len(to_insert) > 0: # not True for current test data
+        db.session.execute(
+            insert(RunTag),
+            to_insert)
+        db.session.commit()
+    logging.info("Committed {} enriched community tags".format(db.session.execute(select(func.count()).select_from(RunTag).where(RunTag.tag_id == enriched_communities_tag_id)).scalar()))
+
 
 if __name__ == '__main__':
     parent_parser = argparse.ArgumentParser(add_help=False)
@@ -766,20 +800,22 @@ if __name__ == '__main__':
     #parent_parser.add_argument('--version', help='output version information and quit',  action='version', version=repeatm.__version__)
     parent_parser.add_argument('--quiet', help='only output errors', action="store_true")
 
-    parent_parser.add_argument('--singlem-db', help='sqlite file from a singlem db', required=True)
-    parent_parser.add_argument('--otu-table', help='OTU table of the singlem db', required=True) # Commented out for now since unsure it will be used.
-    parent_parser.add_argument('--condensed-otu-table', help='condensed OTU table input', required=True)
+    parent_parser.add_argument('--singlem-db', help='sqlite file from a singlem db')
+    parent_parser.add_argument('--otu-table', help='OTU table of the singlem db') # Commented out for now since unsure it will be used.
+    parent_parser.add_argument('--condensed-otu-table', help='condensed OTU table input')
     parent_parser.add_argument('-o', help='sqlite3 file to generate', required=True)
-    parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files', required=True)
+    parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files')
     parent_parser.add_argument('--run-blacklist', help='Ignore runs listed in this file')
     parent_parser.add_argument('--kingfisher-annotate-path', help='kingfisher annotate TSV output')
     parent_parser.add_argument('--kingfisher-annotate-path-list', help='kingfisher annotate TSV outputs listed in this file, one per line')
-    parent_parser.add_argument('--host-predictions-tsv', help='host predictions TSV output', required=True)
-    parent_parser.add_argument('--bioproject-associated-publications', help='tsv from bioprjoect_metadata.py', required=True)
+    parent_parser.add_argument('--host-predictions-tsv', help='host predictions TSV output')
+    parent_parser.add_argument('--bioproject-associated-publications', help='tsv from bioprjoect_metadata.py')
+
+    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start','tags'], required=True)
 
     args = parent_parser.parse_args()
 
-    if not args.kingfisher_annotate_path and not args.kingfisher_annotate_path_list:
+    if args.stage=='start' and not args.kingfisher_annotate_path and not args.kingfisher_annotate_path_list:
         raise Exception("Kingfisher annotate data must be specified somehow")
 
     # Setup logging
@@ -791,54 +827,69 @@ if __name__ == '__main__':
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
-    # Read corrections in
-    corrections = read_corrections()
-
-    blacklist = set()
-    if args.run_blacklist:
-        with open(args.run_blacklist) as f:
-            for line in f:
-                if line != 'acc':
-                    blacklist.add(line.strip())
-        logging.info("Ignoring {} runs".format(len(blacklist)))
-
-    # Copy file over
-    logging.info("Copying SQLite file")
-    sqlite_db_path = args.o
-    shutil.copy(args.singlem_db, sqlite_db_path)
-
     # Create the app and create the tables
+    sqlite_db_path = args.o
     app = create_app()
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + sqlite_db_path
     app.config['SQLALCHEMY_ECHO'] = args.debug is True
     db = SQLAlchemy(app)
     with app.app_context():
-        db.create_all()
 
-        # Create all the tables
-        Taxonomy.metadata.create_all(db.engine)
+        if args.stage == 'start':
+            if not args.singlem_db: raise Exception("singlem-db must be specified for stage 'start'")
+            if not args.otu_table: raise Exception("otu-table must be specified for stage 'start'")
+            if not args.condensed_otu_table: raise Exception("condensed-otu-table must be specified for stage 'start'")
+            if not args.metadata_json_files: raise Exception("metadata-json-files must be specified for stage 'start'")
+            if not args.host_predictions_tsv: raise Exception("host-predictions-tsv must be specified for stage 'start'")
+            if not args.bioproject_associated_publications: raise Exception("bioproject-associated-publications must be specified for stage 'start'")
 
-        # Create sample metadata table, restricting it to just those samples
-        # that we have condensed profiles for.
-        run_accession_to_id = create_sample_metadata(db, args.condensed_otu_table, blacklist, args.metadata_json_files, corrections)
-        
-        taxonomy_name_to_id = fill_condensed_and_taxonomy_tables(db, sqlite_db_path, args.condensed_otu_table, blacklist, run_accession_to_id)
+            # Read corrections in
+            corrections = read_corrections()
 
-        if args.kingfisher_annotate_path:
-            add_metadata_from_kingfisher_annotate(db, run_accession_to_id, args.kingfisher_annotate_path)
-        if args.kingfisher_annotate_path_list:
-            with open(args.kingfisher_annotate_path_list) as f:
-                for line in f:
-                    file_path = line.strip()
-                    logging.info("Adding metadata from {} ..".format(file_path))
-                    add_metadata_from_kingfisher_annotate(db, run_accession_to_id, file_path)
+            blacklist = set()
+            if args.run_blacklist:
+                with open(args.run_blacklist) as f:
+                    for line in f:
+                        if line != 'acc':
+                            blacklist.add(line.strip())
+                logging.info("Ignoring {} runs".format(len(blacklist)))
 
-        add_bioproject_associated_publications(db, sqlite_db_path, args.bioproject_associated_publications)
+            # Copy file over
+            logging.info("Copying SQLite file")
+            shutil.copy(args.singlem_db, sqlite_db_path)
 
-        add_host_predictions(db, run_accession_to_id, args.host_predictions_tsv)
+            db.create_all()
 
-        index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, sqlite_db_path)
+            # Create all the tables
+            Taxonomy.metadata.create_all(db.engine)
 
-        add_host_prediction_counts_to_taxonomy(db, sqlite_db_path)
+            # Create sample metadata table, restricting it to just those samples
+            # that we have condensed profiles for.
+            run_accession_to_id = create_sample_metadata(db, args.condensed_otu_table, blacklist, args.metadata_json_files, corrections)
+            
+            taxonomy_name_to_id = fill_condensed_and_taxonomy_tables(db, sqlite_db_path, args.condensed_otu_table, blacklist, run_accession_to_id)
 
-        index_condensed_profiles_multi_column(db, sqlite_db_path)
+            if args.kingfisher_annotate_path:
+                add_metadata_from_kingfisher_annotate(db, run_accession_to_id, args.kingfisher_annotate_path)
+            if args.kingfisher_annotate_path_list:
+                with open(args.kingfisher_annotate_path_list) as f:
+                    for line in f:
+                        file_path = line.strip()
+                        logging.info("Adding metadata from {} ..".format(file_path))
+                        add_metadata_from_kingfisher_annotate(db, run_accession_to_id, file_path)
+
+            add_bioproject_associated_publications(db, sqlite_db_path, args.bioproject_associated_publications)
+
+            add_host_predictions(db, run_accession_to_id, args.host_predictions_tsv)
+
+            index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, sqlite_db_path)
+
+            add_host_prediction_counts_to_taxonomy(db, sqlite_db_path)
+
+            index_condensed_profiles_multi_column(db, sqlite_db_path)
+
+        elif args.stage == 'tags':
+            add_enriched_community_tags(db, sqlite_db_path)
+
+        else:
+            raise Exception("Unknown stage {}".format(args.stage))
