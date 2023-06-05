@@ -44,8 +44,8 @@ import pandas as pd
 from pytz import country_names
 from tqdm import tqdm
 
-sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
-from api.application import create_app
+sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')] + sys.path
+from api.application import generate_app
 
 # from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -82,30 +82,36 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
             # Calculate per-sample because we need to calculate relative abundance within-sample
             if row[0] != current_sample:
                 if current_sample is not None:
-                    (taxonomy_name_to_id, next_taxonomy_id, count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries, taxonomy_name_to_id, next_taxonomy_id, count, tf)
+                    (taxonomy_name_to_id, next_taxonomy_id,
+                     count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries,
+                                                              taxonomy_name_to_id, next_taxonomy_id, count, tf)
                 current_sample = row[0]
                 current_sample_entries = []
                 sample_count += 1
                 if sample_count % 10000 == 0:
                     logging.info("Processed condensed profiles for {} samples".format(sample_count))
-            
+
             current_sample_entries.append(row)
-            
+
         if current_sample is not None:
-            (taxonomy_name_to_id, next_taxonomy_id, count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries, taxonomy_name_to_id, next_taxonomy_id, count, tf)
+            (taxonomy_name_to_id, next_taxonomy_id,
+             count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries,
+                                                      taxonomy_name_to_id, next_taxonomy_id, count, tf)
 
         # Commit taxonomy entries
         logging.info("Committing taxonomy entries from condensed profiles ..")
         db.session.commit()
-        
+
         logging.info("Committing condensed profiles ..")
         tf.flush()
         extern.run("sqlite3 {}".format(db_path), stdin= \
             '.separator "\\t"\n' \
             ".import {} condensed_profiles".format(tf.name))
-        logging.info("Wrote {} condensed profile rows to DB, skipping {} that were not in metadata".format(count, len(skipped_runs)))
+        logging.info("Wrote {} condensed profile rows to DB, skipping {} that were not in metadata".format(
+            count, len(skipped_runs)))
 
     return taxonomy_name_to_id
+
 
 def iterate_condensed_profiles(condensed_otu_table_path, blacklist):
     first = True
@@ -119,6 +125,7 @@ def iterate_condensed_profiles(condensed_otu_table_path, blacklist):
             continue
         yield row
 
+
 def iterate_condensed_profile_reader_gzip_or_not(condensed_otu_table_path):
     if condensed_otu_table_path.endswith('.gz'):
         with gzip.open(condensed_otu_table_path, 'rt') as csvfile_in:
@@ -128,22 +135,22 @@ def iterate_condensed_profile_reader_gzip_or_not(condensed_otu_table_path):
         with open(condensed_otu_table_path, 'r') as csvfile_in:
             reader = csv.reader(csvfile_in, delimiter="\t")
             yield from reader
-    
+
 
 def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_name_to_id, next_taxonomy_id, count, tf):
     total_coverage = sum([float(x[1]) for x in entries])
-    
+
     # Generate WordNode tree so we can calculate relative abundance later
     root = WordNode(None, 'Root')
     taxons_to_wordnode = {root.word: root}
 
     inserted_taxonomy_ids = set()
-    
+
     for row, taxons in iterate_condensed_profile_split_taxonomy(entries):
         coverage = float(row[1])
         taxonomy = row[2]
         logging.debug("Analysing taxonomy %s", taxonomy)
-        
+
         last_taxon = root
         wn = None
         for (i, tax) in enumerate(taxons):
@@ -152,7 +159,8 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
                 wn.coverage = 0
                 logging.debug("Adding tax %s with prev %s", tax, last_taxon.word)
                 last_taxon.children[tax] = wn
-                taxons_to_wordnode[tax] = wn #TODO: Problem when there is non-unique labels? Require full taxonomy used?
+                taxons_to_wordnode[
+                    tax] = wn  #TODO: Problem when there is non-unique labels? Require full taxonomy used?
             last_taxon = taxons_to_wordnode[tax]
         last_taxon.coverage = coverage
 
@@ -169,25 +177,32 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
                     parent_id = 'NULL'
                     full_taxonomy = 'Root'
                 else:
-                    if i==7:
+                    if i == 7:
                         level = 'species'
                     else:
                         prefix = species_aware_taxonomy.split('__')[0]
-                        level_id = ['d','p','c','o','f','g','s'].index(prefix)
-                        level = ['domain','phylum','class','order','family','genus','species'][level_id]
+                        level_id = ['d', 'p', 'c', 'o', 'f', 'g', 's'].index(prefix)
+                        level = ['domain', 'phylum', 'class', 'order', 'family', 'genus', 'species'][level_id]
                         # Will throw KeyError if something is amiss
 
-                    parent_id = taxonomy_name_to_id[taxons[i-1]]
-                    full_taxonomy = '; '.join(taxons[1:(i+1)])
+                    parent_id = taxonomy_name_to_id[taxons[i - 1]]
+                    full_taxonomy = '; '.join(taxons[1:(i + 1)])
 
-                db.session.add(Taxonomy(id=next_taxonomy_id, taxonomy_level=level, parent_id=parent_id, name=species_aware_taxonomy, full_name=full_taxonomy))
+                db.session.add(
+                    Taxonomy(id=next_taxonomy_id,
+                             taxonomy_level=level,
+                             parent_id=parent_id,
+                             name=species_aware_taxonomy,
+                             full_name=full_taxonomy))
 
                 taxonomy_name_to_id[species_aware_taxonomy] = next_taxonomy_id
                 next_taxonomy_id += 1
 
             taxonomy_ids_here.append(taxonomy_name_to_id[species_aware_taxonomy])
 
-        def add_a_condensed_profile_taxon(count, taxon_name, taxon_level_index, tf): # db, , taxons_to_wordnode, taxonomy, taxonomy_ids_here, taxonomy_name_to_id
+        def add_a_condensed_profile_taxon(
+                count, taxon_name, taxon_level_index,
+                tf):  # db, , taxons_to_wordnode, taxonomy, taxonomy_ids_here, taxonomy_name_to_id
             # condensed_profile_entry = {
             #     'id': count+1,
             #     'run_id': run_id,
@@ -214,7 +229,7 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
 
             # id|run_id|coverage|filled_coverage|relative_abundance|taxonomy_id|domain_id|phylum_id|class_id|order_id|family_id|genus_id|species_id
             to_print = [
-                count+1,
+                count + 1,
                 run_id,
                 taxons_to_wordnode[taxon_name].coverage,
                 taxons_to_wordnode[taxon_name].get_full_coverage(),
@@ -239,6 +254,7 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
 
     return (taxonomy_name_to_id, next_taxonomy_id, count)
 
+
 def iterate_condensed_profile_split_taxonomy(entries):
     for row in entries:
         taxonomies = row[2]
@@ -252,13 +268,14 @@ def iterate_condensed_profile_split_taxonomy(entries):
 
         yield row, species_aware_taxonomies
 
+
 def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_json_files, corrections):
     '''Load metadata including directly parsed metadata, using only samples in the condensed otu table'''
 
     # Only load metadata for samples that are in the DB
     samples_of_interest = set([x[0] for x in iterate_condensed_profiles(condensed_otu_table_path, blacklist)])
     logging.info("Finding metadata for {} samples".format(len(samples_of_interest)))
-    
+
     last_metadata_id = 0
     attribute_count = 0
     run_accession_to_id = {}
@@ -285,21 +302,25 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                             if (type(correction['old_value']) == str and j[field] == correction['old_value']) or \
                                 (type(correction['old_value']) == list and j[field] in correction['old_value']):
                                 j[field] = correction['corrected_value']
-                                logging.info("Correcting {}: '{}' from '{}' to '{}'".format(acc, field, correction['old_value'], correction['corrected_value']))
+                                logging.info("Correcting {}: '{}' from '{}' to '{}'".format(
+                                    acc, field, correction['old_value'], correction['corrected_value']))
                             else:
-                                raise Exception("For acc {} Did not find expected old value {} in {}".format(acc, correction['old_value'], j[field]))
+                                raise Exception("For acc {} Did not find expected old value {} in {}".format(
+                                    acc, correction['old_value'], j[field]))
                         elif field in [kv['k'] for kv in j['attributes']]:
                             for i, kv in enumerate(j['attributes']):
                                 if kv['k'] == field:
                                     if (type(correction['old_value']) == str and kv['v'] == correction['old_value']) or \
                                         (type(correction['old_value']) == list and kv['v'] in correction['old_value']):
                                         j['attributes'][i]['v'] = correction['corrected_value']
-                                        logging.info("Correcting {}: '{}' from '{}' to '{}'".format(acc, field, correction['old_value'], correction['corrected_value']))
+                                        logging.info("Correcting {}: '{}' from '{}' to '{}'".format(
+                                            acc, field, correction['old_value'], correction['corrected_value']))
                                     else:
-                                        raise Exception("For acc {} Did not find expected old value '{}' in '{}'".format(acc, correction['old_value'], kv['v']))
+                                        raise Exception(
+                                            "For acc {} Did not find expected old value '{}' in '{}'".format(
+                                                acc, correction['old_value'], kv['v']))
                         else:
                             raise Exception("Unexpected correction field encountered: {}".format(field))
-
 
                 attributes = j['attributes']
 
@@ -308,20 +329,22 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                 # releasedate = db.Column(db.DateTime, nullable=False)
                 # loaddate = db.Column(db.DateTime, nullable=False)
                 # collection_date_sam = db.Column(db.DateTime, nullable=False)
-                for d in ['releasedate','loaddate','collection_date_sam']:
+                for d in ['releasedate', 'loaddate', 'collection_date_sam']:
                     if d in j and j[d] is not None and j[d].lower() not in ACTUALLY_MISSING:
                         try:
                             j[d] = iso8601.parse_date(j[d])
                         except iso8601.ParseError:
                             logging.warning("Unexpected date value for %s: %s" % (acc, j[d]))
 
-                del j['biosamplemodel_sam'] #Assume it is defined in the associated sample metadata
+                del j['biosamplemodel_sam']  #Assume it is defined in the associated sample metadata
 
                 # Unclear to me why these exist as arrays rather than single values, but eh
-                for d in ['geo_loc_name_sam','ena_first_public_run','ena_last_update_run','sample_name_sam']:
+                for d in ['geo_loc_name_sam', 'ena_first_public_run', 'ena_last_update_run', 'sample_name_sam']:
                     if d in j:
                         if len(j[d]) > 1:
-                            logging.warning("Unexpectedly found a metadata array for {} in {}: {}, just taking the first one".format(d, acc, j[d]))
+                            logging.warning(
+                                "Unexpectedly found a metadata array for {} in {}: {}, just taking the first one".
+                                format(d, acc, j[d]))
                             j[d] = j[d][0]
                         try:
                             j[d] = j[d][0]
@@ -335,7 +358,7 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                 # Write biosample attributes
                 for attribute in attributes:
                     # Don't record bases/bytes as these aren't really biosample attributes
-                    if attribute['k'] not in ('bases','bytes'):
+                    if attribute['k'] not in ('bases', 'bytes'):
                         attribute['run_id'] = last_metadata_id
                         db.session.add(BiosampleAttribute(**attribute))
                         attribute_count += 1
@@ -345,29 +368,37 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                 lat_lon = parse_lat_lons(j['acc'], parse_json_to_lat_lon_dict(j))
                 # logging.info("Parsed lat_lon to {}".format(lat_lon))
                 collection_year, collection_month = parse_extra_sample_attributes(j, ['collection_date_sam'])
-                if collection_year == '': collection_year = None
-                if collection_month == '': collection_month = None
+                if collection_year == '':
+                    collection_year = None
+                if collection_month == '':
+                    collection_month = None
                 depth = parse_extra_sample_attributes(j, ['depth_sam'])[0]
-                if depth == '': depth = None
+                if depth == '':
+                    depth = None
                 temperature = parse_extra_sample_attributes(j, ['temperature_sam'])[0]
-                if temperature == '': temperature = None
-                db.session.add(ParsedSampleAttribute(**{
-                    'run_id': last_metadata_id,
-                    'collection_year': collection_year,
-                    'collection_month': collection_month,
-                    'depth': depth,
-                    'temperature': temperature,
-                    'latitude': lat_lon[0],
-                    'longitude': lat_lon[1]
-                }))
+                if temperature == '':
+                    temperature = None
+                db.session.add(
+                    ParsedSampleAttribute(
+                        **{
+                            'run_id': last_metadata_id,
+                            'collection_year': collection_year,
+                            'collection_month': collection_month,
+                            'depth': depth,
+                            'temperature': temperature,
+                            'latitude': lat_lon[0],
+                            'longitude': lat_lon[1]
+                        }))
 
                 if last_metadata_id % 10000 == 0:
                     db.session.commit()
 
     db.session.commit()
-    logging.info("Wrote {} metadata and {} attribute rows to DB, with {} corrections".format(last_metadata_id, attribute_count, num_corrections))
+    logging.info("Wrote {} metadata and {} attribute rows to DB, with {} corrections".format(
+        last_metadata_id, attribute_count, num_corrections))
 
     return run_accession_to_id
+
 
 def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_annotate_path):
     '''Add metadata from kingfisher_annotate.json'''
@@ -392,27 +423,24 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
     # study_title = db.Column(db.String)
     # study_abstract = db.Column(db.String)
     update_stmt = (
-        update(NcbiMetadata).
-        where(NcbiMetadata.id == bindparam('run_id')).
-        values(
-            experiment_title = bindparam('experiment_title'), #row.experiment_title,
-            library_strategy = bindparam('library_strategy'), #row.library_strategy,
-            instrument_model = bindparam('model'), #row.model,
+        update(NcbiMetadata).where(NcbiMetadata.id == bindparam('run_id')).values(
+            experiment_title=bindparam('experiment_title'),  #row.experiment_title,
+            library_strategy=bindparam('library_strategy'),  #row.library_strategy,
+            instrument_model=bindparam('model'),  #row.model,
             # # meta.organisation_department = row.organisation_department
             # # meta.organisation_institution = row.organisation_institution
             # # meta.organisation_street = row.organisation_street
             # # meta.organisation_city = row.organisation_city
             # # meta.organisation_country = row.organisation_country
             # # meta.organisation_contact_name = row.organisation_contact_name
-            study_title = bindparam('study_title'), #row.study_title,
-            study_abstract = bindparam('study_abstract'), #row.study_abstract,
-            design_description = bindparam('design_description'), #row.design_description
-            read1_length_average = bindparam('read1_length_average'), #row.read1_length_average
-            read1_length_stdev = bindparam('read1_length_stdev'), #row.read1_length_stdev
-            read2_length_average = bindparam('read2_length_average'), #row.read2_length_average
-            read2_length_stdev = bindparam('read2_length_stdev'), #row.read2_length_stdev
-            )
-    )
+            study_title=bindparam('study_title'),  #row.study_title,
+            study_abstract=bindparam('study_abstract'),  #row.study_abstract,
+            design_description=bindparam('design_description'),  #row.design_description
+            read1_length_average=bindparam('read1_length_average'),  #row.read1_length_average
+            read1_length_stdev=bindparam('read1_length_stdev'),  #row.read1_length_stdev
+            read2_length_average=bindparam('read2_length_average'),  #row.read2_length_average
+            read2_length_stdev=bindparam('read2_length_stdev'),  #row.read2_length_stdev
+        ))
     update_bindparams = []
 
     for row in df.itertuples():
@@ -464,6 +492,7 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
     db.session.commit()
     logging.info("Wrote {} metadata and {} study link rows to DB".format(num_kingfisher_annotated, num_study_links))
 
+
 def add_host_predictions(db, run_accession_to_id, host_predictions_tsv):
     num_host_predicted = 0
 
@@ -473,15 +502,11 @@ def add_host_predictions(db, run_accession_to_id, host_predictions_tsv):
     # DRR001360       ecological      human metagenome        host
     # DRR001455       ecological      soil metagenome ecological
 
-    update_stmt = (
-        update(ParsedSampleAttribute).
-        where(ParsedSampleAttribute.id == bindparam('b_run_id')).
-        values(
-            host_or_not_prediction = bindparam('host_or_not_prediction'),
-            host_or_not_recorded = bindparam('host_or_not_recorded'),
-            host_or_not_mature = bindparam('host_or_not_mature'),
-            )
-    )
+    update_stmt = (update(ParsedSampleAttribute).where(ParsedSampleAttribute.id == bindparam('b_run_id')).values(
+        host_or_not_prediction=bindparam('host_or_not_prediction'),
+        host_or_not_recorded=bindparam('host_or_not_recorded'),
+        host_or_not_mature=bindparam('host_or_not_mature'),
+    ))
 
     update_bindparams = []
 
@@ -496,7 +521,7 @@ def add_host_predictions(db, run_accession_to_id, host_predictions_tsv):
             'b_run_id': run_id,
             'host_or_not_prediction': row.prediction,
             'host_or_not_recorded': row.host_or_not,
-            'host_or_not_mature': row.prediction if str(row.host_or_not)=='nan' else row.host_or_not
+            'host_or_not_mature': row.prediction if str(row.host_or_not) == 'nan' else row.host_or_not
         })
 
         num_host_predicted += 1
@@ -533,19 +558,19 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
 
     # Put Eukaryotes in as a special case, as these are never in the condensed
     # profile.
-    if 'd__Eukaryota' not in taxonomy_name_to_id: # which it currently never is
+    if 'd__Eukaryota' not in taxonomy_name_to_id:  # which it currently never is
         taxon = 'd__Eukaryota'
 
         prefix = taxon.split('__')[0]
-        level_id = ['d','p','c','o','f','g','s'].index(prefix)
-        level = ['domain','phylum','class','order','family','genus','species'][level_id]
+        level_id = ['d', 'p', 'c', 'o', 'f', 'g', 's'].index(prefix)
+        level = ['domain', 'phylum', 'class', 'order', 'family', 'genus', 'species'][level_id]
 
-        db.session.add(Taxonomy(
-            id=next_taxonomy_id,
-            taxonomy_level=level,
-            parent_id=db.session.query(Taxonomy).filter_by(taxonomy_level='root').first().id,
-            name=taxon,
-            full_name=taxon))
+        db.session.add(
+            Taxonomy(id=next_taxonomy_id,
+                     taxonomy_level=level,
+                     parent_id=db.session.query(Taxonomy).filter_by(taxonomy_level='root').first().id,
+                     name=taxon,
+                     full_name=taxon))
 
         taxonomy_name_to_id[taxon] = next_taxonomy_id
         next_taxonomy_id += 1
@@ -571,47 +596,46 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
                             taxons_to_add.append(split_taxonomy[i])
                             i -= 1
                         if i == 0:
-                            raise Exception("Strangely didn't find any taxonomy in the table for {}".format(otu.taxonomy))
+                            raise Exception("Strangely didn't find any taxonomy in the table for {}".format(
+                                otu.taxonomy))
                         taxons_to_add = reversed(taxons_to_add)
-                        
-                        full_taxonomy = split_taxonomy[1:(i+1)] # skip first element as that is Root
+
+                        full_taxonomy = split_taxonomy[1:(i + 1)]  # skip first element as that is Root
                         for taxon in taxons_to_add:
                             if split_taxonomy[1] == 'd__Eukaryota':
                                 level_id = 0
-                                level = 'phylum' # Not quite true but doesn't matter
+                                level = 'phylum'  # Not quite true but doesn't matter
                             else:
                                 prefix = taxon.split('__')[0]
-                                level_id = ['d','p','c','o','f','g','s'].index(prefix)
-                                level = ['domain','phylum','class','order','family','genus','species'][level_id]
-                            
+                                level_id = ['d', 'p', 'c', 'o', 'f', 'g', 's'].index(prefix)
+                                level = ['domain', 'phylum', 'class', 'order', 'family', 'genus', 'species'][level_id]
+
                             # Insert the new taxonomy into the DB
                             full_taxonomy.append(taxon)
                             logging.debug("Adding full name {}".format(full_taxonomy))
-                            db.session.add(Taxonomy(
-                                id=next_taxonomy_id,
-                                taxonomy_level=level,
-                                parent_id=parent_id,
-                                name=taxon,
-                                full_name='; '.join(full_taxonomy)))
+                            db.session.add(
+                                Taxonomy(id=next_taxonomy_id,
+                                         taxonomy_level=level,
+                                         parent_id=parent_id,
+                                         name=taxon,
+                                         full_name='; '.join(full_taxonomy)))
 
                             taxonomy_name_to_id[taxon] = next_taxonomy_id
                             parent_id = next_taxonomy_id
                             next_taxonomy_id += 1
 
-                    f.write("\t".join([str(x) for x in [
-                        count + 1,
-                        run_accession_to_id[otu.sample_name],
-                        otu.count,
-                        otu.coverage,
-                        taxonomy_name_to_id[split_taxonomy[-1]],
-                        marker_name_to_id[otu.marker],
-                        otu.sequence
-                    ]])+"\n")
+                    f.write("\t".join([
+                        str(x) for x in [
+                            count + 1, run_accession_to_id[otu.sample_name], otu.count, otu.coverage,
+                            taxonomy_name_to_id[split_taxonomy[-1]], marker_name_to_id[otu.marker], otu.sequence
+                        ]
+                    ]) + "\n")
                     count += 1
 
         logging.info("Committing taxonomy entries seen only in OTU table ..")
         db.session.commit()
-    
+
+        logging.warning("Last time I tried this is took ages (>1 days, likely months if I hadn't killed it) to import, so imported manually")
         logging.info("Importing {} OTU lines into DB".format(count))
         extern.run("sqlite3 {}".format(db_path), stdin= \
             '.separator "\\t"\n' \
@@ -622,8 +646,10 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
     logging.info("Dropping old otus table ..")
     Otu.__table__.drop(db.session.connection())
 
+
 def read_corrections():
-    with open(os.path.join(os.path.dirname(__file__), '../../public_sequencing_metadata_corrections/corrections.json')) as f:
+    with open(os.path.join(os.path.dirname(__file__),
+                           '../../public_sequencing_metadata_corrections/corrections.json')) as f:
         corrections = json.load(f)
     # Convert corrections to a dict with key of bioproject
     corrections_by_key = {}
@@ -645,6 +671,7 @@ def read_corrections():
     logging.debug("corrections_by_key:", corrections_by_key)
     return corrections_by_key
 
+
 def add_host_prediction_counts_to_taxonomy(db, db_path):
     with tempfile.NamedTemporaryFile(prefix='sandpiper_generate_taxonomy') as f:
         tax_count = db.session.query(Taxonomy).count()
@@ -658,7 +685,7 @@ def add_host_prediction_counts_to_taxonomy(db, db_path):
                 join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
                 join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='ecological'). \
                 count()
-                
+
             # id = db.Column(db.Integer, primary_key=True)
             # taxonomy_level = db.Column(db.String, nullable=False)
             # parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
@@ -666,21 +693,19 @@ def add_host_prediction_counts_to_taxonomy(db, db_path):
             # full_name = db.Column(db.String, nullable=False)
             # host_sample_count = db.Column(db.Integer)
             # ecological_sample_count = db.Column(db.Integer)
-            f.write(("\t".join([str(x) for x in [
-                taxonomy.id,
-                taxonomy.taxonomy_level,
-                taxonomy.parent_id,
-                taxonomy.name,
-                taxonomy.full_name,
-                num_host_runs,
-                num_ecological_runs
-            ]])+"\n").encode())
+            f.write(("\t".join([
+                str(x) for x in [
+                    taxonomy.id, taxonomy.taxonomy_level, taxonomy.parent_id, taxonomy.name, taxonomy.full_name,
+                    num_host_runs, num_ecological_runs
+                ]
+            ]) + "\n").encode())
         f.flush()
         extern.run("sqlite3 {}".format(db_path), stdin= \
             'delete from taxonomies;\n' \
             '.separator "\\t"\n' \
             ".import {} taxonomies".format(f.name))
         logging.info("Imported {} taxonomies with host prediction counts".format(db.session.query(Taxonomy).count()))
+
 
 def add_bioproject_associated_publications(db, db_path, tsv_path):
     df = pd.read_csv(tsv_path, sep='\t')
@@ -728,19 +753,15 @@ def add_bioproject_associated_publications(db, db_path, tsv_path):
                 already_there = False
                 # Remove duplicate links that are already recorded e.g. SRR9113719
                 for link in current_study_links:
-                    if link.database is not None and link.database.lower() == 'pubmed' and link.study_id == str(row['id']):
+                    if link.database is not None and link.database.lower() == 'pubmed' and link.study_id == str(
+                            row['id']):
                         already_there = True
                 if not already_there:
                     count_added += 1
-                    f.write(("\t".join([str(x) for x in [
-                        first_id_to_add+count_added,
-                        run_id,
-                        row['id'],
-                        row['db'],
-                        '',
-                        ''
-                    ]])+"\n").encode())
-    
+                    f.write(("\t".join(
+                        [str(x) for x in [first_id_to_add + count_added, run_id, row['id'], row['db'], '', '']]) +
+                             "\n").encode())
+
         f.flush()
         logging.info("Importing {} new bioproject associated publications to DB".format(count_added))
         # Import and set empty values as NULL
@@ -753,13 +774,15 @@ def add_bioproject_associated_publications(db, db_path, tsv_path):
 
     logging.info("Added {} bioproject associated publications to DB".format(count_added))
 
+
 def index_condensed_profiles_multi_column(db, db_path):
-    
+
     # This vastly speeds up search by taxonomy
     logging.info("Indexing condensed profiles tax+relabund ..")
     extern.run("sqlite3 {}".format(db_path), stdin= \
         'create index condensed_profiles_taxonomy_id_relative_abundance on condensed_profiles (taxonomy_id, relative_abundance);')
     logging.info("Indexed condensed profiles tax+relabund")
+
 
 def add_enriched_community_tags(db, db_path):
     # Add enriched community TAG
@@ -767,18 +790,20 @@ def add_enriched_community_tags(db, db_path):
     # An enriched community is one with >50% of a single genus
 
     # Create the enriched community tag
-    db.session.add(Tag(
-        name = 'enriched_community',
-        description = 'Enriched community, one with a single genus comprising >50%% relative abundance'))
+    db.session.add(
+        Tag(name='enriched_community',
+            description='Enriched community, one with a single genus comprising >50%% relative abundance'))
     db.session.commit()
     enriched_communities_tag_id = db.session.query(Tag).filter(Tag.name == 'enriched_community').one().id
 
     # select all runs with a condensed profile with a genus > 50%
-    
+
     # enriched_communities = db.session.execute(select(CondensedProfile).filter(CondensedProfile.relative_abundance > 0.5)).all()
-    enriched_communities_stmt = select(CondensedProfile.run_id).filter(CondensedProfile.relative_abundance > 0.5).distinct()
+    enriched_communities_stmt = select(
+        CondensedProfile.run_id).filter(CondensedProfile.relative_abundance > 0.5).distinct()
     # Require that the taxonomy_level is genus
-    enriched_communities_stmt = enriched_communities_stmt.join(CondensedProfile.taxonomy).where(Taxonomy.taxonomy_level == 'genus') # TODO: Change to genus for prod
+    enriched_communities_stmt = enriched_communities_stmt.join(CondensedProfile.taxonomy).where(
+        Taxonomy.taxonomy_level == 'genus')  # TODO: Change to genus for prod
     enriched_communities = list(db.session.execute(enriched_communities_stmt).scalars())
     logging.info("Found {} enriched communities. Adding tags..".format(len(enriched_communities)))
 
@@ -786,12 +811,12 @@ def add_enriched_community_tags(db, db_path):
     to_insert = []
     for run_id in enriched_communities:
         to_insert.append({'run_id': run_id, 'tag_id': enriched_communities_tag_id})
-    if len(to_insert) > 0: # not True for current test data
-        db.session.execute(
-            insert(RunTag),
-            to_insert)
+    if len(to_insert) > 0:  # not True for current test data
+        db.session.execute(insert(RunTag), to_insert)
         db.session.commit()
-    logging.info("Committed {} enriched community tags".format(db.session.execute(select(func.count()).select_from(RunTag).where(RunTag.tag_id == enriched_communities_tag_id)).scalar()))
+    logging.info("Committed {} enriched community tags".format(
+        db.session.execute(
+            select(func.count()).select_from(RunTag).where(RunTag.tag_id == enriched_communities_tag_id)).scalar()))
 
 
 if __name__ == '__main__':
@@ -801,21 +826,23 @@ if __name__ == '__main__':
     parent_parser.add_argument('--quiet', help='only output errors', action="store_true")
 
     parent_parser.add_argument('--singlem-db', help='sqlite file from a singlem db')
-    parent_parser.add_argument('--otu-table', help='OTU table of the singlem db') # Commented out for now since unsure it will be used.
+    parent_parser.add_argument(
+        '--otu-table', help='OTU table of the singlem db')  # Commented out for now since unsure it will be used.
     parent_parser.add_argument('--condensed-otu-table', help='condensed OTU table input')
     parent_parser.add_argument('-o', help='sqlite3 file to generate', required=True)
     parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files')
     parent_parser.add_argument('--run-blacklist', help='Ignore runs listed in this file')
     parent_parser.add_argument('--kingfisher-annotate-path', help='kingfisher annotate TSV output')
-    parent_parser.add_argument('--kingfisher-annotate-path-list', help='kingfisher annotate TSV outputs listed in this file, one per line')
+    parent_parser.add_argument('--kingfisher-annotate-path-list',
+                               help='kingfisher annotate TSV outputs listed in this file, one per line')
     parent_parser.add_argument('--host-predictions-tsv', help='host predictions TSV output')
     parent_parser.add_argument('--bioproject-associated-publications', help='tsv from bioprjoect_metadata.py')
 
-    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start','tags'], required=True)
+    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'tags'], required=True)
 
     args = parent_parser.parse_args()
 
-    if args.stage=='start' and not args.kingfisher_annotate_path and not args.kingfisher_annotate_path_list:
+    if args.stage == 'start' and not args.kingfisher_annotate_path and not args.kingfisher_annotate_path_list:
         raise Exception("Kingfisher annotate data must be specified somehow")
 
     # Setup logging
@@ -829,19 +856,25 @@ if __name__ == '__main__':
 
     # Create the app and create the tables
     sqlite_db_path = args.o
-    app = create_app()
+    app = generate_app()
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + sqlite_db_path
     app.config['SQLALCHEMY_ECHO'] = args.debug is True
     db = SQLAlchemy(app)
     with app.app_context():
 
         if args.stage == 'start':
-            if not args.singlem_db: raise Exception("singlem-db must be specified for stage 'start'")
-            if not args.otu_table: raise Exception("otu-table must be specified for stage 'start'")
-            if not args.condensed_otu_table: raise Exception("condensed-otu-table must be specified for stage 'start'")
-            if not args.metadata_json_files: raise Exception("metadata-json-files must be specified for stage 'start'")
-            if not args.host_predictions_tsv: raise Exception("host-predictions-tsv must be specified for stage 'start'")
-            if not args.bioproject_associated_publications: raise Exception("bioproject-associated-publications must be specified for stage 'start'")
+            if not args.singlem_db:
+                raise Exception("singlem-db must be specified for stage 'start'")
+            if not args.otu_table:
+                raise Exception("otu-table must be specified for stage 'start'")
+            if not args.condensed_otu_table:
+                raise Exception("condensed-otu-table must be specified for stage 'start'")
+            if not args.metadata_json_files:
+                raise Exception("metadata-json-files must be specified for stage 'start'")
+            if not args.host_predictions_tsv:
+                raise Exception("host-predictions-tsv must be specified for stage 'start'")
+            if not args.bioproject_associated_publications:
+                raise Exception("bioproject-associated-publications must be specified for stage 'start'")
 
             # Read corrections in
             corrections = read_corrections()
@@ -865,9 +898,11 @@ if __name__ == '__main__':
 
             # Create sample metadata table, restricting it to just those samples
             # that we have condensed profiles for.
-            run_accession_to_id = create_sample_metadata(db, args.condensed_otu_table, blacklist, args.metadata_json_files, corrections)
-            
-            taxonomy_name_to_id = fill_condensed_and_taxonomy_tables(db, sqlite_db_path, args.condensed_otu_table, blacklist, run_accession_to_id)
+            run_accession_to_id = create_sample_metadata(db, args.condensed_otu_table, blacklist,
+                                                         args.metadata_json_files, corrections)
+
+            taxonomy_name_to_id = fill_condensed_and_taxonomy_tables(db, sqlite_db_path, args.condensed_otu_table,
+                                                                     blacklist, run_accession_to_id)
 
             if args.kingfisher_annotate_path:
                 add_metadata_from_kingfisher_annotate(db, run_accession_to_id, args.kingfisher_annotate_path)
@@ -883,7 +918,7 @@ if __name__ == '__main__':
             add_host_predictions(db, run_accession_to_id, args.host_predictions_tsv)
 
             index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, sqlite_db_path)
-
+        
             add_host_prediction_counts_to_taxonomy(db, sqlite_db_path)
 
             index_condensed_profiles_multi_column(db, sqlite_db_path)
