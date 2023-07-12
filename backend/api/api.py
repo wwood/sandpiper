@@ -9,7 +9,7 @@ import re
 from flask import Blueprint, jsonify, request, make_response, current_app
 
 from sqlalchemy import select, distinct, or_
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, text
 from sqlalchemy.orm import joinedload, lazyload
 from sqlalchemy.sql.expression import func
 
@@ -453,7 +453,7 @@ def taxonomy_search_hints(taxon):
 
     # Underscores are wildcards, but we don't want that since there are names like p__Actinobacteria
     sql = "select name from taxonomies where name like :taxon escape \'\\\' order by name limit 30"
-    results = db.session.execute(sql, {'taxon': '%'+taxon.replace('_','\_')+'%'})
+    results = db.session.execute(text(sql), {'taxon': '%'+taxon.replace('_','\_')+'%'})
     taxonomies = []
     for r in results:
         taxonomies.append(r)

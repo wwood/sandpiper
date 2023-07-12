@@ -8,15 +8,25 @@ WORKDIR /sandpiper
 USER sandpiper
 ENV PATH="/sandpiper/.local/bin:${PATH}"
 
+# flask-sqlalchemy          3.0.3              pyhd8ed1ab_0    conda-forge
+# sqlalchemy                1.4.49          py311h459d7ec_0    conda-forge
+# (sandpiper-dev2)cl5n007:20230712:~/git/sandpiper/backend$ conda list |grep flask
+# flask                     2.3.2              pyhd8ed1ab_0    conda-forge
+# flask-cors                4.0.0              pyhd8ed1ab_0    conda-forge
+# flask-migrate             4.0.4              pyhd8ed1ab_0    conda-forge
+# flask-script              2.0.6                      py_0    conda-forge
+# flask-sqlalchemy          3.0.3              pyhd8ed1ab_0    conda-forge
+
 RUN pip install --user --no-cache-dir \
-    'Flask-CORS~=3.0.10' \
-    'Flask-Migrate~=3.1.0' \
+    'Flask-CORS~=4.0.0' \
+    'Flask-Migrate~=4.0.4' \
     'Flask-Script~=2.0.6' \
-    'Flask-SQLAlchemy~=3.0.2' \
-    'Flask~=2.2.2' \
+    'Flask-SQLAlchemy~=3.0.3' \
+    'Flask~=2.3.2' \
     'uWSGI~=2.0.20' \
     'iso8601~=1.1.0' \
     'zenodo-backpack~=0.2.0' \
+    'sqlalchemy~=1.4.49' \
     git+https://github.com/wwood/singlem.git@v1.0.0beta2
 
 COPY backend /sandpiper

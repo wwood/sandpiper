@@ -3,6 +3,7 @@ channels:
   - bioconda
   - defaults
 dependencies:
+  # Ensure dependencies are same/similar to those in api.dockerfile and web.dockerfile to reduce dev vs prod issues
   - python>=3.8
   - requests
   - ipython
