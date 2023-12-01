@@ -529,11 +529,54 @@ def add_host_predictions(db, run_accession_to_id, host_predictions_tsv):
         if num_host_predicted % 10000 == 0:
             db.session.execute(update_stmt, update_bindparams)
             db.session.commit()
-            bindparams = []
+            update_bindparams = []
 
     db.session.execute(update_stmt, update_bindparams)
     db.session.commit()
     logging.info("Wrote {} host predictions to DB".format(num_host_predicted))
+
+
+def add_smf(db, run_accession_to_id, smf_tsv):
+    num_smf_predictions = 0
+
+    df = pd.read_csv(smf_tsv, sep='\t')
+
+    update_stmt = (update(ParsedSampleAttribute).where(ParsedSampleAttribute.id == bindparam('b_run_id')).values(
+        bacterial_archaeal_bases=bindparam('bacterial_archaeal_bases'),
+        smf=bindparam('smf'),
+        smf_warning=bindparam('smf_warning'),
+    ))
+
+    update_bindparams = []
+
+    for row in df.itertuples():
+        # Find associated NcbiMetadata record
+        if row.sample not in run_accession_to_id:
+            logging.debug("Skipping {} as there was no condense data for it".format(row.sample))
+            continue
+        run_id = run_accession_to_id[row.sample]
+
+        # # sample  bacterial_archaeal_bases        metagenome_size read_fraction   warning
+        # bacterial_archaeal_bases = db.Column(db.Float)
+        # smf = db.Column(db.Float)
+        # smf_warning = db.Column(db.Boolean)
+        update_bindparams.append({
+            'b_run_id': run_id,
+            'bacterial_archaeal_bases': row.bacterial_archaeal_bases,
+            'smf': float(row.read_fraction.replace('%', '')),
+            'smf_warning': row.warning != '',
+        })
+
+        num_smf_predictions += 1
+
+        if num_smf_predictions % 10000 == 0:
+            db.session.execute(update_stmt, update_bindparams)
+            db.session.commit()
+            update_bindparams = []
+
+    db.session.execute(update_stmt, update_bindparams)
+    db.session.commit()
+    logging.info("Wrote {} SMF predictions to DB".format(num_smf_predictions))
 
 
 def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id, db_path):
@@ -837,6 +880,7 @@ if __name__ == '__main__':
                                help='kingfisher annotate TSV outputs listed in this file, one per line')
     parent_parser.add_argument('--host-predictions-tsv', help='host predictions TSV output')
     parent_parser.add_argument('--bioproject-associated-publications', help='tsv from bioprjoect_metadata.py')
+    parent_parser.add_argument('--smf-file', help='SMF file to read')
 
     parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'tags'], required=True)
 
@@ -900,6 +944,8 @@ if __name__ == '__main__':
             # that we have condensed profiles for.
             run_accession_to_id = create_sample_metadata(db, args.condensed_otu_table, blacklist,
                                                          args.metadata_json_files, corrections)
+
+            add_smf(db, run_accession_to_id, args.smf_file)
 
             taxonomy_name_to_id = fill_condensed_and_taxonomy_tables(db, sqlite_db_path, args.condensed_otu_table,
                                                                      blacklist, run_accession_to_id)

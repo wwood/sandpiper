@@ -68,7 +68,7 @@ rule generate_backend_db:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
         'mkdir -p /data1/woodcrob && ' \
-        'PYTHONPATH=~/git/singlem TMPDIR=. ./bin/generate_backend_db --stage start --singlem-db ../test/data/5_s3_runs/5_s3_runs.sdb/otus.sqlite3 --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --metadata-json-files {config[JSON_METADATA_FILES]} --run-blacklist db/metagenome_assembly_acc_list.csv --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION_GZ]} --kingfisher-annotate-path-list <(echo $SNAKE_WORKING_DIR/{input.kingfisher_metadata}) --otu-table <(pigz -cd {config[OTU_TABLE]}) --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'PYTHONPATH=~/git/singlem TMPDIR=. ./bin/generate_backend_db --stage start --singlem-db ../test/data/5_s3_runs/5_s3_runs.sdb/otus.sqlite3 --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --metadata-json-files {config[JSON_METADATA_FILES]} --run-blacklist db/metagenome_assembly_acc_list.csv --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION_GZ]} --kingfisher-annotate-path-list <(echo $SNAKE_WORKING_DIR/{input.kingfisher_metadata}) --otu-table <(pigz -cd {config[OTU_TABLE]}) --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
         'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start && ' \
         'touch $SNAKE_WORKING_DIR/{config[TEST_OR_PROD]}/{config[SANDPIPER_VERSION]}/backend_db/start_done'
 
@@ -78,9 +78,9 @@ rule add_tags_to_backend_db:
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION'])
     output:
-        '{test_or_prod}/{version}/backend_db/done'.format(
+        touch('{test_or_prod}/{version}/backend_db/done'.format(
             test_or_prod=config['TEST_OR_PROD'],
-            version=config['SANDPIPER_VERSION'])
+            version=config['SANDPIPER_VERSION']))
     log:
         '{test_or_prod}/{version}/backend_db/tags_backend_db.log'.format(
             test_or_prod=config['TEST_OR_PROD'],
@@ -93,6 +93,27 @@ rule add_tags_to_backend_db:
         # cp to remain idempotent, e.g. if this step fails
         'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
         'PYTHONPATH=~/git/singlem TMPDIR=. ./bin/generate_backend_db --stage tags -o /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
-        'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 db/ && ' \
-        'touch $SNAKE_WORKING_DIR/{config[TEST_OR_PROD]}/{config[SANDPIPER_VERSION]}/backend_db/done'
+        'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 db/'
 
+# rule add_smf_to_backend_db:
+#     input:
+#         '{test_or_prod}/{version}/backend_db/tags_done'.format(
+#             test_or_prod=config['TEST_OR_PROD'],
+#             version=config['SANDPIPER_VERSION'])
+#     output:
+#         touch('{test_or_prod}/{version}/backend_db/done'.format(
+#             test_or_prod=config['TEST_OR_PROD'],
+#             version=config['SANDPIPER_VERSION']))
+#     log:
+#         '{test_or_prod}/{version}/backend_db/smf_backend_db.log'.format(
+#             test_or_prod=config['TEST_OR_PROD'],
+#             version=config['SANDPIPER_VERSION'])
+#     conda:
+#         '../sandpiper.yml'
+#     shell:
+#         'export SNAKE_WORKING_DIR=`pwd` && ' \
+#         'cd ../backend && ' \
+#         # cp to remain idempotent, e.g. if this step fails
+#         'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_tags /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
+#         'PYTHONPATH=~/git/singlem TMPDIR=. ./bin/generate_backend_db --stage smf --smf-file {config[SMF_FILE]} -o /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
+#         'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 db/'

@@ -165,6 +165,11 @@ class ParsedSampleAttribute(db.Model):
     host_or_not_prediction = db.Column(db.String)
     host_or_not_recorded = db.Column(db.String)
     host_or_not_mature = db.Column(db.String)
+    # sample  bacterial_archaeal_bases        metagenome_size read_fraction   warning
+    bacterial_archaeal_bases = db.Column(db.Float)
+    # metagenome_size = db.Column(db.Float) #=> use mbases from ncbi_metadata
+    smf = db.Column(db.Float)
+    smf_warning = db.Column(db.Boolean)
 
     def to_displayable_dict(self):
         return dict(

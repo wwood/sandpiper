@@ -7,8 +7,10 @@ BIOPROJECT_METADATA_DATE: '20220711'
 
 JSON_METADATA_FILES: '../test/data/6_runs/metadata_each_line.json'
 
+# Output from ~/git/singlem-sra-processing
 CONDENSED_OTU_TABLE: '../test/data/6_runs/condensed.csv.gz'
 OTU_TABLE: '../test/data/6_runs/otu_table.csv.gz'
 HOST_OR_NOT_PREDICTION_GZ: '../test/data/6_runs/host_or_not_preds.tsv.gz'
+SMF_FILE: '../test/data/6_runs/smf.csv'
 
 TEST_OR_PROD: 'test'
