@@ -39,7 +39,7 @@
               </span>
       <!-- {{ related_runs_short }}  -->
             <br />
-            NCBI: <a :href="bioproject_url">{{ metadata.metadata_parsed.bioproject }}</a> | <a :href="'http://www.ncbi.nlm.nih.gov/sra?term=' + accession">{{ accession }}</a>
+            Microbial fraction <span style="smf_low">{{ metadata.metadata_parsed.smf }}%</span> | Known species fraction {{ metadata.metadata_parsed.known_species_fraction }}%
             <br />
           </div>
 
@@ -49,6 +49,8 @@
           </div>
 
           <div>
+            <br />
+            NCBI: <a :href="bioproject_url">{{ metadata.metadata_parsed.bioproject }}</a> | <a :href="'http://www.ncbi.nlm.nih.gov/sra?term=' + accession">{{ accession }}</a>
             <br />
             <div v-if="publications.length===0">
               <p>No linked publications recorded. A <a :href="scholar_search_url">search on Google Scholar</a> may find some.</p>
@@ -76,11 +78,23 @@
       <section class="section">
         <div class="container">
           <h3 class="title">Taxonomic profile</h3>
-
           <div class="sunburst">
             <template v-if="condensed_tree != null">
               <Sunburst3 :json_tree="sunburst_tree" :overall_coverage="10.3" />
             </template>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <h3 class="title">Microbial fraction</h3>
+          <div v-if="metadata.metadata_parsed.smf">
+            <br />
+            <br />
+            <b-progress :value="metadata.metadata_parsed.smf" :max="100" :type=get_smf_category size="is-medium"  />
+            <span v-if="metadata.metadata_parsed.smf_warning">Warning!</span> SingleM Microbial Fraction (<a href="https://wwood.github.io/singlem/tools/microbial_fraction">SMF</a>) estimated that {{ metadata.metadata_parsed.smf }}% of the reads in this metagenome are bacterial or archaeal.
+            <span v-if="metadata.metadata_parsed.smf_warning">However, this community has dominating lineages which are not known to the species level, so the estimate is less reliable.</span>
           </div>
         </div>
       </section>
@@ -197,6 +211,17 @@ export default {
       return this.metadata.metadata.study_links.filter(function (link) {
         return (typeof link['label'] !== 'undefined')
       })
+    },
+    get_smf_category: function () {
+      if (this.metadata.metadata_parsed.smf_warning === true) {
+        return '' // i.e. grey
+      } else if (this.metadata.metadata_parsed.smf < 40) {
+        return 'is-danger'
+      } else if (this.metadata.metadata_parsed.smf < 80) {
+        return 'is-warning'
+      } else {
+        return 'is-success'
+      }
     }
   },
   created () {

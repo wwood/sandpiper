@@ -213,6 +213,9 @@ def fetch_metadata(sample_name):
         'longitude': metadata_dict['parsed_sample_attributes']['longitude'],
         'num_related_runs': related_run_count(meta.bioproject)-1,
         'host_or_not_mature': host_mature,
+        'smf': round(metadata_dict['parsed_sample_attributes']['smf']),
+        'smf_warning': metadata_dict['parsed_sample_attributes']['smf_warning'],
+        'known_species_fraction': round(metadata_dict['parsed_sample_attributes']['known_species_fraction']*100),
     }
 
     read_length_summary = None
@@ -551,9 +554,13 @@ def random_run():
 
 def related_run_query(example_run):
     if example_run.study_abstract is None or example_run.study_abstract == '':
-        return NcbiMetadata.query.filter_by(study_title=example_run.study_title)
+        q = NcbiMetadata.query.filter_by(study_title=example_run.study_title)
     else:
-        return NcbiMetadata.query.filter_by(study_abstract=example_run.study_abstract)
+        q = NcbiMetadata.query.filter_by(study_abstract=example_run.study_abstract)
+    return q.join(ParsedSampleAttribute).add_columns(
+        ParsedSampleAttribute.smf,
+        ParsedSampleAttribute.smf_warning,
+        ParsedSampleAttribute.known_species_fraction)
 
 @api.route('/project', methods=('GET',))
 def project():
@@ -570,16 +577,20 @@ def project():
         return jsonify({ 'error': 'No runs found' })
     else:
         # Sort projects by run acc, numerically after removing the SRR/DRR/etc prefix
-        projects.sort(key=lambda x: int(x.acc[3:]))
+        projects.sort(key=lambda x: int(x[0].acc[3:]))
         return jsonify({
-            'study_abstract': projects[0].study_abstract,
+            'study_abstract': projects[0][0].study_abstract,
+            'smf_mean': round(sum([p[1] for p in projects]) / len(projects), 0),
             'projects': [{
-                'acc': p.acc,
-                'study_title': p.study_title,
-                'sample_name': p.sample_name,
-                'library_name': p.library_name,
-                'experiment_title': p.experiment_title,
-                'gbp': round(p.mbases/1000, 2),
+                'acc': p[0].acc,
+                'study_title': p[0].study_title,
+                'sample_name': p[0].sample_name,
+                'library_name': p[0].library_name,
+                'experiment_title': p[0].experiment_title,
+                'gbp': round(p[0].mbases/1000, 2),
+                'smf': p[1],
+                'smf_warning': p[2],
+                'known_species_fraction': p[3],
             } for p in projects]
         })
 

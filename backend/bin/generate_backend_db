@@ -34,15 +34,13 @@ import sys
 import os
 import shutil
 import csv
-import subprocess
 import json
-import datetime
 import tempfile
 
 import extern
 import pandas as pd
-from pytz import country_names
 from tqdm import tqdm
+import sqlite3
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')] + sys.path
 from api.application import generate_app
@@ -53,6 +51,7 @@ from sqlalchemy import update, bindparam, select, insert, func
 from sqlalchemy.orm import selectinload
 
 from api.models import *
+
 
 sys.path = ['.'] + sys.path
 from sandpiper.parse_biosample_extras import *
@@ -73,6 +72,10 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
 
     skipped_runs = set()
 
+    current_sample_species_coverage = 0.0
+    current_sample_non_species_coverage = 0.0
+    known_species_fractions = []
+
     with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8') as tf:
         for row in iterate_condensed_profiles(condensed_otu_table_path, blacklist):
             if row[0] not in run_accession_to_id:
@@ -85,18 +88,32 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
                     (taxonomy_name_to_id, next_taxonomy_id,
                      count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries,
                                                               taxonomy_name_to_id, next_taxonomy_id, count, tf)
+                    known_species_fractions.append({
+                        'b_run_id': run_accession_to_id[current_sample],
+                        'known_species_fraction': current_sample_species_coverage / (
+                            current_sample_species_coverage + current_sample_non_species_coverage)})
                 current_sample = row[0]
                 current_sample_entries = []
                 sample_count += 1
+                current_sample_species_coverage = 0.0
+                current_sample_non_species_coverage = 0.0
                 if sample_count % 10000 == 0:
                     logging.info("Processed condensed profiles for {} samples".format(sample_count))
 
             current_sample_entries.append(row)
+            if '; s__' in row[2]:
+                current_sample_species_coverage += float(row[1])
+            else:
+                current_sample_non_species_coverage += float(row[1])
 
         if current_sample is not None:
             (taxonomy_name_to_id, next_taxonomy_id,
              count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries,
                                                       taxonomy_name_to_id, next_taxonomy_id, count, tf)
+            known_species_fractions.append({
+                'b_run_id': run_accession_to_id[current_sample],
+                'known_species_fraction': current_sample_species_coverage / (
+                    current_sample_species_coverage + current_sample_non_species_coverage)})
 
         # Commit taxonomy entries
         logging.info("Committing taxonomy entries from condensed profiles ..")
@@ -109,6 +126,14 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
             ".import {} condensed_profiles".format(tf.name))
         logging.info("Wrote {} condensed profile rows to DB, skipping {} that were not in metadata".format(
             count, len(skipped_runs)))
+
+        # Commit known species fractions
+        logging.info("Committing known species fractions ..")
+        update_stmt = update(ParsedSampleAttribute).where(ParsedSampleAttribute.id == bindparam('b_run_id')).values(
+            known_species_fraction=bindparam('known_species_fraction'))
+        db.session.execute(update_stmt, known_species_fractions)
+        db.session.commit()
+        logging.info("Wrote {} known species fractions to DB".format(len(known_species_fractions)))
 
     return taxonomy_name_to_id
 
@@ -564,7 +589,8 @@ def add_smf(db, run_accession_to_id, smf_tsv):
             'b_run_id': run_id,
             'bacterial_archaeal_bases': row.bacterial_archaeal_bases,
             'smf': float(row.read_fraction.replace('%', '')),
-            'smf_warning': row.warning != '',
+            # Using isnan because if the input file has no warnings at all e.g. in test files maybe. Not well tested tho
+            'smf_warning': not str(row.warning) == 'nan' or row.warning == '',
         })
 
         num_smf_predictions += 1
@@ -862,17 +888,25 @@ def add_enriched_community_tags(db, db_path):
             select(func.count()).select_from(RunTag).where(RunTag.tag_id == enriched_communities_tag_id)).scalar()))
 
 
+def create_markers_table(db, describe_csv):
+    with open(describe_csv) as f:
+        reader = csv.DictReader(f, delimiter='\t')
+        for row in reader:
+            db.session.add(Marker(marker=row['name']))
+    db.session.commit()
+
+
 if __name__ == '__main__':
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument('--debug', help='output debug information', action="store_true")
     #parent_parser.add_argument('--version', help='output version information and quit',  action='version', version=repeatm.__version__)
     parent_parser.add_argument('--quiet', help='only output errors', action="store_true")
 
-    parent_parser.add_argument('--singlem-db', help='sqlite file from a singlem db')
     parent_parser.add_argument(
         '--otu-table', help='OTU table of the singlem db')  # Commented out for now since unsure it will be used.
     parent_parser.add_argument('--condensed-otu-table', help='condensed OTU table input')
     parent_parser.add_argument('-o', help='sqlite3 file to generate', required=True)
+    parent_parser.add_argument('--metapackage-describe', help='metapackage describe CSV file')
     parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files')
     parent_parser.add_argument('--run-blacklist', help='Ignore runs listed in this file')
     parent_parser.add_argument('--kingfisher-annotate-path', help='kingfisher annotate TSV output')
@@ -907,8 +941,8 @@ if __name__ == '__main__':
     with app.app_context():
 
         if args.stage == 'start':
-            if not args.singlem_db:
-                raise Exception("singlem-db must be specified for stage 'start'")
+            if not args.metapackage_describe:
+                raise Exception("metapackage-describe must be specified for stage 'start'")
             if not args.otu_table:
                 raise Exception("otu-table must be specified for stage 'start'")
             if not args.condensed_otu_table:
@@ -919,6 +953,8 @@ if __name__ == '__main__':
                 raise Exception("host-predictions-tsv must be specified for stage 'start'")
             if not args.bioproject_associated_publications:
                 raise Exception("bioproject-associated-publications must be specified for stage 'start'")
+            if not args.smf_file:
+                raise Exception("smf-file must be specified for stage 'start'")
 
             # Read corrections in
             corrections = read_corrections()
@@ -931,14 +967,21 @@ if __name__ == '__main__':
                             blacklist.add(line.strip())
                 logging.info("Ignoring {} runs".format(len(blacklist)))
 
-            # Copy file over
-            logging.info("Copying SQLite file")
-            shutil.copy(args.singlem_db, sqlite_db_path)
+            # Create new DB
+            logging.info("Removing old DB if it exists ..")
+            if os.path.exists(sqlite_db_path):
+                os.remove(sqlite_db_path)
+            logging.info("Making new DB ..")
+            conn = sqlite3.connect(sqlite_db_path)
+            conn.close()
 
             db.create_all()
 
             # Create all the tables
             Taxonomy.metadata.create_all(db.engine)
+
+            # Create markers
+            create_markers_table(db, args.metapackage_describe)
 
             # Create sample metadata table, restricting it to just those samples
             # that we have condensed profiles for.

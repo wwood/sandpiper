@@ -144,6 +144,51 @@ export default {
       const overallCoverage = d3.hierarchy(sunburstData)
         .sum(function (d) { return d.size }).value
 
+
+      // Known species_fraction
+      const species_fraction = 0.75
+      var width_donut = 100
+      var margin_donut = 40
+
+      // The radius of the pieplot is half the width or half the height (smallest one). I subtract a bit of margin.
+      var radius_donut = Math.min(width_donut, width_donut) / 2 - margin_donut
+
+      const gpie = d3.select('#annotation_area').attr('viewBox', [0, 0, 600, 600]).append('g')
+      gpie.append('text')
+        .attr('x', 0)
+        .attr('y', 50)
+        .text(`species_fraction: ${species_fraction}`)
+      var gpie_svg = gpie.append('svg')
+        .attr('width', width_donut)
+        .attr('height', width_donut)
+        .append('g')
+          .attr("transform", "translate(" + width_donut / 2 + "," + width_donut / 2 + ")")
+      var pie = d3.pie()
+        .value(function(d) {return d.value; })
+      var data_ready = pie([
+        {"key": "known_species", "value": species_fraction}, 
+        {"key": "unknown_species", "value": 1 - species_fraction}])
+      console.log("data_ready: " + data_ready[0])
+      // set the color scale
+      var color = d3.scaleOrdinal()
+        .domain(data_ready)
+        .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"])
+      gpie_svg
+        .selectAll('whatever')
+        .data(data_ready)
+        .enter()
+        .append('path')
+        .attr('d', d3.arc()
+          .innerRadius(100)         // This is the size of the donut hole
+          .outerRadius(radius_donut)
+        )
+        .attr('fill', function(d){ return(color(d.data.key)) })
+        .attr("stroke", "black")
+        .style("stroke-width", "2px")
+        .style("opacity", 0.7)
+      console.log('species_fraction: ' + species_fraction)
+
+
       function clicked (_event, p) {
         // clear any content currently there
         d3.select('#annotation_area > *').remove()
@@ -209,7 +254,6 @@ export default {
           .attr('x', 0)
           .attr('y', 12 * linewidth)
           .text(`relative abundance: ${round(totalCoverage / overallCoverage * 100, 2)} %`)
-        console.log(p.data)
       }
 
       function round (value, precision) {

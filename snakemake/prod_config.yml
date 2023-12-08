@@ -1,14 +1,17 @@
-SANDPIPER_VERSION: '22'
+SANDPIPER_VERSION: '23'
 
 KINGFISHER_METADATA_DATE: '20220627'
 ACCESSIONS_FILE: ../sra_metadata/sra_metadata_20220209.accessions
+
+METAPACKAGE_DESCRIBE: 'metapackage_describe.csv'
 
 BIOPROJECT_METADATA_DATE: '20220711'
 
 JSON_METADATA_FILES: '../sra_metadata/sra_metadata_20220209/*'
 
-CONDENSED_OTU_TABLE: '/work/microbiome/msingle/mess/126_r214_renew_of_sra/processing_20230523/condensed.csv.gz'
-OTU_TABLE: '/work/microbiome/msingle/mess/126_r214_renew_of_sra/processing_20230523/otu_table.csv.gz'
-HOST_OR_NOT_PREDICTION_GZ: '/work/microbiome/msingle/mess/126_r214_renew_of_sra/processing_20230523/host_or_not_prediction/host_or_not_preds.csv'
+CONDENSED_OTU_TABLE: '/work/microbiome/msingle/mess/141_sra_renew_singlem_0.17_approx/processing_20231016/condensed.csv.gz'
+OTU_TABLE: '/work/microbiome/msingle/mess/141_sra_renew_singlem_0.17_approx/processing_20231016/otu_table.csv.gz'
+HOST_OR_NOT_PREDICTION: '/work/microbiome/msingle/mess/141_sra_renew_singlem_0.17_approx/processing_20231016/host_or_not_prediction/host_or_not_preds.csv'
+SMF_FILE: '/work/microbiome/msingle/mess/141_sra_renew_singlem_0.17_approx/processing_20231016/microbial_fractions.csv'
 
 TEST_OR_PROD: 'prod'

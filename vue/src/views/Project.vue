@@ -30,32 +30,10 @@
             <b-table-column field="gbp" label="Gbp" v-slot="props" sortable numeric centered>
               {{ props.row.gbp }}
             </b-table-column>
+            <b-table-column field="smf" :label="'SMF (mean '+metadata.smf_mean+'%)'" v-slot="props" sortable numeric centered>
+              <b-progress :value="props.row.smf" :max="100" :type="get_smf_category1(props.row.smf, props.row.smf_warning)" size="is-small"  />
+            </b-table-column>
           </b-table>
-
-          <!-- <div>
-            {{ metadata.metadata_parsed.organism }} | {{
-            metadata.metadata_parsed.mbases / 1000}} Gbp | {{ getNumReads }} million
-            reads {{ read_length_mature }}|
-            {{ metadata.metadata_parsed.instrument }} | Released {{
-            metadata.metadata_parsed.release_month }}
-            <br />
-            NCBI: <a :href="bioproject_url">{{ metadata.metadata_parsed.bioproject }}</a> | <a :href="'http://www.ncbi.nlm.nih.gov/sra?term=' + accession">{{ accession }}</a>
-            <br />
-          </div> -->
-
-          <!-- <div>
-            <br />
-            <div v-if="publications.length===0">
-              <p>No linked publications recorded. A <a :href="scholar_search_url">search on Google Scholar</a> may find some.</p>
-            </div>
-            <div v-else>
-              <ul v-for="link in publications" v-bind:key="link.study_id">
-                <li v-if="link['database'].toLowerCase()==='pubmed'">PubMed <a :href="'https://www.ncbi.nlm.nih.gov/pubmed?term='+link['study_id']">{{ link['study_id'] }}</a></li>
-                <li v-else>{{ link['database'] }} {{ link['study_id'] }}</li>
-              </ul>
-              A <a :href="scholar_search_url">search on Google Scholar</a> may find further publications.
-            </div>
-          </div> -->
 
         </div>
       </section>
@@ -166,6 +144,17 @@ export default {
           }
         })
     },
+    get_smf_category1: function (smf, smf_warning) {
+      if (smf_warning === true) {
+        return '' // i.e. grey
+      } else if (smf < 40) {
+        return 'is-danger'
+      } else if (smf < 80) {
+        return 'is-warning'
+      } else {
+        return 'is-success'
+      }
+    }
   },
   watch: {
     // call again the method if the route changes

@@ -170,6 +170,7 @@ class ParsedSampleAttribute(db.Model):
     # metagenome_size = db.Column(db.Float) #=> use mbases from ncbi_metadata
     smf = db.Column(db.Float)
     smf_warning = db.Column(db.Boolean)
+    known_species_fraction = db.Column(db.Float)
 
     def to_displayable_dict(self):
         return dict(
@@ -181,7 +182,11 @@ class ParsedSampleAttribute(db.Model):
             temperature=self.temperature,
             host_or_not_prediction=self.host_or_not_prediction,
             host_or_not_recorded=self.host_or_not_recorded,
-            host_or_not_mature=self.host_or_not_mature)
+            host_or_not_mature=self.host_or_not_mature,
+            bacterial_archaeal_bases=self.bacterial_archaeal_bases,
+            smf=self.smf,
+            smf_warning=self.smf_warning,
+            known_species_fraction=self.known_species_fraction)
 
 
 class StudyLink(db.Model):

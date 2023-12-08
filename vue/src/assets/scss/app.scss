@@ -26,3 +26,7 @@ $colors: map-merge($colors, $addColors);
 @import "~buefy/src/scss/buefy";
 
 // 4. Provide custom buefy overrides and site styles here
+
+// For SMF
+// red
+$smf_low: #ff0000;

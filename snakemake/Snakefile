@@ -64,11 +64,13 @@ rule generate_backend_db:
             version=config['SANDPIPER_VERSION'])
     conda:
         '../sandpiper.yml'
+    params:
+        describe=os.path.abspath(config['METAPACKAGE_DESCRIBE']),
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
         'mkdir -p /data1/woodcrob && ' \
-        'PYTHONPATH=~/git/singlem TMPDIR=. ./bin/generate_backend_db --stage start --singlem-db ../test/data/5_s3_runs/5_s3_runs.sdb/otus.sqlite3 --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --metadata-json-files {config[JSON_METADATA_FILES]} --run-blacklist db/metagenome_assembly_acc_list.csv --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION_GZ]} --kingfisher-annotate-path-list <(echo $SNAKE_WORKING_DIR/{input.kingfisher_metadata}) --otu-table <(pigz -cd {config[OTU_TABLE]}) --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'PYTHONPATH=~/git/singlem TMPDIR=. ./bin/generate_backend_db --stage start --metapackage-describe {params.describe} --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --metadata-json-files {config[JSON_METADATA_FILES]} --run-blacklist db/metagenome_assembly_acc_list.csv --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION]} --kingfisher-annotate-path-list <(echo $SNAKE_WORKING_DIR/{input.kingfisher_metadata}) --otu-table <(pigz -cd {config[OTU_TABLE]}) --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
         'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start && ' \
         'touch $SNAKE_WORKING_DIR/{config[TEST_OR_PROD]}/{config[SANDPIPER_VERSION]}/backend_db/start_done'
 

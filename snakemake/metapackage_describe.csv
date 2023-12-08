@@ -1,0 +1,60 @@
+name	version	target_domains	gene_description
+S3.1.ribosomal_protein_L2_rplB	4	Bacteria,Archaea	50S ribosomal protein L2
+S3.2.ribosomal_protein_L3_rplC	4	Bacteria,Archaea	50S ribosomal protein L3
+S3.3.ribosomal_protein_L14b_L23e_rplN	4	Bacteria,Archaea	50S ribosomal protein L14
+S3.4.ribosomal_protein_L16_L10E_rplP	4	Bacteria,Archaea	50S ribosomal protein L16
+S3.5.ribosomal_protein_S2_rpsB	4	Bacteria,Archaea	30S ribosomal protein L2
+S3.6.ribosomal_protein_S5	4	Bacteria,Archaea	30S ribosomal protein S5
+S3.7.ribosomal_protein_S7	4	Bacteria,Archaea	60S ribosomal protein L7
+S3.8.ribosomal_protein_S12_S23	4	Bacteria,Archaea	Ribosomal protein S12/S23
+S3.9.ribosomal_protein_S15P_S13e	4	Bacteria,Archaea	SSU ribosomal protein S15p (S13e)
+S3.10.ribosomal_protein_S19_rpsS	4	Bacteria,Archaea	30S ribosomal protein S19
+S3.11.pheS	4	Bacteria,Archaea	phenylalanine--tRNA ligase, alpha subunit
+S3.12.ribosomal_L1	4	Bacteria,Archaea	Ribosomal protein L1p/L10e family
+S3.13.ribosomal_S9	4	Bacteria,Archaea	Ribosomal protein S9/S16
+S3.14.hisS	4	Archaea	histidine--tRNA ligase
+S3.15.glyS_dimeric	4	Archaea	glycine--tRNA ligase
+S3.16.SRP_SPB	4	Archaea	Signal peptide binding domain
+S3.17.dph5	4	Archaea	diphthine synthase
+S3.18.EIF_2_alpha	4	Archaea	Eukaryotic translation initiation factor 2 alpha subunit
+S3.19.eIF_5A	4	Archaea	translation elongation factor IF5A
+S3.20.eS8	4	Archaea	ribosomal protein eS8
+S3.21.Fibrillarin	4	Archaea	Fibrallin
+S3.22.gatD_arch	4	Archaea	glutamyl-tRNA(Gln) amidotransferase, subunit D
+S3.23.KOW_elon_Spt5	4	Archaea	transcription elongation factor Spt5
+S3.24.Nop	4	Archaea	Putative snoRNA binding domain
+S3.25.ribosomal_L15e	4	Archaea	Ribosomal L15
+S3.26.ribosomal_L19e	4	Archaea	Ribosomal protein L19e
+S3.27.ribosomal_L21e	4	Archaea	Ribosomal protein L21e
+S3.28.ribosomal_L31e	4	Archaea	Ribosomal protein L31e
+S3.29.ribosomal_L32e	4	Archaea	Ribosomal protein L32
+S3.30.ribosomal_S19e	4	Archaea	Ribosomal protein S19e
+S3.31.ribosomal_S24e	4	Archaea	Ribosomal protein S24e
+S3.32.ribosomal_S28e	4	Archaea	Ribosomal protein S28e
+S3.33.ribosomal_S4e	4	Archaea	Ribosomal protein S4e
+S3.34.ribosomal_S6e	4	Archaea	Ribosomal protein S6e
+S3.35.RNA_SBDS	4	Archaea	rRNA metabolism protein, SBDS family
+S3.36.uL22_arch_euk	4	Archaea	ribosomal protein uL22
+S3.37.uS4_arch	4	Archaea	ribosomal protein uS4
+S3.38.ribosomal_protein_L5_rplE	4	Bacteria	50S ribosomal protein L5
+S3.39.ribosomal_protein_L6_rplF	4	Bacteria	50S ribosomal protein L6
+S3.40.ribosomal_protein_L11_rplK	4	Bacteria	50S ribosomal protein L11
+S3.41.ribosomal_protein_S10_rpsJ	4	Bacteria	30S ribosomal protein S10
+S3.42.RNA_pol_A_bac	4	Bacteria	RNA polymerase Rpb3/RpoA insert domain
+S3.43.TIGR00042	4	Bacteria	non-canonical purine NTP pyrophosphatase, RdgB/HAM1 family
+S3.44.alaS	4	Bacteria	alanine--tRNA ligase
+S3.45.NusA	4	Bacteria	transcription termination factor NusA
+S3.46.pheT_bact	4	Bacteria	phenylalanine--tRNA ligase, beta subunit
+S3.47.recR	4	Bacteria	recombination protein RecR
+S3.48.rplD_bact	4	Bacteria	50S ribosomal protein uL4
+S3.49.rplO_bact	4	Bacteria	ribosomal protein uL15
+S3.50.rplT_bact	4	Bacteria	ribosomal protein bL20
+S3.51.rplV_bact	4	Bacteria	ribosomal protein uL22
+S3.52.rpsC_bact	4	Bacteria	ribosomal protein uS3
+S3.53.ruvA	4	Bacteria	Holliday junction DNA helicase RuvA
+S3.54.serS	4	Bacteria	serine--tRNA ligase
+S3.55.TIGR00006	4	Bacteria	16S rRNA (cytosine(1402)-N(4))-methyltransferase
+S3.56.trmD	4	Bacteria	tRNA (guanine(37)-N(1))-methyltransferase
+S3.57.TruB	4	Bacteria	tRNA (guanine(37)-N(1))-methyltransferase
+S3.58.tsf	4	Bacteria	translation elongation factor Ts
+S3.59.uS11_bact	4	Bacteria	ribosomal protein uS11
