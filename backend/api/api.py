@@ -281,7 +281,6 @@ def fetch_metadata(sample_name):
     # Some are double e.g. https://sandpiper.qut.edu.au/run/SRR9224309 has 2 PubMed study_links
     final_study_links = []
     for study_link_pair in metadata_dict['study_links']:
-        print(study_link_pair)
         if 'database' in study_link_pair:
             db = study_link_pair['database']
             study_id = study_link_pair['study_id']
@@ -310,7 +309,7 @@ def taxonomy_search_fail_json(reason):
 def taxonomy_search_global_data(taxon):
     taxonomy = Taxonomy.query.filter_by(name=taxon).first()
     if taxonomy is None:
-        return taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in GTDB '+__gtdb_version__+', or no records of this taxon are recorded in Sandpiper. We recommend using the auto-complete function when searching to avoid typographical errors.')
+        return taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in GTDB '+__gtdb_version__+', or no records of this taxon are recorded in Sandpiper. We recommend using the auto-complete function when searching to avoid typographical errors. Alternately, if this an NCBI taxonomy name, you could try searching for it at the GTDB website.')
     total_num_hits = CondensedProfile.query.filter_by(taxonomy_id=taxonomy.id).count()
     if total_num_hits == 0:
         # This happens when there's a taxonomy in the full table that didn't make it into any condensed table
@@ -581,6 +580,7 @@ def project():
         return jsonify({
             'study_abstract': projects[0][0].study_abstract,
             'smf_mean': round(sum([p[1] for p in projects]) / len(projects), 0),
+            'known_species_mean': round(sum([p[3] for p in projects])*100 / len(projects), 0),
             'projects': [{
                 'acc': p[0].acc,
                 'study_title': p[0].study_title,
@@ -590,7 +590,7 @@ def project():
                 'gbp': round(p[0].mbases/1000, 2),
                 'smf': p[1],
                 'smf_warning': p[2],
-                'known_species_fraction': p[3],
+                'known_species_fraction': round(p[3]*100,1),
             } for p in projects]
         })
 

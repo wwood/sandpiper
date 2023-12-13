@@ -80,7 +80,7 @@
           <h3 class="title">Taxonomic profile</h3>
           <div class="sunburst">
             <template v-if="condensed_tree != null">
-              <Sunburst3 :json_tree="sunburst_tree" :overall_coverage="10.3" />
+              <Sunburst3 :json_tree="sunburst_tree" :overall_coverage="10.3" :known_species_fraction="known_species_fraction" />
             </template>
           </div>
         </div>
@@ -89,12 +89,14 @@
       <section class="section">
         <div class="container">
           <h3 class="title">Microbial fraction</h3>
-          <div v-if="metadata.metadata_parsed.smf">
+          <div v-if="metadata.metadata_parsed.smf || metadata.metadata_parsed.smf==0">
             <br />
             <br />
-            <b-progress :value="metadata.metadata_parsed.smf" :max="100" :type=get_smf_category size="is-medium"  />
-            <span v-if="metadata.metadata_parsed.smf_warning">Warning!</span> SingleM Microbial Fraction (<a href="https://wwood.github.io/singlem/tools/microbial_fraction">SMF</a>) estimated that {{ metadata.metadata_parsed.smf }}% of the reads in this metagenome are bacterial or archaeal.
-            <span v-if="metadata.metadata_parsed.smf_warning">However, this community has dominating lineages which are not known to the species level, so the estimate is less reliable.</span>
+            <b-progress :value="Math.max(0.5, metadata.metadata_parsed.smf)" :max="100" :type=get_smf_category size="is-medium"  />
+            <p><span v-if="metadata.metadata_parsed.smf_warning">Warning!</span> SingleM Microbial Fraction (<a href="https://wwood.github.io/singlem/tools/microbial_fraction">SMF</a>) estimated that {{ metadata.metadata_parsed.smf }}% of the reads in this metagenome are bacterial or archaeal.
+            <span v-if="metadata.metadata_parsed.smf_warning">However, this community has dominating lineages which are not known to the species level, so the estimate is less reliable.</span></p>
+            <br />
+            <p>If the non-microbial DNA is from a sequenced genome, <a :href="'https://trace.ncbi.nlm.nih.gov/Traces/?view=run_browser&acc='+accession+'&display=analysis'">NCBI STAT</a> may provide some insight into its source(s).</p>
           </div>
         </div>
       </section>
@@ -180,6 +182,9 @@ export default {
     },
     sunburst_tree: function () {
       return this.condensed_tree.condensed
+    },
+    known_species_fraction: function () {
+      return this.metadata.metadata_parsed.known_species_fraction
     },
     sample_name_mature: function () {
       return this.metadata.metadata_parsed.sample_name

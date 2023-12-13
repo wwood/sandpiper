@@ -30,6 +30,9 @@
             <b-table-column field="gbp" label="Gbp" v-slot="props" sortable numeric centered>
               {{ props.row.gbp }}
             </b-table-column>
+            <b-table-column field="known_species_fraction" :label="'Known species (mean '+metadata.known_species_mean+'%)'" v-slot="props" sortable numeric centered>
+              {{  props.row.known_species_fraction }}%
+            </b-table-column>
             <b-table-column field="smf" :label="'SMF (mean '+metadata.smf_mean+'%)'" v-slot="props" sortable numeric centered>
               <b-progress :value="props.row.smf" :max="100" :type="get_smf_category1(props.row.smf, props.row.smf_warning)" size="is-small"  />
             </b-table-column>

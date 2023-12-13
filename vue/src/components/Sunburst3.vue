@@ -19,12 +19,12 @@ import { scaleLinear } from 'd3-scale'
 
 export default {
   name: 'Sunburst3',
-  props: ['json_tree'],
+  props: ['json_tree','known_species_fraction'],
   mounted () {
-    this.sunburst(this.json_tree)
+    this.sunburst(this.json_tree, this.known_species_fraction)
   },
   updated () {
-    this.sunburst(this.json_tree)
+    this.sunburst(this.json_tree, this.known_species_fraction)
   },
   // watch: {
   //   // call again the method if the route changes
@@ -63,7 +63,7 @@ export default {
       }
     },
 
-    sunburst (sunburstData) {
+    sunburst (sunburstData, known_species_fraction) {
       // const sunburstData = this.json_tree
       // const color = function (s) {
       //   phylogenyColor(s)
@@ -146,8 +146,7 @@ export default {
 
 
       // Known species_fraction
-      const species_fraction = 0.75
-      var width_donut = 100
+      var width_donut = 500
       var margin_donut = 40
 
       // The radius of the pieplot is half the width or half the height (smallest one). I subtract a bit of margin.
@@ -155,24 +154,27 @@ export default {
 
       const gpie = d3.select('#annotation_area').attr('viewBox', [0, 0, 600, 600]).append('g')
       gpie.append('text')
-        .attr('x', 0)
-        .attr('y', 50)
-        .text(`species_fraction: ${species_fraction}`)
+        .attr('x', 60)
+        .attr('y', 550)
+        .text(`known species fraction: ${round(known_species_fraction,0)}%`)
       var gpie_svg = gpie.append('svg')
         .attr('width', width_donut)
         .attr('height', width_donut)
         .append('g')
           .attr("transform", "translate(" + width_donut / 2 + "," + width_donut / 2 + ")")
       var pie = d3.pie()
-        .value(function(d) {return d.value; })
+        // Sort so that the known species slice is first going clockwise
+        .value(function(d) {return d.value; }).sort((a) => {
+          if (a.type === 'inc') {
+            return -1;
+          } else {
+            return 1;
+          }
+        });
       var data_ready = pie([
-        {"key": "known_species", "value": species_fraction}, 
-        {"key": "unknown_species", "value": 1 - species_fraction}])
-      console.log("data_ready: " + data_ready[0])
-      // set the color scale
-      var color = d3.scaleOrdinal()
-        .domain(data_ready)
-        .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"])
+        // hack here so that the key names are the values used for the stroke attr
+        {"key": "2px", "type": 'inc', "colour": "#48c78e", "value": known_species_fraction}, 
+        {"key": "0.5px", "type": 'not inc', "colour": "#ffffff", "value": 100 - known_species_fraction}])
       gpie_svg
         .selectAll('whatever')
         .data(data_ready)
@@ -182,11 +184,11 @@ export default {
           .innerRadius(100)         // This is the size of the donut hole
           .outerRadius(radius_donut)
         )
-        .attr('fill', function(d){ return(color(d.data.key)) })
+        .attr('fill', function(d){ return d.data.colour })
         .attr("stroke", "black")
-        .style("stroke-width", "2px")
-        .style("opacity", 0.7)
-      console.log('species_fraction: ' + species_fraction)
+        .style("stroke-width", function(d){ return d.data.key })
+        .style("opacity", 1)
+      console.log('species_fraction: ' + known_species_fraction)
 
 
       function clicked (_event, p) {
@@ -233,10 +235,16 @@ export default {
           //   .attr('font-size', '5em') // function (d) { return d.size + 'em' })
           //   // .text('\uf871')
           //   .text('&#xf871')
+          // ${taxonPrefix[i][0]}: 
+          g.append('svg')
+            .append('text')
+            .attr('x', 50) //75
+            .attr('y', linewidth * (i + 2))
+            .text(`${taxonPrefix[0]}: `)
           g.append('svg:a')
             .attr('xlink:href', taxonLink)
             .append('text')
-            .attr('x', 75)
+            .attr('x', 90) //75
             .attr('y', linewidth * (i + 2))
             .attr('class', 'svg-link')
             .text(`${taxonomy[i]}`)
