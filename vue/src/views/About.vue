@@ -7,6 +7,12 @@
     </section>
 
     <section class="section is-small container has-text-justified">
+      <h1 class="title">Bulk download</h1>
+      <p>Community profiles for all runs are available for download from <a href="https://zenodo.org/doi/10.5281/zenodo.10547493">Zenodo</a>.</p><br />
+      <p>Please feel free to get in touch with <a href="https://research.qut.edu.au/cmr/team/ben-woodcroft/">us</a> if you have any questions or comments, or want data of other kinds.</p>
+    </section>
+
+    <section class="section is-small container has-text-justified">
       <h1 class="title">How Sandpiper {{ version }} was built</h1>
       <p>The data underlying Sandpiper was generated using the <a href="https://github.com/wwood/singlem">SingleM</a> pipeline, applied to public metagenome datasets listed in the <a href="https://www.ncbi.nlm.nih.gov/sra">NCBI SRA</a> that were designated as metagenomic, or derived from "metagenomic" organisms such as "soil metagenome". This list of public metagenomes which was generated on {{ scrape_date }}.</p><br />
 
@@ -39,12 +45,25 @@
 
     <section class="section is-small container has-text-justified">
       <h1 class="title">Changelog</h1>
+      <h2 class="title is-5">v0.2.1</h2>
+        <div class="columns has-text-left"> 
+          <div class="column content">  
+            <ul> 
+              <li>Added links to bulk download of condensed profiles.</li>
+            </ul> 
+          </div> 
+        </div>
       <h2 class="title is-5">v0.2.0</h2>
-      <ol>
-        <li>Updated to use SingleM 0.16.0, changing the species assignment and "condense" procedures</li>
-        <li>Added "SMF" (SingleM Microbial Fraction) statistics</li>
-        <li>Community profile and SMF data: originally generated from SRA metadata collected Dec 15, 2021, using git commit of SingleM e97d171 and metapackage 'S3.metapackage_20211101.smpkg. Then renewed with SingleM v0.16.0 using metapackage S3.2.1.GTDB_r214.metapackage_20231006.smpkg.</li>
-      </ol>
+      <div class="columns has-text-left"> 
+        <div class="column content"> 
+          <ul>
+            <li>Updated to use SingleM 0.16.0, changing the species assignment and "condense" procedures</li>
+            <li>Added "SMF" (SingleM Microbial Fraction) statistics</li>
+            <li>Community profile and SMF data: originally generated from SRA metadata collected Dec 15, 2021, using git commit of SingleM e97d171 and metapackage 'S3.metapackage_20211101.smpkg. Then renewed with SingleM v0.16.0 using metapackage S3.2.1.GTDB_r214.metapackage_20231006.smpkg.</li>
+            <li>Community profiles can be downloaded in bulk from <a href="https://zenodo.org/doi/10.5281/zenodo.10547493">Zenodo</a>.</li>
+          </ul>
+        </div> 
+      </div>
     </section>
 
     <section class="section is-small container has-text-justified">
