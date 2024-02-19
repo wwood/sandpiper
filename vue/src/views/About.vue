@@ -45,6 +45,14 @@
 
     <section class="section is-small container has-text-justified">
       <h1 class="title">Changelog</h1>
+      <h2 class="title is-5">v0.2.2</h2>
+        <div class="columns has-text-left"> 
+          <div class="column content">  
+            <ul> 
+              <li>NPM package updates.</li>
+            </ul> 
+          </div> 
+        </div>
       <h2 class="title is-5">v0.2.1</h2>
         <div class="columns has-text-left"> 
           <div class="column content">  
