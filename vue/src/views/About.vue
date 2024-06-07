@@ -7,8 +7,18 @@
     </section>
 
     <section class="section is-small container has-text-justified">
+      <h1 class="title">Citations</h1>
+      
+      <p>The overall citation for SingleM/Sandpiper:</p><br />
+      <p>Woodcroft, Ben J., Samuel TN Aroney, Rossen Zhao, Mitchell Cunningham, Joshua AM Mitchell, Linda Blackall, and Gene W. Tyson. <i>SingleM and Sandpiper: Robust microbial taxonomic profiles from metagenomic data.</i> bioRxiv (2024): 2024-01. <a href='https://doi.org/10.1101/2024.01.30.578060'>https://doi.org/10.1101/2024.01.30.578060</a></p><br />
+
+      <p>The microbial fraction (SMF) mode of SingleM:</p><br />
+      <p>Eisenhofer, Raphael, Antton Alberdi, and Ben J. Woodcroft. <i>Large-scale estimation of bacterial and archaeal DNA prevalence in metagenomes reveals biome-specific patterns.</i> bioRxiv (2024): 2024-05. <a href='https://doi.org/10.1101/2024.05.16.594470'>https://doi.org/10.1101/2024.05.16.594470</a></p><br />
+    </section>
+
+    <section class="section is-small container has-text-justified">
       <h1 class="title">Bulk download</h1>
-      <p>Community profiles for all runs are available for download from <a href="https://zenodo.org/doi/10.5281/zenodo.10547493">Zenodo</a>.</p><br />
+      <p>Community profiles for all runs are available for download from <a href="https://zenodo.org/doi/10.5281/zenodo.10547493">Zenodo</a>. The data behind older versions of Sandpiper can also be downloaded there.</p><br />
       <p>Please feel free to get in touch with <a href="https://research.qut.edu.au/cmr/team/ben-woodcroft/">us</a> if you have any questions or comments, or want data of other kinds.</p>
     </section>
 
@@ -45,6 +55,14 @@
 
     <section class="section is-small container has-text-justified">
       <h1 class="title">Changelog</h1>
+      <h2 class="title is-5">v0.3.0</h2>
+        <div class="columns has-text-left"> 
+          <div class="column content">  
+            <ul> 
+              <li>Update profiles to use GTDB R220, generated using SingleM renew v0.17.0.</li>
+            </ul> 
+          </div> 
+        </div>
       <h2 class="title is-5">v0.2.2</h2>
         <div class="columns has-text-left"> 
           <div class="column content">  

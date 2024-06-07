@@ -1,4 +1,8 @@
 
+print("TODO: Add fractionation metadata parsing from microbial_fraction paper")
+print("TODO: Integrate https://gold-ws.jgi.doe.gov/ GOLD API e.g. for publications associated with https://sandpiper.qut.edu.au/run/SRR5691149")
+print("TODO: Integrate average genome size from SMF file")
+
 rule all:
     input:
         '{test_or_prod}/{version}/backend_db/done'.format(
@@ -12,23 +16,21 @@ rule gather_kingfisher_metadata:
         metadata='{test_or_prod}/kingfisher_metadata/{date}/kingfisher_metadata.csv'.format(
             date=config['KINGFISHER_METADATA_DATE'],
             test_or_prod=config['TEST_OR_PROD']),
-        done='{test_or_prod}/kingfisher_metadata/{date}/done'.format(
+        done=touch('{test_or_prod}/kingfisher_metadata/{date}/done'.format(
             date=config['KINGFISHER_METADATA_DATE'],
-            test_or_prod=config['TEST_OR_PROD'])
+            test_or_prod=config['TEST_OR_PROD']))
     conda:
         'envs/kingfisher.yml'
     shell:
-        "kingfisher annotate -f tsv --all-columns --run-identifiers-list {input.accessions} -o {output.metadata} && " \
-        "touch {output.done}"
+        "kingfisher annotate -f tsv --all-columns --run-identifiers-list {input.accessions} -o {output.metadata}"
 
 rule gather_bioproject_pubs:
     output:
-        done='{test_or_prod}/gather_bioproject_pubs/{date}/done'.format(
+        done=touch('{test_or_prod}/gather_bioproject_pubs/{date}/done'.format(
             date=config['BIOPROJECT_METADATA_DATE'],
-            test_or_prod=config['TEST_OR_PROD'])
+            test_or_prod=config['TEST_OR_PROD']))
     shell:
-        "../backend/bin/bioproject_metadata.py --meta {config[JSON_METADATA_FILES]} --output-directory {config[TEST_OR_PROD]}/gather_bioproject_pubs/{config[BIOPROJECT_METADATA_DATE]} && " \
-        "touch {output.done}"
+        "../backend/bin/bioproject_metadata.py --meta {config[JSON_METADATA_FILES]} --output-directory {config[TEST_OR_PROD]}/gather_bioproject_pubs/{config[BIOPROJECT_METADATA_DATE]}"
 
 rule process_bioproject_pubs:
     input:
@@ -39,12 +41,11 @@ rule process_bioproject_pubs:
         bioproject_publications='{test_or_prod}/process_bioproject_pubs/{date}/bioproject_publications.csv'.format(
             date=config['BIOPROJECT_METADATA_DATE'],
             test_or_prod=config['TEST_OR_PROD']),
-        done='{test_or_prod}/process_bioproject_pubs/{date}/done'.format(
+        done=touch('{test_or_prod}/process_bioproject_pubs/{date}/done'.format(
             date=config['BIOPROJECT_METADATA_DATE'],
-            test_or_prod=config['TEST_OR_PROD'])
+            test_or_prod=config['TEST_OR_PROD']))
     shell:
-        "../backend/bin/bioproject_metadata_process.py --xml-directory {config[TEST_OR_PROD]}/gather_bioproject_pubs/{config[BIOPROJECT_METADATA_DATE]} > {output.bioproject_publications} && " \
-        "touch {output.done}"
+        "../backend/bin/bioproject_metadata_process.py --xml-directory {config[TEST_OR_PROD]}/gather_bioproject_pubs/{config[BIOPROJECT_METADATA_DATE]} > {output.bioproject_publications}"
 
 rule generate_backend_db:
     input:
@@ -59,9 +60,9 @@ rule generate_backend_db:
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION'])
     output:
-        '{test_or_prod}/{version}/backend_db/start_done'.format(
+        done = touch('{test_or_prod}/{version}/backend_db/start_done'.format(
             test_or_prod=config['TEST_OR_PROD'],
-            version=config['SANDPIPER_VERSION'])
+            version=config['SANDPIPER_VERSION']))
     conda:
         '../sandpiper.yml'
     params:
@@ -71,8 +72,7 @@ rule generate_backend_db:
         'cd ../backend && ' \
         'mkdir -p /data1/woodcrob && ' \
         'PYTHONPATH=~/git/singlem TMPDIR=. ./bin/generate_backend_db --stage start --metapackage-describe {params.describe} --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --metadata-json-files {config[JSON_METADATA_FILES]} --run-blacklist db/metagenome_assembly_acc_list.csv --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION]} --kingfisher-annotate-path-list <(echo $SNAKE_WORKING_DIR/{input.kingfisher_metadata}) --otu-table <(pigz -cd {config[OTU_TABLE]}) --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
-        'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start && ' \
-        'touch $SNAKE_WORKING_DIR/{config[TEST_OR_PROD]}/{config[SANDPIPER_VERSION]}/backend_db/start_done'
+        'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start'
 
 rule add_tags_to_backend_db:
     input:
@@ -97,7 +97,7 @@ rule add_tags_to_backend_db:
         'PYTHONPATH=~/git/singlem TMPDIR=. ./bin/generate_backend_db --stage tags -o /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
         'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 db/'
 
-# rule add_smf_to_backend_db:
+# rule add_smf_to_backend_db: # Already integrated into "start" stage above
 #     input:
 #         '{test_or_prod}/{version}/backend_db/tags_done'.format(
 #             test_or_prod=config['TEST_OR_PROD'],

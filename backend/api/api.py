@@ -486,7 +486,13 @@ def get_lat_lons(taxonomy_id, max_to_show):
                 lat_lons[mykey]['samples'][description] = [sample_name]
         else:
             lat_lons[mykey] = {'lat_lon': [lat, lon], 'samples': {description: [sample_name]}}
-    min_lat_lon_relabund = lat_lon_db_entries[-1][4] # sorted by descending, so last one is the min
+    if len(lat_lon_db_entries) > 0:
+        min_lat_lon_relabund = lat_lon_db_entries[-1][4] # sorted by descending, so last one is the min
+    else:
+        # Currently occurs for
+        # http://localhost:8080/taxonomy/s__Nanoarchaeum%20equitans where there
+        # are no lat lons for any sample where this taxon is found.
+        min_lat_lon_relabund = 0
     return list(lat_lons.values()), lat_lons_count, min_lat_lon_relabund
 
 @api.route('/otus/<string:acc>', methods=('GET',))

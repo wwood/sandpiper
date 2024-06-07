@@ -588,7 +588,7 @@ def add_smf(db, run_accession_to_id, smf_tsv):
         update_bindparams.append({
             'b_run_id': run_id,
             'bacterial_archaeal_bases': row.bacterial_archaeal_bases,
-            'smf': float(row.read_fraction.replace('%', '')),
+            'smf': float(row.read_fraction),
             # Using isnan because if the input file has no warnings at all e.g. in test files maybe. Not well tested tho
             'smf_warning': not str(row.warning) == 'nan' or row.warning == '',
         })

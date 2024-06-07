@@ -3,6 +3,11 @@
 test_data_dir = '../test/data/more_runs'
 test_accessions_file = test_data_dir + '/accessions'
 
+# Create test_data_dir if it doesn't already exist
+import os
+if not os.path.exists(test_data_dir):
+    os.makedirs(test_data_dir)
+
 with open(test_accessions_file, 'w') as f:
     f.write('\n'.join([
         'ERR1914274',
