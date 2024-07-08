@@ -18,13 +18,13 @@
 
     <section class="section is-small container has-text-justified">
       <h1 class="title">Bulk download</h1>
-      <p>Community profiles for all runs are available for download from <a href="https://zenodo.org/doi/10.5281/zenodo.10547493">Zenodo</a>. The data behind older versions of Sandpiper can also be downloaded there.</p><br />
+      <p>Community profiles for all runs are available for download from <a href="https://zenodo.org/doi/10.5281/zenodo.10547493">Zenodo</a>. The data behind older versions of Sandpiper can also be downloaded there as they are stored as old Zenodo versions.</p><br />
       <p>Please feel free to get in touch with <a href="https://research.qut.edu.au/cmr/team/ben-woodcroft/">us</a> if you have any questions or comments, or want data of other kinds.</p>
     </section>
 
     <section class="section is-small container has-text-justified">
       <h1 class="title">How Sandpiper {{ version }} was built</h1>
-      <p>The data underlying Sandpiper was generated using the <a href="https://github.com/wwood/singlem">SingleM</a> pipeline, applied to public metagenome datasets listed in the <a href="https://www.ncbi.nlm.nih.gov/sra">NCBI SRA</a> that were designated as metagenomic, or derived from "metagenomic" organisms such as "soil metagenome". This list of public metagenomes which was generated on {{ scrape_date }}.</p><br />
+      <p>The data underlying Sandpiper was generated using the <a href="https://github.com/wwood/singlem">SingleM</a> pipeline, applied to public metagenome datasets listed in the <a href="https://www.ncbi.nlm.nih.gov/sra">NCBI SRA</a> that were designated as metagenomic, or derived from "metagenomic" organisms such as "soil metagenome". This list of public metagenomes which was generated on {{ scrape_date }}. The <a href="https://gtdb.ecogenomic.org/">Genome Taxonomy Database (GTDB)</a> version underlying these data is {{ gtdb_version }}. Community profiles derived from older GTDB versions are available as a bulk download (see above).</p><br />
 
       <p>SingleM is a tool to find the abundances of discrete operational taxonomic units (OTUs) directly from shotgun metagenome data, without heavy reliance on reference sequence databases. It operates by scanning for reads that cover highly conserved regions of single copy marker genes (35 bacterial, 37 archaeal, 59 total) when translated into amino acids. The nucleotides from each read that cover these conserved gene sections are then clustered into operational taxonomic units (OTUs). Importantly, this clustering happens before the taxonomy of the cluster is determined, setting it apart from methods which rely more heavily on reference databases. With SingleM, multiple OTUs can be assigned to one taxa, indicating e.g. strain heterogeneity within a species, or multiple families from a novel taxa.</p><br />
 
@@ -131,6 +131,7 @@ export default {
           this.num_bioprojects = r.num_bioprojects
           this.version = r.version
           this.scrape_date = r.scrape_date
+          this.gtdb_version = r.gtdb_version
         })
     },
 
