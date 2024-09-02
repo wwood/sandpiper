@@ -1,5 +1,11 @@
 <template>
   <div>
+    <section class="section is-small">
+    <b-image
+            :src="require('@/assets/sandpiper_logo.png')"
+            ratio= "1009by746" />
+    </section>
+
     <section class="section is-small container has-text-justified">
       <h1 class="title">Team</h1>
       <p>This website, and SingleM itself, is the result of a collaboration between (in no particular order) <a href="https://research.qut.edu.au/cmr/team/ben-woodcroft/">Ben Woodcroft</a>, Rossen Zhao, Mitchell Cunningham, Joshua Mitchell, Samuel Aroney, <a href="https://findanexpert.unimelb.edu.au/profile/753413-linda-blackall">Linda Blackall</a>, <a href="https://research.qut.edu.au/cmr/team/gene-tyson/">Gene Tyson</a>, <a href="https://www.alberdilab.dk/members">Raphael Eisenhofer</a> and <a href="https://www.alberdilab.dk/members">Antton Alberdi</a>.</p><br />
