@@ -1,9 +1,10 @@
 <template>
   <div>
-    <section class="section is-small">
+    <section class="section container is-small">
     <b-image
             :src="require('@/assets/sandpiper_logo.png')"
-            ratio= "1009by746" />
+            style="height: 230px; width: 400px; margin: auto"
+            />
     </section>
 
     <section class="section is-small container has-text-justified">
