@@ -45,6 +45,7 @@ if __name__ == '__main__':
     #parent_parser.add_argument('--version', help='output version information and quit',  action='version', version=repeatm.__version__)
     parent_parser.add_argument('--quiet', help='only output errors', action="store_true")
     parent_parser.add_argument('--target', help='amplicon or shotgun', choices=['amplicon','shotgun'], required=True)
+    parent_parser.add_argument('--bucket-name', help='bucket name', default='singlem-sra-metadata-gathering')
 
     args = parent_parser.parse_args()
 
@@ -63,7 +64,7 @@ if __name__ == '__main__':
 DECLARE counter int64 default 1;
 
 -- Create intermediate table with initial records where employee directly reports
-CREATE OR REPLACE TABLE test.emp
+CREATE OR REPLACE TABLE metadata.emp
 AS
 WITH cte AS
 (
@@ -76,15 +77,15 @@ FROM cte;
 
 WHILE EXISTS (
 SELECT c.*
-FROM test.emp p
+FROM metadata.emp p
 INNER JOIN `nih-sra-datastore.sra_tax_analysis_tool.taxonomy` c ON p.tax_id = c.parent_id
 WHERE p.xlevel = counter
 )
 DO
 -- Insert next level
-INSERT INTO test.emp ( xlevel, tax_id, parent_id, sci_name )
+INSERT INTO metadata.emp ( xlevel, tax_id, parent_id, sci_name )
 SELECT counter + 1 AS xlevel, c.tax_id, c.parent_id, c.sci_name
-FROM test.emp p
+FROM metadata.emp p
 INNER JOIN `nih-sra-datastore.sra_tax_analysis_tool.taxonomy` c ON p.tax_id = c.parent_id
 WHERE p.xlevel = counter;
 
@@ -98,7 +99,7 @@ END IF;
 END WHILE;
 
 -- -- Display employee-manger hierarchy
--- -- SELECT  xlevel, tax_id, parent_id, sci_name  FROM test.emp ORDER BY xlevel;
+-- -- SELECT  xlevel, tax_id, parent_id, sci_name  FROM metadata.emp ORDER BY xlevel;
 """
 
     sql = """
@@ -121,6 +122,7 @@ SELECT
   librarysource,
   bioproject,
   sra_study,
+  avgspotlen,
   attributes
 FROM
   `nih-sra-datastore.sra.metadata`
@@ -134,7 +136,7 @@ WHERE
     (
 		librarysource = 'METAGENOMIC'
 		 or 
-	organism IN (SELECT sci_name FROM test.emp)
+	organism IN (SELECT sci_name FROM metadata.emp)
 	)
     AND platform = 'ILLUMINA'
     AND consent = 'public'
@@ -159,6 +161,9 @@ WHERE
     # https://www.ncbi.nlm.nih.gov/sra/?term=SRR12280810 - covid, source VIRAL RNA - want to exclude
     # https://www.ncbi.nlm.nih.gov/sra?term=srr7694367 covid, source VIRAL RNA - want to exclude
 
+    logging.info("(re-)Creating metadata dataset ...")
+    extern.run('bq mk -f -d metadata')
+    logging.info("Finished creating metadata dataset")
 
     ## CREATE TEMPORARY TABLE
     logging.info("Creating temporary taxonomy table ...")
@@ -167,7 +172,7 @@ WHERE
 
     ##### SHOTGUN
     if args.target == 'shotgun':
-      shotgun_destination_path = 'gs://cmr-big-data-microbiome/shotgun_sra_{}/*'.format(args.date)
+      shotgun_destination_path = 'gs://{}/shotgun_sra_{}/*'.format(args.bucket_name, args.date)
       logging.info("Querying and writing shotgun results to {} ..".format(shotgun_destination_path))
 
       sql1 = sql.replace('__SQL_JSON_RESULTS_URI__',shotgun_destination_path) + metagenome_specfic_sql
@@ -178,7 +183,7 @@ WHERE
 
     ##### AMPLICON
     elif args.target == 'amplicon':
-      amplicon_destination_path = 'gs://cmr-big-data-microbiome/amplicon_sra_{}/*'.format(args.date)
+      amplicon_destination_path = 'gs://{}/amplicon_sra_{}/*'.format(args.bucket_name, args.date)
       logging.info("Querying and writing shotgun results to {} ..".format(amplicon_destination_path))
 
       sql2 = sql.replace('__SQL_JSON_RESULTS_URI__',amplicon_destination_path) + amplicon_specific_sql
@@ -190,10 +195,10 @@ WHERE
     else: raise ValueError("Unknown target: {}".format(args.target))
 
     # Now write the taxonomy table
-    destination_path = 'gs://cmr-big-data-microbiome/sra_taxonomy_table_{}/*'.format(args.date)
+    destination_path = 'gs://{}/sra_taxonomy_table_{}/*'.format(args.bucket_name, args.date)
     logging.info("Querying and writing taxonomy table results to {} ..".format(destination_path))
 
-    sql = "EXPORT DATA OPTIONS(uri='{}', format='JSON') AS select * from test.emp".format(destination_path)
+    sql = "EXPORT DATA OPTIONS(uri='{}', format='JSON') AS select * from metadata.emp".format(destination_path)
 
     extern.run('bq query --use_legacy_sql=false', stdin=sql)
     logging.info("Finished querying for the taxonomy table")
