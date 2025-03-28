@@ -164,8 +164,6 @@ rule add_tags_to_backend_db:
         '{test_or_prod}/{version}/backend_db/tags_backend_db.log'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION'])
-    conda:
-        '../sandpiper.yml'
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
