@@ -1,0 +1,42 @@
+[project]
+authors = ["Ben Woodcroft <benjwoodcroft@gmail.com>"]
+channels = ["conda-forge", "bioconda"]
+name = "snakemake"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+
+[feature.kingfisher.dependencies]
+kingfisher = ">=0.4.1"
+
+[feature.sandpiper.dependencies]
+# Ensure dependencies are same/similar to those in api.dockerfile and web.dockerfile to reduce dev vs prod issues
+python= ">=3.8"
+requests = "*"
+ipython = "*"
+Flask = "*"
+Flask-SQLAlchemy = "*"
+Flask-Migrate = "*"
+Flask-Script = "*"
+extern = "*"
+Flask-CORS = "*"
+nodejs = "*"
+vue="2.*"
+iso8601 = "*"
+pandas = "*, >=1.5" # pandas 1.1ish was broken for itertuples in generate_backend_db
+graftm = "*"
+tqdm = "*"
+snakemake = "*"
+numpy = "*"
+typing_extensions="*, >4.2" #4.2 gives an Attribute error when flast starts
+biopython = "*"
+zenodo_backpack = "*"
+singlem="*"
+
+[environments]
+sandpiper = ["sandpiper"]
+kingfisher = ["kingfisher"]
+

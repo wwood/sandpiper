@@ -3,26 +3,105 @@ print("TODO: Add fractionation metadata parsing from microbial_fraction paper")
 print("TODO: Integrate https://gold-ws.jgi.doe.gov/ GOLD API e.g. for publications associated with https://sandpiper.qut.edu.au/run/SRR5691149")
 print("TODO: Integrate average genome size from SMF file")
 
+
+
+##### accessions in 50k chunks for kingfisher metadata scalbility #####
+import csv
+import itertools
+import os
+
+file_list = config['ACCESSIONS_FILE']
+
+# Process this many in the list at a time.
+chunk_size = 50000
+
+# Read the list of files to process into a list
+paths = []
+with open(file_list) as f:
+    reader = csv.reader(f, delimiter='\t')
+    for row in reader:
+        paths.append(row[0])
+
+# Convert them into chunks
+def iterable_chunks(iterable, n):
+    '''Given an iterable, return it in chunks of size n. In the last chunk, the
+    remaining space is replaced by None entries.
+    '''
+    args = [iter(iterable)] * n
+    return itertools.zip_longest(*args, fillvalue=None)
+chunked_genome_lists = []
+for chunk in iterable_chunks(paths, chunk_size):
+    chunked_genome_lists.append(list([a for a in chunk if a is not None]))
+
+print("Kingfisher annotate will process {} accessions in {} chunks of size {}".format(len(paths), len(chunked_genome_lists), chunk_size))
+if not os.path.exists('data/chunk_definitions'):
+    os.makedirs('data/chunk_definitions')
+if not os.path.exists('data/chunk_definitions.done'):
+    print("Writing chunk definition files")
+    for i, chunk in enumerate(chunked_genome_lists):
+        with open('data/chunk_definitions/{}.txt'.format(i), 'w') as f:
+            f.write('\n'.join(chunk))
+    print("Finished writing chunk definition files")
+    with open('data/chunk_definitions.done', 'w') as f:
+        f.write('')
+else:
+    print("Chunk definition files already exist, reusing them")
+
+
+
 rule all:
     input:
         '{test_or_prod}/{version}/backend_db/done'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION'])
 
+rule run_kingfisher_metadata:
+    input:
+        chunk = 'data/chunk_definitions/{chunk}.txt'
+    output:
+        metadata='{test_or_prod}/kingfisher_metadata/{date}/metadata_chunks/{chunk}.csv'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD'],
+            chunk="{chunk}"),
+        done=touch('{test_or_prod}/kingfisher_metadata/{date}/metadata_chunks_done/{chunk}.done'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD'],
+            chunk="{chunk}"))
+    retries: 3
+    log:
+        '{test_or_prod}/kingfisher_metadata/{date}/logs/run_kingfisher_metadata_{chunk}.log'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD'],
+            chunk="{chunk}")
+    benchmark:
+        'kingfisher_metadata/{date}/benchmarks/run_kingfisher_metadata_{chunk}.txt'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD'],
+            chunk="{chunk}")
+    shell:
+        "pixi run -e kingfisher ~/git/kingfisher/bin/kingfisher annotate --debug -f tsv --all-columns --run-identifiers-list {input.chunk} -o {output.metadata} > {log} 2>&1"
+
 rule gather_kingfisher_metadata:
     input:
-        accessions=config['ACCESSIONS_FILE']
-    output:
-        metadata='{test_or_prod}/kingfisher_metadata/{date}/kingfisher_metadata.csv'.format(
+        chunks_done = expand('{test_or_prod}/kingfisher_metadata/{date}/metadata_chunks_done/{chunk}.done', 
             date=config['KINGFISHER_METADATA_DATE'],
-            test_or_prod=config['TEST_OR_PROD']),
+            test_or_prod=config['TEST_OR_PROD'],
+            chunk=[str(i) for i in range(len(chunked_genome_lists))]),
+        metadata_chunks = expand('{test_or_prod}/kingfisher_metadata/{date}/metadata_chunks/{chunk}.csv',
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD'],
+            chunk=[str(i) for i in range(len(chunked_genome_lists))])
+    output:
         done=touch('{test_or_prod}/kingfisher_metadata/{date}/done'.format(
             date=config['KINGFISHER_METADATA_DATE'],
-            test_or_prod=config['TEST_OR_PROD']))
-    conda:
-        'envs/kingfisher.yml'
+            test_or_prod=config['TEST_OR_PROD'])),
+        file_list='{test_or_prod}/kingfisher_metadata/{date}/kingfisher_metadata_file_list'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD'])
+    params:
+        chunks_str = lambda _, input: '\n'.join([os.path.abspath(i) for i in input.metadata_chunks])
     shell:
-        "kingfisher annotate -f tsv --all-columns --run-identifiers-list {input.accessions} -o {output.metadata}"
+        'echo "{params.chunks_str}" > {output.file_list}'
 
 rule gather_bioproject_pubs:
     output:
@@ -30,7 +109,7 @@ rule gather_bioproject_pubs:
             date=config['BIOPROJECT_METADATA_DATE'],
             test_or_prod=config['TEST_OR_PROD']))
     shell:
-        "../backend/bin/bioproject_metadata.py --meta {config[JSON_METADATA_FILES]} --output-directory {config[TEST_OR_PROD]}/gather_bioproject_pubs/{config[BIOPROJECT_METADATA_DATE]}"
+        "pixi run -e sandpiper ../backend/bin/bioproject_metadata.py --meta {config[JSON_METADATA_FILES]} --output-directory {config[TEST_OR_PROD]}/gather_bioproject_pubs/{config[BIOPROJECT_METADATA_DATE]}"
 
 rule process_bioproject_pubs:
     input:
@@ -45,14 +124,14 @@ rule process_bioproject_pubs:
             date=config['BIOPROJECT_METADATA_DATE'],
             test_or_prod=config['TEST_OR_PROD']))
     shell:
-        "../backend/bin/bioproject_metadata_process.py --xml-directory {config[TEST_OR_PROD]}/gather_bioproject_pubs/{config[BIOPROJECT_METADATA_DATE]} > {output.bioproject_publications}"
+        "pixi run -e sandpiper ../backend/bin/bioproject_metadata_process.py --xml-directory {config[TEST_OR_PROD]}/gather_bioproject_pubs/{config[BIOPROJECT_METADATA_DATE]} > {output.bioproject_publications}"
 
 rule generate_backend_db:
     input:
         bioproject_publications='{test_or_prod}/process_bioproject_pubs/{date}/bioproject_publications.csv'.format(
             date=config['BIOPROJECT_METADATA_DATE'],
             test_or_prod=config['TEST_OR_PROD']),
-        kingfisher_metadata='{test_or_prod}/kingfisher_metadata/{date}/kingfisher_metadata.csv'.format(
+        kingfisher_metadata_file_list='{test_or_prod}/kingfisher_metadata/{date}/kingfisher_metadata_file_list'.format(
             date=config['KINGFISHER_METADATA_DATE'],
             test_or_prod=config['TEST_OR_PROD'])
     log:
@@ -63,16 +142,14 @@ rule generate_backend_db:
         done = touch('{test_or_prod}/{version}/backend_db/start_done'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION']))
-    conda:
-        '../sandpiper.yml'
     params:
         describe=os.path.abspath(config['METAPACKAGE_DESCRIBE']),
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
-        'mkdir -p /data1/woodcrob && ' \
-        'PYTHONPATH=~/git/singlem TMPDIR=. ./bin/generate_backend_db --stage start --metapackage-describe {params.describe} --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --metadata-json-files {config[JSON_METADATA_FILES]} --run-blacklist db/metagenome_assembly_acc_list.csv --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION]} --kingfisher-annotate-path-list <(echo $SNAKE_WORKING_DIR/{input.kingfisher_metadata}) --otu-table <(pigz -cd {config[OTU_TABLE]}) --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
-        'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start'
+        'mkdir -p {config[SCRATCH_DIR]} && ' \
+        'pixi run -e sandpiper TMPDIR=. ./bin/generate_backend_db --stage start --metapackage-describe {params.describe} --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --metadata-json-files {config[JSON_METADATA_FILES]} --run-blacklist db/metagenome_assembly_acc_list.csv --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION]} --kingfisher-annotate-path-list $SNAKE_WORKING_DIR/{input.kingfisher_metadata_file_list} --otu-table <(pigz -cd {config[OTU_TABLE]}) --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start'
 
 rule add_tags_to_backend_db:
     input:
@@ -93,29 +170,7 @@ rule add_tags_to_backend_db:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
         # cp to remain idempotent, e.g. if this step fails
-        'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
-        'PYTHONPATH=~/git/singlem TMPDIR=. ./bin/generate_backend_db --stage tags -o /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
-        'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 db/'
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage tags -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 db/'
 
-# rule add_smf_to_backend_db: # Already integrated into "start" stage above
-#     input:
-#         '{test_or_prod}/{version}/backend_db/tags_done'.format(
-#             test_or_prod=config['TEST_OR_PROD'],
-#             version=config['SANDPIPER_VERSION'])
-#     output:
-#         touch('{test_or_prod}/{version}/backend_db/done'.format(
-#             test_or_prod=config['TEST_OR_PROD'],
-#             version=config['SANDPIPER_VERSION']))
-#     log:
-#         '{test_or_prod}/{version}/backend_db/smf_backend_db.log'.format(
-#             test_or_prod=config['TEST_OR_PROD'],
-#             version=config['SANDPIPER_VERSION'])
-#     conda:
-#         '../sandpiper.yml'
-#     shell:
-#         'export SNAKE_WORKING_DIR=`pwd` && ' \
-#         'cd ../backend && ' \
-#         # cp to remain idempotent, e.g. if this step fails
-#         'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_tags /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
-#         'PYTHONPATH=~/git/singlem TMPDIR=. ./bin/generate_backend_db --stage smf --smf-file {config[SMF_FILE]} -o /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
-#         'cp /data1/woodcrob/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 db/'

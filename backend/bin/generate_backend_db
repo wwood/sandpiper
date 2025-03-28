@@ -89,7 +89,7 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
                      count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries,
                                                               taxonomy_name_to_id, next_taxonomy_id, count, tf)
                     known_species_fractions.append({
-                        'b_run_id': run_accession_to_id[current_sample],
+                        'id': run_accession_to_id[current_sample],
                         'known_species_fraction': current_sample_species_coverage / (
                             current_sample_species_coverage + current_sample_non_species_coverage)})
                 current_sample = row[0]
@@ -111,7 +111,7 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
              count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries,
                                                       taxonomy_name_to_id, next_taxonomy_id, count, tf)
             known_species_fractions.append({
-                'b_run_id': run_accession_to_id[current_sample],
+                'id': run_accession_to_id[current_sample],  # We test that id == run_id in the add_smf function
                 'known_species_fraction': current_sample_species_coverage / (
                     current_sample_species_coverage + current_sample_non_species_coverage)})
 
@@ -129,9 +129,11 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
 
         # Commit known species fractions
         logging.info("Committing known species fractions ..")
-        update_stmt = update(ParsedSampleAttribute).where(ParsedSampleAttribute.id == bindparam('b_run_id')).values(
-            known_species_fraction=bindparam('known_species_fraction'))
-        db.session.execute(update_stmt, known_species_fractions)
+        # update_stmt = update(ParsedSampleAttribute).values(
+        #     id=bindparam('id'),
+        #     known_species_fraction=bindparam('known_species_fraction'))
+        # db.session.execute(update_stmt, known_species_fractions)
+        db.session.bulk_update_mappings(ParsedSampleAttribute, known_species_fractions)
         db.session.commit()
         logging.info("Wrote {} known species fractions to DB".format(len(known_species_fractions)))
 
@@ -345,7 +347,8 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                                             "For acc {} Did not find expected old value '{}' in '{}'".format(
                                                 acc, correction['old_value'], kv['v']))
                         else:
-                            raise Exception("Unexpected correction field encountered: {}".format(field))
+                            logging.error("Unexpected correction field encountered: {}".format(field))
+                            # raise Exception("Unexpected correction field encountered: {}".format(field))
 
                 attributes = j['attributes']
 
@@ -361,7 +364,8 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                         except iso8601.ParseError:
                             logging.warning("Unexpected date value for %s: %s" % (acc, j[d]))
 
-                del j['biosamplemodel_sam']  #Assume it is defined in the associated sample metadata
+                if 'biosamplemodel_sam' in j:
+                    del j['biosamplemodel_sam']  #Assume it is defined in the associated sample metadata
 
                 # Unclear to me why these exist as arrays rather than single values, but eh
                 for d in ['geo_loc_name_sam', 'ena_first_public_run', 'ena_last_update_run', 'sample_name_sam']:
@@ -447,26 +451,31 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
     # organisation_contact_name = db.Column(db.String)
     # study_title = db.Column(db.String)
     # study_abstract = db.Column(db.String)
-    update_stmt = (
-        update(NcbiMetadata).where(NcbiMetadata.id == bindparam('run_id')).values(
-            experiment_title=bindparam('experiment_title'),  #row.experiment_title,
-            library_strategy=bindparam('library_strategy'),  #row.library_strategy,
-            instrument_model=bindparam('model'),  #row.model,
-            # # meta.organisation_department = row.organisation_department
-            # # meta.organisation_institution = row.organisation_institution
-            # # meta.organisation_street = row.organisation_street
-            # # meta.organisation_city = row.organisation_city
-            # # meta.organisation_country = row.organisation_country
-            # # meta.organisation_contact_name = row.organisation_contact_name
-            study_title=bindparam('study_title'),  #row.study_title,
-            study_abstract=bindparam('study_abstract'),  #row.study_abstract,
-            design_description=bindparam('design_description'),  #row.design_description
-            read1_length_average=bindparam('read1_length_average'),  #row.read1_length_average
-            read1_length_stdev=bindparam('read1_length_stdev'),  #row.read1_length_stdev
-            read2_length_average=bindparam('read2_length_average'),  #row.read2_length_average
-            read2_length_stdev=bindparam('read2_length_stdev'),  #row.read2_length_stdev
-        ))
+    # update_stmt = (
+    #     update(NcbiMetadata).where(NcbiMetadata.id == bindparam('run_id')).values(
+    #         experiment_title=bindparam('experiment_title'),  #row.experiment_title,
+    #         library_strategy=bindparam('library_strategy'),  #row.library_strategy,
+    #         instrument_model=bindparam('model'),  #row.model,
+    #         # # meta.organisation_department = row.organisation_department
+    #         # # meta.organisation_institution = row.organisation_institution
+    #         # # meta.organisation_street = row.organisation_street
+    #         # # meta.organisation_city = row.organisation_city
+    #         # # meta.organisation_country = row.organisation_country
+    #         # # meta.organisation_contact_name = row.organisation_contact_name
+    #         study_title=bindparam('study_title'),  #row.study_title,
+    #         study_abstract=bindparam('study_abstract'),  #row.study_abstract,
+    #         design_description=bindparam('design_description'),  #row.design_description
+    #         read1_length_average=bindparam('read1_length_average'),  #row.read1_length_average
+    #         read1_length_stdev=bindparam('read1_length_stdev'),  #row.read1_length_stdev
+    #         read2_length_average=bindparam('read2_length_average'),  #row.read2_length_average
+    #         read2_length_stdev=bindparam('read2_length_stdev'),  #row.read2_length_stdev
+    #     ))
     update_bindparams = []
+
+    # Generate a mapping of run_id to id from NcbiMetadata
+    run_acc_to_ncbi_metadata_id = {}
+    for row in db.session.query(NcbiMetadata).all():
+        run_acc_to_ncbi_metadata_id[row.acc] = row.id
 
     for row in df.itertuples():
         # Find associated NcbiMetadata record
@@ -476,7 +485,7 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
         run_id = run_accession_to_id[row.run]
 
         update_bindparams.append({
-            'run_id': run_id,
+            'id': run_acc_to_ncbi_metadata_id[row.run],
             'experiment_title': row.experiment_title,
             'library_strategy': row.library_strategy,
             'model': row.model,
@@ -508,12 +517,12 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
         num_kingfisher_annotated += 1
 
         if num_kingfisher_annotated % 10000 == 0:
-            db.session.execute(update_stmt, update_bindparams)
+            db.session.bulk_update_mappings(NcbiMetadata, update_bindparams)
             db.session.commit()
             bindparams = []
 
     if len(update_bindparams) > 0:
-        db.session.execute(update_stmt, update_bindparams)
+        db.session.bulk_update_mappings(NcbiMetadata, update_bindparams)
     db.session.commit()
     logging.info("Wrote {} metadata and {} study link rows to DB".format(num_kingfisher_annotated, num_study_links))
 
@@ -527,12 +536,6 @@ def add_host_predictions(db, run_accession_to_id, host_predictions_tsv):
     # DRR001360       ecological      human metagenome        host
     # DRR001455       ecological      soil metagenome ecological
 
-    update_stmt = (update(ParsedSampleAttribute).where(ParsedSampleAttribute.id == bindparam('b_run_id')).values(
-        host_or_not_prediction=bindparam('host_or_not_prediction'),
-        host_or_not_recorded=bindparam('host_or_not_recorded'),
-        host_or_not_mature=bindparam('host_or_not_mature'),
-    ))
-
     update_bindparams = []
 
     for row in df.itertuples():
@@ -543,7 +546,7 @@ def add_host_predictions(db, run_accession_to_id, host_predictions_tsv):
         run_id = run_accession_to_id[row.acc]
 
         update_bindparams.append({
-            'b_run_id': run_id,
+            'id': run_id,
             'host_or_not_prediction': row.prediction,
             'host_or_not_recorded': row.host_or_not,
             'host_or_not_mature': row.prediction if str(row.host_or_not) == 'nan' else row.host_or_not
@@ -552,11 +555,12 @@ def add_host_predictions(db, run_accession_to_id, host_predictions_tsv):
         num_host_predicted += 1
 
         if num_host_predicted % 10000 == 0:
-            db.session.execute(update_stmt, update_bindparams)
+            db.session.bulk_update_mappings(ParsedSampleAttribute, update_bindparams)
             db.session.commit()
             update_bindparams = []
 
-    db.session.execute(update_stmt, update_bindparams)
+    if len(update_bindparams) > 0:
+        db.session.bulk_update_mappings(ParsedSampleAttribute, update_bindparams)
     db.session.commit()
     logging.info("Wrote {} host predictions to DB".format(num_host_predicted))
 
@@ -566,13 +570,23 @@ def add_smf(db, run_accession_to_id, smf_tsv):
 
     df = pd.read_csv(smf_tsv, sep='\t')
 
-    update_stmt = (update(ParsedSampleAttribute).where(ParsedSampleAttribute.id == bindparam('b_run_id')).values(
+    update_stmt = update(ParsedSampleAttribute).values(
+        id=bindparam('id'),
         bacterial_archaeal_bases=bindparam('bacterial_archaeal_bases'),
         smf=bindparam('smf'),
         smf_warning=bindparam('smf_warning'),
-    ))
+    )
 
     update_bindparams = []
+
+    # Test the assumption that id = run_id. Needs to be true otherwise we cannot
+    # supply the id to the update statement using the run_id value
+    stmt = db.select(func.count()).where(ParsedSampleAttribute.run_id != ParsedSampleAttribute.id)
+    stmt = stmt.select_from(ParsedSampleAttribute)
+    mismatch_count = db.session.execute(stmt).scalar()
+    if mismatch_count > 0:
+        raise Exception(
+            "ParsedSampleAttribute.run_id != ParsedSampleAttribute.id. This is unexpected and needs to be fixed, or the code adjusted to work with it. Mismatch count: {}".format())
 
     for row in df.itertuples():
         # Find associated NcbiMetadata record
@@ -586,7 +600,7 @@ def add_smf(db, run_accession_to_id, smf_tsv):
         # smf = db.Column(db.Float)
         # smf_warning = db.Column(db.Boolean)
         update_bindparams.append({
-            'b_run_id': run_id,
+            'id': run_id,
             'bacterial_archaeal_bases': row.bacterial_archaeal_bases,
             'smf': float(row.read_fraction),
             # Using isnan because if the input file has no warnings at all e.g. in test files maybe. Not well tested tho
