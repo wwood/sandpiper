@@ -13,7 +13,7 @@ import os
 file_list = config['ACCESSIONS_FILE']
 
 # Process this many in the list at a time.
-chunk_size = 50000
+chunk_size = 10000
 
 # Read the list of files to process into a list
 paths = []
@@ -53,7 +53,13 @@ rule all:
     input:
         '{test_or_prod}/{version}/backend_db/done'.format(
             test_or_prod=config['TEST_OR_PROD'],
-            version=config['SANDPIPER_VERSION'])
+            version=config['SANDPIPER_VERSION']),
+        '{test_or_prod}/gather_bioproject_pubs/{date}/done'.format(
+            date=config['BIOPROJECT_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD']),
+        '{test_or_prod}/kingfisher_metadata/{date}/done'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD']),
 
 rule run_kingfisher_metadata:
     input:
@@ -78,6 +84,9 @@ rule run_kingfisher_metadata:
             date=config['KINGFISHER_METADATA_DATE'],
             test_or_prod=config['TEST_OR_PROD'],
             chunk="{chunk}")
+    resources:
+        mem_mb=16000,
+        runtime='6h'
     shell:
         "pixi run -e kingfisher ~/git/kingfisher/bin/kingfisher annotate --debug -f tsv --all-columns --run-identifiers-list {input.chunk} -o {output.metadata} > {log} 2>&1"
 
@@ -131,9 +140,15 @@ rule generate_backend_db:
         bioproject_publications='{test_or_prod}/process_bioproject_pubs/{date}/bioproject_publications.csv'.format(
             date=config['BIOPROJECT_METADATA_DATE'],
             test_or_prod=config['TEST_OR_PROD']),
+        bioproject_done='{test_or_prod}/gather_bioproject_pubs/{date}/done'.format(
+            date=config['BIOPROJECT_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD']),
         kingfisher_metadata_file_list='{test_or_prod}/kingfisher_metadata/{date}/kingfisher_metadata_file_list'.format(
             date=config['KINGFISHER_METADATA_DATE'],
-            test_or_prod=config['TEST_OR_PROD'])
+            test_or_prod=config['TEST_OR_PROD']),
+        kingfisher_done='{test_or_prod}/kingfisher_metadata/{date}/done'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD']),
     log:
         '{test_or_prod}/{version}/backend_db/start_backend_db2.log'.format(
             test_or_prod=config['TEST_OR_PROD'],
@@ -144,11 +159,18 @@ rule generate_backend_db:
             version=config['SANDPIPER_VERSION']))
     params:
         describe=os.path.abspath(config['METAPACKAGE_DESCRIBE']),
+    benchmark:
+        'backend_db/{test_or_prod}/{version}/start_backend_db2.txt'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
+    resources:
+        mem_mb=64000,
+        runtime='48h'
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
         'mkdir -p {config[SCRATCH_DIR]} && ' \
-        'pixi run -e sandpiper TMPDIR=. ./bin/generate_backend_db --stage start --metapackage-describe {params.describe} --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --metadata-json-files {config[JSON_METADATA_FILES]} --run-blacklist db/metagenome_assembly_acc_list.csv --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION]} --kingfisher-annotate-path-list $SNAKE_WORKING_DIR/{input.kingfisher_metadata_file_list} --otu-table <(pigz -cd {config[OTU_TABLE]}) --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage start --metapackage-describe {params.describe} --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --metadata-json-files {config[JSON_METADATA_FILES]} --run-blacklist db/metagenome_assembly_acc_list.csv --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION]} --kingfisher-annotate-path-list $SNAKE_WORKING_DIR/{input.kingfisher_metadata_file_list} --otu-table <(pigz -cd {config[OTU_TABLE]}) --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start'
 
 rule add_tags_to_backend_db:

@@ -11,3 +11,18 @@ docker-compose up
 ```
 
 The server is then available on localhost:8000.
+
+# Dev on lyra
+
+backend:
+```
+cd backend
+pixi shell -e sandpiper
+FLASK_ENV=development flask run --reload
+```
+
+frontend:
+```
+cd vue
+pixi run -e sandpiper API_URL=localhost:5000 npm run serve -- --host localhost
+```

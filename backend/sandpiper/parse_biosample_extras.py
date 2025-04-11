@@ -24,16 +24,16 @@ def parse_json_to_lat_lon_dict(j):
     lat_long_dict = {}
 
     biosample_keys_for_lat_long_parsing = [
-        'lat_lon_sam',
-        'geographic_location__latitude__sam',
-        'geographic_location__longitude__sam',
-        'latitude_start_sam',
-        'longitude_start_sam',
-        'latitude_sam',
-        'longitude_sam',
-        'sampling_event__latitude__start_sam',
-        'sampling_event__longitude__start_sam',
-        'geographic_location__latitude_and_longitude__sam'
+        'lat_lon',
+        'geographic_location__latitude',
+        'geographic_location__longitude',
+        'latitude_start',
+        'longitude_start',
+        'latitude',
+        'longitude',
+        'sampling_event__latitude__start',
+        'sampling_event__longitude__start',
+        'geographic_location__latitude_and_longitude'
     ]
 
     for attr in j['attributes']:
@@ -73,20 +73,20 @@ def degrees_minutes_to_decimal(degrees, minutes, seconds=0):
     return float(degrees) + float(minutes) / 60.0 + float(seconds) / 3600.0
 
 def parse_two_part_lat_lon(sample_name, lat_input, lon_input):
-    geoloc_lat_regex = re.compile('^([0-9.-]+)[°\?]{0,1} {0,1}([NSns])$')
-    geoloc_lon_regex = re.compile('^([0-9.-]+)[°\?]{0,1} {0,1}([EWew])$')
+    geoloc_lat_regex = re.compile(r'^([0-9.-]+)[°\?]{0,1} {0,1}([NSns])$')
+    geoloc_lon_regex = re.compile(r'^([0-9.-]+)[°\?]{0,1} {0,1}([EWew])$')
     # e.g. S 12°37.707′
-    sexigesimal_regex_lat1 = re.compile('^([NSns]) ([0-9]+)[°\?]([0-9.]+)[\'′]$')
-    sexigesimal_regex_lon1 = re.compile('^([EWew]) ([0-9]+)[°\?]([0-9.]+)[\'′]$')
+    sexigesimal_regex_lat1 = re.compile(r'^([NSns]) ([0-9]+)[°\?]([0-9.]+)[\'′]$')
+    sexigesimal_regex_lon1 = re.compile(r'^([EWew]) ([0-9]+)[°\?]([0-9.]+)[\'′]$')
     # e.g. 52?09'50.8N
-    sexigesimal_regex_lat2 = re.compile('^([0-9]+)[°\?]([0-9.]+)[\'′]([0-9.]*)([NSns])$')
-    sexigesimal_regex_lon2 = re.compile('^([0-9]+)[°\?]([0-9.]+)[\'′]([0-9.]*)([EWew])$')
+    sexigesimal_regex_lat2 = re.compile(r'^([0-9]+)[°\?]([0-9.]+)[\'′]([0-9.]*)([NSns])$')
+    sexigesimal_regex_lon2 = re.compile(r'^([0-9]+)[°\?]([0-9.]+)[\'′]([0-9.]*)([EWew])$')
     # e.g.  ERR2824916: ["S33°28'21.68", "O70°38'50.06"] -> Actually that one is fail
-    sexigesimal_regex_lat3 = re.compile('^([NSns])([0-9]+)[°\?]([0-9.]+)[\'′]([0-9.]*)$')
-    sexigesimal_regex_lon3 = re.compile('^([EWew])([0-9]+)[°\?]([0-9.]+)[\'′]([0-9.]*)$')
+    sexigesimal_regex_lat3 = re.compile(r'^([NSns])([0-9]+)[°\?]([0-9.]+)[\'′]([0-9.]*)$')
+    sexigesimal_regex_lon3 = re.compile(r'^([EWew])([0-9]+)[°\?]([0-9.]+)[\'′]([0-9.]*)$')
     # e.g. ERR5173566: ['N 43.8047886', 'E 15.9637432']
-    geoloc_lat_regex2 = re.compile('^([NSns]) {0,1}([0-9.-]+)[°\?]{0,1}$')
-    geoloc_lon_regex2 = re.compile('^([EWew]) {0,1}([0-9.-]+)[°\?]{0,1}$')
+    geoloc_lat_regex2 = re.compile(r'^([NSns]) {0,1}([0-9.-]+)[°\?]{0,1}$')
+    geoloc_lon_regex2 = re.compile(r'^([EWew]) {0,1}([0-9.-]+)[°\?]{0,1}$')
 
     try:
         lat = float(lat_input)
@@ -184,18 +184,23 @@ def parse_temp(acc, temp):
         if temp2.endswith(e):
             temp2 = temp2[:-len(e)]
 
+    if ',' in temp2:
+        # Replace comma with dot
+        temp2 = temp2.replace(',', '.')
+
     try:
-        f = float(temp2)
+        if '.' in temp2:
+            # Cast as float only if there is a decimal point
+            f = float(temp2)
+        else:
+            f = int(temp2)
         if f > 100: # SRR12345782 has 255C
             logging.warning("Too big temperature value for %s: %s from %s" % (acc, temp2, temp))
             return ''
         return f
     except ValueError:
-        try:
-            return float(temp2.replace(',','.'))
-        except ValueError:
-            logging.warning("Unexpected temperature value for %s: %s from %s" % (acc, temp2, temp))
-            return ''
+        logging.warning("Unexpected temperature value for %s: %s from %s" % (acc, temp2, temp))
+        return ''
 
 def parse_depth(acc, depth):
     if depth.lower() in ACTUALLY_MISSING:
@@ -217,10 +222,17 @@ def parse_depth(acc, depth):
                 depth2 = depth2[:-len(e)]
 
     try:
-        if is_cm:
-            return float(depth2) / 100.0
+        # Cast as float only if there is a decimal point
+        if '.' in depth2:
+            if is_cm:
+                return float(depth2) / 100.0
+            else:
+                return float(depth2)
         else:
-            return float(depth2)
+            if is_cm:
+                return float(depth2) / 100.0
+            else:
+                return int(depth2)
     except ValueError:
         logging.warning("Unexpected depth value for %s: %s from %s" % (acc, depth2, depth))
         return ''
@@ -264,18 +276,18 @@ def parse_date(acc, date):
 
 def parse_lat_lons(acc, lat_long_dict):
     single_part_keys = [
-        'lat_lon_sam',
-        'geographic_location__latitude_and_longitude__sam'
+        'lat_lon',
+        'geographic_location__latitude_and_longitude'
     ]
     two_part_keys = [
-        ['geographic_location__latitude__sam',
-        'geographic_location__longitude__sam'],
-        ['latitude_start_sam',
-        'longitude_start_sam'],
-        ['latitude_sam',
-        'longitude_sam'],
-        ['sampling_event__latitude__start_sam',
-        'sampling_event__longitude__start_sam'],
+        ['geographic_location__latitude',
+        'geographic_location__longitude'],
+        ['latitude_start',
+        'longitude_start'],
+        ['latitude',
+        'longitude'],
+        ['sampling_event__latitude__start',
+        'sampling_event__longitude__start'],
     ]
 
     to_return = []
@@ -308,13 +320,13 @@ def parse_lat_lons(acc, lat_long_dict):
 
 # Special parsing methods
 parsing_hash = {
-    'depth_sam': parse_depth,
-    'temperature_sam': parse_temp,
-    'collection_date_sam': parse_date,
+    'depth': parse_depth,
+    'temperature': parse_temp,
+    'collection_date': parse_date,
 }
 # For when the number of fields returned by parsing != 1
 non_standard_output_field_names_hash = {
-    'collection_date_sam': ['collection_year','collection_month'],
+    'collection_date': ['collection_year','collection_month'],
 }
 
 def parse_attribute_fields(j, extra_sample_keys):
@@ -348,6 +360,25 @@ def parse_extra_sample_attributes(j, extra_sample_keys):
                 to_return.append('')
 
     return to_return
+
+def prepare_attributes(attributes):
+    # start by removing __sam from the end of each key, and also anythi9ng matching _sam_.* e.g. lat_lon_sam_s_dpl34
+    re1 = re.compile(r'_{1,2}sam$')
+    re2 = re.compile(r'_sam_.*$')
+
+    attr2 = []
+    for attr in attributes:
+        # apply re1 and re2, replace with ''
+        real_key = re1.sub('', attr['k'])
+        real_key = re2.sub('', real_key)
+        # temp -> temperature
+        if real_key == 'temp':
+            real_key = 'temperature'
+        if real_key in attr2:
+            logging.warning("Duplicate key %s in attributes for %s" % (real_key, j['acc']))
+        attr2.append({'k': real_key, 'v': attr['v']})
+    return attr2
+
 
 if __name__ == '__main__':
     parent_parser = argparse.ArgumentParser(add_help=False)
@@ -388,6 +419,9 @@ if __name__ == '__main__':
             j = json.loads(line)
             
             lat_long_res = [j['acc']]
+
+            # start by removing __sam from the end of each key, and also anythi9ng matching _sam_.* e.g. lat_lon_sam_s_dpl34
+            j['attributes'] = prepare_attributes(j['attributes'])
 
             lat_lon = parse_lat_lons(j['acc'], parse_json_to_lat_lon_dict(j))
             if lat_lon == [None, None]:

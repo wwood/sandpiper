@@ -350,25 +350,25 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                             logging.error("Unexpected correction field encountered: {}".format(field))
                             # raise Exception("Unexpected correction field encountered: {}".format(field))
 
-                attributes = j['attributes']
+                attributes = prepare_attributes(j['attributes'])
 
                 del j['attributes']
                 # Convert datetimes
                 # releasedate = db.Column(db.DateTime, nullable=False)
                 # loaddate = db.Column(db.DateTime, nullable=False)
                 # collection_date_sam = db.Column(db.DateTime, nullable=False)
-                for d in ['releasedate', 'loaddate', 'collection_date_sam']:
+                for d in ['releasedate', 'loaddate', 'collection_date']:
                     if d in j and j[d] is not None and j[d].lower() not in ACTUALLY_MISSING:
                         try:
                             j[d] = iso8601.parse_date(j[d])
                         except iso8601.ParseError:
                             logging.warning("Unexpected date value for %s: %s" % (acc, j[d]))
 
-                if 'biosamplemodel_sam' in j:
+                if 'biosamplemodel' in j:
                     del j['biosamplemodel_sam']  #Assume it is defined in the associated sample metadata
 
                 # Unclear to me why these exist as arrays rather than single values, but eh
-                for d in ['geo_loc_name_sam', 'ena_first_public_run', 'ena_last_update_run', 'sample_name_sam']:
+                for d in ['geo_loc_name', 'ena_first_public_run', 'ena_last_update_run', 'sample_name']:
                     if d in j:
                         if len(j[d]) > 1:
                             logging.warning(
@@ -396,15 +396,15 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                 j['attributes'] = attributes
                 lat_lon = parse_lat_lons(j['acc'], parse_json_to_lat_lon_dict(j))
                 # logging.info("Parsed lat_lon to {}".format(lat_lon))
-                collection_year, collection_month = parse_extra_sample_attributes(j, ['collection_date_sam'])
+                collection_year, collection_month = parse_extra_sample_attributes(j, ['collection_date'])
                 if collection_year == '':
                     collection_year = None
                 if collection_month == '':
                     collection_month = None
-                depth = parse_extra_sample_attributes(j, ['depth_sam'])[0]
+                depth = parse_extra_sample_attributes(j, ['depth'])[0]
                 if depth == '':
                     depth = None
-                temperature = parse_extra_sample_attributes(j, ['temperature_sam'])[0]
+                temperature = parse_extra_sample_attributes(j, ['temperature'])[0]
                 if temperature == '':
                     temperature = None
                 db.session.add(
@@ -618,6 +618,10 @@ def add_smf(db, run_accession_to_id, smf_tsv):
     db.session.commit()
     logging.info("Wrote {} SMF predictions to DB".format(num_smf_predictions))
 
+def read_run_accession_to_id(db):
+    # select NcbiMetadata.id, NcbiMetadata.acc
+    # from NcbiMetadata
+    raise
 
 def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id, db_path):
     # For each OTU in the input, create a new line in the otus_indexed table,
