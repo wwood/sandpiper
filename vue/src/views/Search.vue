@@ -112,8 +112,9 @@ export default {
         })
     }, 500),
 
-    search_by_accession () {
-      this.$router.push({ name: 'Accession', params: { accession: this.accession } })
+    search_by_accession() {
+      const uppercaseAccession = this.accession.toUpperCase();
+      this.$router.push({ name: 'Accession', params: { accession: uppercaseAccession } });
     },
 
     search_by_random () {
