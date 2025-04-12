@@ -2,6 +2,7 @@
 print("TODO: Add fractionation metadata parsing from microbial_fraction paper")
 print("TODO: Integrate https://gold-ws.jgi.doe.gov/ GOLD API e.g. for publications associated with https://sandpiper.qut.edu.au/run/SRR5691149")
 print("TODO: Integrate average genome size from SMF file")
+print("TODO: Copy input files to /scratch so it is faster?")
 
 
 

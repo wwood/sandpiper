@@ -724,6 +724,7 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
 
         logging.warning("Last time I tried this is took ages (>1 days, likely months if I hadn't killed it) to import, so imported manually")
         logging.info("Importing {} OTU lines into DB".format(count))
+        # This could be made faster by turning off journaling etc.
         extern.run("sqlite3 {}".format(db_path), stdin= \
             '.separator "\\t"\n' \
             ".import {} otus_indexed".format(f.name))
