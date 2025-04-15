@@ -340,7 +340,8 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, kingfisher_a
                         else:
                             raise Exception("Unexpected correction field encountered: {}".format(field))
                 
-                # Must be done before any converstion to datetime
+                # Must be done before any converstion to datetime.
+                #
                 # For historical reasons, convert each column into a k, v array
                 # rather than a dict. This is not how the DB is structured, but
                 # is how the JSON is structured. So we need to convert it.
