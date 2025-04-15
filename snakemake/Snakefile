@@ -52,7 +52,7 @@ else:
 
 rule all:
     input:
-        '{test_or_prod}/{version}/backend_db/done'.format(
+        '{test_or_prod}/{version}/backend_db/otus_done'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION']),
         '{test_or_prod}/gather_bioproject_pubs/{date}/done'.format(
@@ -64,7 +64,7 @@ rule all:
 
 rule run_kingfisher_metadata:
     input:
-        chunk = 'data/chunk_definitions/{chunk}.txt'
+        chunk = ancient('data/chunk_definitions/{chunk}.txt')
     output:
         metadata='{test_or_prod}/kingfisher_metadata/{date}/metadata_chunks/{chunk}.csv'.format(
             date=config['KINGFISHER_METADATA_DATE'],
@@ -136,7 +136,7 @@ rule process_bioproject_pubs:
     shell:
         "pixi run -e sandpiper ../backend/bin/bioproject_metadata_process.py --xml-directory {config[TEST_OR_PROD]}/gather_bioproject_pubs/{config[BIOPROJECT_METADATA_DATE]} > {output.bioproject_publications}"
 
-rule generate_backend_db:
+rule generate_backend_db_start:
     input:
         bioproject_publications='{test_or_prod}/process_bioproject_pubs/{date}/bioproject_publications.csv'.format(
             date=config['BIOPROJECT_METADATA_DATE'],
@@ -151,7 +151,7 @@ rule generate_backend_db:
             date=config['KINGFISHER_METADATA_DATE'],
             test_or_prod=config['TEST_OR_PROD']),
     log:
-        '{test_or_prod}/{version}/backend_db/start_backend_db2.log'.format(
+        '{test_or_prod}/{version}/backend_db/start.log'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION'])
     output:
@@ -161,7 +161,7 @@ rule generate_backend_db:
     params:
         describe=os.path.abspath(config['METAPACKAGE_DESCRIBE']),
     benchmark:
-        'backend_db/{test_or_prod}/{version}/start_backend_db2.txt'.format(
+        'backend_db/{test_or_prod}/{version}/start.txt'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION'])
     resources:
@@ -171,27 +171,91 @@ rule generate_backend_db:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
         'mkdir -p {config[SCRATCH_DIR]} && ' \
-        'pixi run -e sandpiper ./bin/generate_backend_db --stage start --metapackage-describe {params.describe} --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --metadata-json-files {config[JSON_METADATA_FILES]} --run-blacklist db/metagenome_assembly_acc_list.csv --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION]} --kingfisher-annotate-path-list $SNAKE_WORKING_DIR/{input.kingfisher_metadata_file_list} --otu-table <(pigz -cd {config[OTU_TABLE]}) --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage start --run-blacklist db/metagenome_assembly_acc_list.csv --metapackage-describe {params.describe} --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --kingfisher-annotate-path-list $SNAKE_WORKING_DIR/{input.kingfisher_metadata_file_list} 2> $SNAKE_WORKING_DIR/{log} && ' \
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start'
 
-rule add_tags_to_backend_db:
+rule generate_backend_db_stage2:
     input:
-        '{test_or_prod}/{version}/backend_db/start_done'.format(
+        done = '{test_or_prod}/{version}/backend_db/start_done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION']),
+        bioproject_publications='{test_or_prod}/process_bioproject_pubs/{date}/bioproject_publications.csv'.format(
+            date=config['BIOPROJECT_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD']),
+        bioproject_done='{test_or_prod}/gather_bioproject_pubs/{date}/done'.format(
+            date=config['BIOPROJECT_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD']),
+        kingfisher_metadata_file_list='{test_or_prod}/kingfisher_metadata/{date}/kingfisher_metadata_file_list'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD']),
+        kingfisher_done='{test_or_prod}/kingfisher_metadata/{date}/done'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD']),
+    log:
+        '{test_or_prod}/{version}/backend_db/stage2.log'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION'])
     output:
-        touch('{test_or_prod}/{version}/backend_db/done'.format(
+        done = touch('{test_or_prod}/{version}/backend_db/stage2_done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION']))
+    params:
+        describe=os.path.abspath(config['METAPACKAGE_DESCRIBE']),
+    benchmark:
+        'backend_db/{test_or_prod}/{version}/stage2.txt'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
+    resources:
+        mem_mb=64000,
+        runtime='48h'
+    shell:
+        'export SNAKE_WORKING_DIR=`pwd` && ' \
+        'cd ../backend && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage stage2 --run-blacklist db/metagenome_assembly_acc_list.csv --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION]} --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_stage2'
+
+rule add_tags_to_backend_db:
+    input:
+        '{test_or_prod}/{version}/backend_db/stage2_done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
+    output:
+        touch('{test_or_prod}/{version}/backend_db/tags_done'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION']))
     log:
-        '{test_or_prod}/{version}/backend_db/tags_backend_db.log'.format(
+        '{test_or_prod}/{version}/backend_db/tags.log'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION'])
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
         # cp to remain idempotent, e.g. if this step fails
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_stage2 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
         'pixi run -e sandpiper ./bin/generate_backend_db --stage tags -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_tags'
+
+rule add_otus_to_backend_db:
+    input:
+        '{test_or_prod}/{version}/backend_db/tags_done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
+    output:
+        touch('{test_or_prod}/{version}/backend_db/otus_done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION']))
+    log:
+        '{test_or_prod}/{version}/backend_db/otus.log'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
+    shell:
+        'export SNAKE_WORKING_DIR=`pwd` && ' \
+        'cd ../backend && ' \
+        # cp to remain idempotent, e.g. if this step fails
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_tags {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
+        # cp the otus because scratch will be faster than /work/microbiome
+        'cp {config[OTU_TABLE]} {config[SCRATCH_DIR]}/otus && ' \
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage otus --otu-table <(pigz -cd {config[SCRATCH_DIR]}/otus) -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 db/'
 

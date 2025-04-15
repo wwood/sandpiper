@@ -178,7 +178,7 @@ export default {
       return 'https://scholar.google.com/scholar?q=' + this.metadata.metadata_parsed.bioproject + ' OR ' + this.accession
     },
     getNumReads: function () {
-      return Math.round(this.metadata.metadata_parsed.mbases / this.metadata.metadata_parsed.avgspotlen)
+      return Math.round(this.metadata.metadata_parsed.spots / 1e6)
     },
     sunburst_tree: function () {
       return this.condensed_tree.condensed

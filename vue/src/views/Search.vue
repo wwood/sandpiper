@@ -91,7 +91,8 @@ export default {
       this.$router.push({ name: 'SearchResults', params: { taxonomy: this.taxonomy } })
     },
     getAsyncData: debounce(function (name) {
-      if (!name.length) {
+      // if undefined or empty, reset the list
+      if (name === undefined || name === null || !name.length) {
         this.autocomplete_taxons = []
         return
       }
@@ -99,7 +100,7 @@ export default {
       fetchTaxonomySearchHints(name)
         .then(({ data }) => {
           this.autocomplete_taxons = data.taxonomies
-          if (this.autocomplete_taxons.length >= 30) {
+          if (this.autocomplete_taxons != undefined && this.autocomplete_taxons.length >= 30) {
             this.autocomplete_taxons.push('.. possibly more')
           }
         })

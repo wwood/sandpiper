@@ -243,35 +243,33 @@ class NcbiMetadata(db.Model):
     center_name = db.Column(db.String)
     experiment = db.Column(db.String, index=True)
     sample_name = db.Column(db.String)
-    instrument = db.Column(db.String)
+    model = db.Column(db.String)
     librarylayout = db.Column(db.String)
     libraryselection = db.Column(db.String)
     librarysource = db.Column(db.String)
     platform = db.Column(db.String)
     sample_acc = db.Column(db.String, index=True)
     biosample = db.Column(db.String, index=True)
-    organism = db.Column(db.String)
+    taxon_name = db.Column(db.String)
     sra_study = db.Column(db.String, index=True)
-    releasedate = db.Column(db.DateTime)
+    published = db.Column(db.DateTime)
     bioproject = db.Column(db.String, index=True)
-    mbytes = db.Column(db.Integer)
-    loaddate = db.Column(db.DateTime)
-    avgspotlen = db.Column(db.Integer)
-    mbases = db.Column(db.Integer)
+    # mbytes = db.Column(db.Integer)
+    # avgspotlen = db.Column(db.Integer)
+    bases = db.Column(db.Integer)
+    spots = db.Column(db.Integer)
     insertsize = db.Column(db.Integer)
     library_name = db.Column(db.String)
-    collection_date_sam = db.Column(db.DateTime)
+    collection_date_parsed = db.Column(db.DateTime)
     geo_loc_name_country_calc = db.Column(db.String)
     geo_loc_name_country_continent_calc = db.Column(db.String)
-    geo_loc_name_sam = db.Column(db.String)
+    geo_loc_name = db.Column(db.String)
     ena_first_public_run = db.Column(db.String)
     ena_last_update_run = db.Column(db.String)
-    sample_name_sam = db.Column(db.String)
 
     # Below are fields found from kingfisher annotate
     experiment_title = db.Column(db.String)
     library_strategy = db.Column(db.String)
-    instrument_model = db.Column(db.String) # model column in kingfisher
     organisation_name = db.Column(db.String)
     organisation_department = db.Column(db.String)
     organisation_institution = db.Column(db.String)
@@ -294,38 +292,62 @@ class NcbiMetadata(db.Model):
     otus = db.relationship('OtuIndexed', back_populates='ncbi_metadata', foreign_keys=[OtuIndexed.run_id])
 
     def to_displayable_dict(self):
+        biosample_attrs = [x for x in self.biosample_attributes if x.k != 'primary_search']
+        # Temporary fix - somehow study_links are in the wrong table atm. HACK!!
+        study_links_tmp = [x.v for  x in biosample_attrs if x.k == 'study_links']
+        print('tmp: '+str(study_links_tmp)+' type is '+str(type(study_links_tmp)))
+        # study_links_tmp currently a list of str e.g. ([{"db": "pubmed", "id": "29669589"}])
+        # convert to list of dicts
+        study_links = [study_link.to_displayable_dict() for study_link in self.study_links]
+        for sl0 in study_links_tmp:
+            try:
+                print("Evaluating study_links sl0: "+str(sl0))
+                sl = eval(sl0)
+                for s in sl:
+                    if 'id' in s:
+                        s['study_id'] = s['id']
+                        del s['id']
+                    if 'db' in s:
+                        s['database'] = s['db']
+                        del s['db']
+                    if 'label' in s:
+                        s['label'] = s['label']
+                    if 'url' in s:
+                        s['url'] = s['url']
+                    study_links.append(s)
+            except Exception as e:
+                print(f"Error parsing study_links: {e}")
         return dict(acc=self.acc,
                     assay_type=self.assay_type,
                     center_name=self.center_name,
                     experiment=self.experiment,
                     sample_name=self.sample_name,
-                    instrument=self.instrument,
+                    model=self.model,
                     librarylayout=self.librarylayout,
                     libraryselection=self.libraryselection,
                     librarysource=self.librarysource,
                     platform=self.platform,
                     sample_acc=self.sample_acc,
                     biosample=self.biosample,
-                    organism=self.organism,
+                    taxon_name=self.taxon_name,
                     sra_study=self.sra_study,
-                    releasedate=self.releasedate.strftime('%-d %B %Y') if self.releasedate else None,
+                    releasedate=self.published.strftime('%-d %B %Y') if self.published else None,
                     bioproject=self.bioproject,
-                    mbytes=self.mbytes,
-                    loaddate=self.loaddate,
-                    avgspotlen=self.avgspotlen,
-                    mbases=self.mbases,
+                    # bytes=self.bytes,
+                    # loaddate=self.loaddate,
+                    # avgspotlen=self.avgspotlen,
+                    bases=self.bases,
+                    spots=self.spots,
                     insertsize=self.insertsize,
                     library_name=self.library_name,
-                    collection_date_sam=self.collection_date_sam.strftime('%-d %B %Y') if self.collection_date_sam else None,
+                    collection_date_parsed=self.collection_date_parsed.strftime('%-d %B %Y') if self.collection_date_parsed else None,
                     geo_loc_name_country_calc=self.geo_loc_name_country_calc,
                     geo_loc_name_country_continent_calc=self.geo_loc_name_country_continent_calc,
-                    geo_loc_name_sam=self.geo_loc_name_sam,
+                    geo_loc_name=self.geo_loc_name,
                     ena_first_public_run=self.ena_first_public_run,
                     ena_last_update_run=self.ena_last_update_run,
-                    sample_name_sam=self.sample_name_sam,
                     experiment_title=self.experiment_title,
                     library_strategy=self.library_strategy,
-                    instrument_model=self.instrument_model,
                     organisation_department=self.organisation_department,
                     organisation_institution=self.organisation_institution,
                     organisation_street=self.organisation_street,
@@ -339,7 +361,7 @@ class NcbiMetadata(db.Model):
                     read1_length_stdev=self.read1_length_stdev,
                     read2_length_average=self.read2_length_average,
                     read2_length_stdev=self.read2_length_stdev,
-                    study_links=[study_link.to_displayable_dict() for study_link in self.study_links],
+                    study_links=study_links,
                     biosample_attributes=[{'k': x.k, 'v': x.v} for x in self.biosample_attributes if x.k != 'primary_search'],
                     parsed_sample_attributes=self.parsed_sample_attributes[0].to_displayable_dict())
 

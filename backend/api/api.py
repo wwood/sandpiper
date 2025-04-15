@@ -43,7 +43,7 @@ def generate_cache():
 
     if sandpiper_stats_cache is None or len(sandpiper_stats_cache) != 3:
         sandpiper_stats_cache = {}
-        sandpiper_stats_cache['sandpiper_total_terrabases'] = db.session.query(func.sum(NcbiMetadata.mbases)).scalar()/10**6
+        sandpiper_stats_cache['sandpiper_total_terrabases'] = db.session.query(func.sum(NcbiMetadata.bases)).scalar()/10**12
         sandpiper_stats_cache['sandpiper_num_runs'] = db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar() #NcbiMetadata.query.distinct(NcbiMetadata.acc).count()
         sandpiper_stats_cache['sandpiper_num_bioprojects'] = db.session.query(func.count(distinct(NcbiMetadata.bioproject))).scalar()
     if sandpiper_taxonomy_id_to_full_name is None:
@@ -207,8 +207,12 @@ def fetch_metadata(sample_name):
         host_mature = 'Eukaryote host-associated'
     
     metadata_parsed = {
+        'mbases': round(metadata_dict['bases']/1e6),
+        'spots': metadata_dict['spots'],
+        'organism': metadata_dict['taxon_name'],
+        'instrument': metadata_dict['model'],
         'collection_time': metadata_dict['parsed_sample_attributes']['collection_year'],
-        'release_month': meta.releasedate.strftime('%Y'),
+        'release_month': meta.published.strftime('%Y'),
         'latitude': metadata_dict['parsed_sample_attributes']['latitude'],
         'longitude': metadata_dict['parsed_sample_attributes']['longitude'],
         'num_related_runs': related_run_count(meta.bioproject)-1,
@@ -216,6 +220,10 @@ def fetch_metadata(sample_name):
         'smf': round(metadata_dict['parsed_sample_attributes']['smf']),
         'smf_warning': metadata_dict['parsed_sample_attributes']['smf_warning'],
         'known_species_fraction': round(metadata_dict['parsed_sample_attributes']['known_species_fraction']*100),
+        'sample_name': metadata_dict['sample_name'],
+        'study_title': metadata_dict['study_title'],
+        'bioproject': metadata_dict['bioproject'],
+        'study_abstract': metadata_dict['study_abstract'],
     }
 
     read_length_summary = None
@@ -228,43 +236,59 @@ def fetch_metadata(sample_name):
     # Change format to be classification => [[name, description], [name, description], ..]
     # for fields that are known already
     d2 = {}
+    basic_metadata_metadata = {}
     for info in ncbi_metadata_infos.values():
-        if info.name in metadata_dict and metadata_dict[info.name] is not None:
-            if str(metadata_dict[info.name]).lower().strip() in ACTUALLY_MISSING:
-                # Do not display missing / fake data
-                continue
+        basic_metadata_metadata[info.name] = info
+        basic_metadata_metadata[info.name.replace('_', ' ')] = info
+        basic_metadata_metadata[info.name.replace(' ', '_')] = info
 
-            if info.name in ['sample_name', 'sample_name_sam', 'study_title',
-                'organism','mbases','instrument','bioproject','avgspotlen']:
-                metadata_parsed[info.name] = metadata_dict[info.name]
-            elif info.name == 'study_abstract':
-                metadata_parsed[info.name] = metadata_dict[info.name]
-                continue # No need to repeat this in the metadata table when it is up the top.
-
+    def add_annotation(k, v):
+        if v is None or str(v).lower().strip() in ACTUALLY_MISSING:
+            # Do not display missing / fake data
+            return
+        if k in basic_metadata_metadata:
+            info = basic_metadata_metadata[k]
             to_add = {
-                'k': info.nice_name, 
-                'v': metadata_dict[info.name], 
-                'description': info.description, 
+                'k': basic_metadata_metadata[k].nice_name,
+                'v': v,
+                'description': basic_metadata_metadata[k].description,
                 'is_custom': False}
             if info.classification in d2:
                 d2[info.classification].append(to_add)
             else:
                 d2[info.classification] = [to_add]
-            del metadata_dict[info.name]
+        else:
+            to_add = {
+                'k': k.replace('_', ' '),
+                'v': v,
+                'description': None,
+                'is_custom': True}
+            # by default, associate with sample
+            if SAMPLE_INFO_TYPE_METADATA not in d2:
+                d2[SAMPLE_INFO_TYPE_METADATA] = []
+            d2[SAMPLE_INFO_TYPE_METADATA].append(to_add)
+
+    for k, v in metadata_dict.items():
+        if k in ['acc', 'biosample_attributes', 'study_links', 'parsed_sample_attributes', 'study_title', 'study_abstract']:
+            continue
+        add_annotation(k, v)
 
     # Give the biosample attributes a more friendly name, and annotate them as
     # being custom or not.
     biosample_dict = []
-    sam_regex = re.compile('_sam$')
+    sam_regex = re.compile(r'_sam$')
 
     for bs in metadata_dict['biosample_attributes']:
         k_original = bs['k']
         k = sam_regex.sub('', k_original)
         v = bs['v']
 
-        if str(v).lower().strip() in ACTUALLY_MISSING:
+        if k_original in ['Gbp', 'run_size', 'study_links']: continue # This is a duplicate of mbases / spots
+        # study_links is a temperorary fix
+
+        if v is None or str(v).lower().strip() in ACTUALLY_MISSING:
             # Do not display missing / fake data
-            continue    
+            continue
         
         if k in biosample_attribute_definitions:
             biosample_dict.append({ 
@@ -274,12 +298,15 @@ def fetch_metadata(sample_name):
                 'description': biosample_attribute_definitions[k].description })
         else:
             # Submitters can upload custom attributes
-            biosample_dict.append({ 'k': k.replace('_',' '), 'v': v, 'is_custom': True, 'description': None })
+            add_annotation(k, v)
 
+    if SAMPLE_INFO_TYPE_METADATA not in d2:
+        d2[SAMPLE_INFO_TYPE_METADATA] = []
     d2[SAMPLE_INFO_TYPE_METADATA].extend(biosample_dict)
 
     # Some are double e.g. https://sandpiper.qut.edu.au/run/SRR9224309 has 2 PubMed study_links
     final_study_links = []
+    # print("Study links from dict: {}".format(metadata_dict['study_links']))
     for study_link_pair in metadata_dict['study_links']:
         if 'database' in study_link_pair:
             db = study_link_pair['database']
@@ -297,6 +324,11 @@ def fetch_metadata(sample_name):
             if study_link_pair not in final_study_links:
                 final_study_links.append(study_link_pair)
     d2['study_links'] = final_study_links
+
+    # Order the values in each classification dict in alphabetical order
+    for k, v in d2.items():
+        if len(v) > 0 and 'k' in v[0]: # don't sort e.g. study_links
+            d2[k] = sorted(v, key=lambda x: x['k'].lower())
 
     return jsonify({ 
         'metadata': d2,
@@ -344,8 +376,8 @@ def taxonomy_search_run_data(taxon):
                     'sample_acc': c.acc,
                     'relative_abundance': round(c.relative_abundance*100,2),
                     'coverage': round(c.filled_coverage, 2),
-                    'organism': c.organism.replace(' metagenome',''),
-                    'release_year': c.releasedate.strftime('%Y'),}
+                    'organism': c.taxon_name.replace(' metagenome',''),
+                    'release_year': c.published.strftime('%Y'),}
                     for c in condensed_profile_hits],                
             }
         })
@@ -362,12 +394,15 @@ def taxonomy_search_csv(taxon):
                 c.acc,
                 round(c.relative_abundance*100,2),
                 round(c.filled_coverage, 2),
-                c.organism,
-                c.releasedate.strftime('%Y'),
-                c.host_or_not_mature]
+                c.taxon_name,
+                c.published.strftime('%Y'),
+                c.host_or_not_mature,
+                c.latitude,
+                c.longitude,]
                 for c in condensed_profile_hits],
-            columns=['sample', 'relative_abundance', 'coverage', 'organism', 'release_year', 
-            'eukaryotic_host_association']
+            columns=['sample', 'relative_abundance', 'coverage', 'taxon_name', 'release_year', 
+            'eukaryotic_host_association',
+            'latitude', 'longitude']
         )
         response = make_response(df.to_csv(index=False, header=True))
         cd = 'attachment; filename=sandpiper_v{}_{}_sample_coverage.csv'.format(__version__, taxon)
@@ -406,10 +441,11 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
                 NcbiMetadata.acc,
                 CondensedProfile.relative_abundance,
                 CondensedProfile.filled_coverage,
-                NcbiMetadata.organism,
-                NcbiMetadata.releasedate,
+                NcbiMetadata.taxon_name,
+                NcbiMetadata.published,
                 # TODO: Add experiment title here, not currently in DB
                 ParsedSampleAttribute.host_or_not_mature,
+                ParsedSampleAttribute.latitude, ParsedSampleAttribute.longitude,
             ).where(CondensedProfile.run_id == NcbiMetadata.id
             ).where(ParsedSampleAttribute.run_id == NcbiMetadata.id)
         else:
@@ -417,8 +453,8 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
                 NcbiMetadata.acc,
                 CondensedProfile.relative_abundance,
                 CondensedProfile.filled_coverage,
-                NcbiMetadata.organism,
-                NcbiMetadata.releasedate
+                NcbiMetadata.taxon_name,
+                NcbiMetadata.published,
                 # TODO: Add experiment title here, not currently in DB
             ).where(CondensedProfile.run_id == NcbiMetadata.id)
 
@@ -455,7 +491,7 @@ def taxonomy_search_hints(taxon):
 
     # Underscores are wildcards, but we don't want that since there are names like p__Actinobacteria
     sql = "select name from taxonomies where name like :taxon escape \'\\\' order by name limit 30"
-    results = db.session.execute(text(sql), {'taxon': '%'+taxon.replace('_','\_')+'%'})
+    results = db.session.execute(text(sql), {'taxon': '%'+taxon.replace('_','\\_')+'%'})
     taxonomies = []
     for r in results:
         taxonomies.append(r)
@@ -549,7 +585,7 @@ def random_run():
             )
 
     if two_gbp == True:
-        stmt = stmt.where(NcbiMetadata.mbases >= 2000)
+        stmt = stmt.where(NcbiMetadata.bases >= 2e9)
 
     ran = db.session.execute(stmt).fetchone()
 
@@ -593,7 +629,7 @@ def project():
                 'sample_name': p[0].sample_name,
                 'library_name': p[0].library_name,
                 'experiment_title': p[0].experiment_title,
-                'gbp': round(p[0].mbases/1000, 2),
+                'gbp': round(p[0].bases/1e9, 2),
                 'smf': p[1],
                 'smf_warning': p[2],
                 'known_species_fraction': round(p[3]*100,1),

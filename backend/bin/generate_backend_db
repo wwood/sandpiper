@@ -39,6 +39,7 @@ import tempfile
 
 import extern
 import pandas as pd
+import polars as pl
 from tqdm import tqdm
 import sqlite3
 
@@ -48,7 +49,6 @@ from api.application import generate_app
 # from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import update, bindparam, select, insert, func
-from sqlalchemy.orm import selectinload
 
 from api.models import *
 
@@ -296,7 +296,7 @@ def iterate_condensed_profile_split_taxonomy(entries):
         yield row, species_aware_taxonomies
 
 
-def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_json_files, corrections):
+def create_sample_metadata(db, condensed_otu_table_path, blacklist, kingfisher_annotate_files, corrections):
     '''Load metadata including directly parsed metadata, using only samples in the condensed otu table'''
 
     # Only load metadata for samples that are in the DB
@@ -307,12 +307,13 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
     attribute_count = 0
     run_accession_to_id = {}
     num_corrections = 0
-    for path in metadata_json_files:
+    for path in kingfisher_annotate_files:
+        logging.info("Opening {}".format(path))
         with open(path) as f:
-            for line in f:
-                j = json.loads(line)
-
-                acc = j['acc']
+            # Read forcing str on all columns to avoid issues with "n/a" etc
+            df = pl.read_csv(f, separator='\t', has_header=True, infer_schema=False)
+            for j in df.rows(named=True):
+                acc = j['run']
                 if acc not in samples_of_interest:
                     logging.debug("Skipping {}".format(acc))
                     continue
@@ -332,79 +333,99 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, metadata_jso
                                 logging.info("Correcting {}: '{}' from '{}' to '{}'".format(
                                     acc, field, correction['old_value'], correction['corrected_value']))
                             else:
-                                raise Exception("For acc {} Did not find expected old value {} in {}".format(
-                                    acc, correction['old_value'], j[field]))
-                        elif field in [kv['k'] for kv in j['attributes']]:
-                            for i, kv in enumerate(j['attributes']):
-                                if kv['k'] == field:
-                                    if (type(correction['old_value']) == str and kv['v'] == correction['old_value']) or \
-                                        (type(correction['old_value']) == list and kv['v'] in correction['old_value']):
-                                        j['attributes'][i]['v'] = correction['corrected_value']
-                                        logging.info("Correcting {}: '{}' from '{}' to '{}'".format(
-                                            acc, field, correction['old_value'], correction['corrected_value']))
-                                    else:
-                                        raise Exception(
-                                            "For acc {} Did not find expected old value '{}' in '{}'".format(
-                                                acc, correction['old_value'], kv['v']))
+                                msg = "For acc {} Did not find expected old value {} in {}".format(
+                                    acc, correction['old_value'], j[field])
+                                logging.error(msg)
+                                # raise Exception()
                         else:
-                            logging.error("Unexpected correction field encountered: {}".format(field))
-                            # raise Exception("Unexpected correction field encountered: {}".format(field))
+                            raise Exception("Unexpected correction field encountered: {}".format(field))
+                
+                # Must be done before any converstion to datetime
+                # For historical reasons, convert each column into a k, v array
+                # rather than a dict. This is not how the DB is structured, but
+                # is how the JSON is structured. So we need to convert it.
+                j2 = [{'k': column, 'v': j[column]} for column in j.keys()]
+                attributes = prepare_attributes(j2)
 
-                attributes = prepare_attributes(j['attributes'])
-
-                del j['attributes']
+                # del j['attributes']
                 # Convert datetimes
                 # releasedate = db.Column(db.DateTime, nullable=False)
                 # loaddate = db.Column(db.DateTime, nullable=False)
                 # collection_date_sam = db.Column(db.DateTime, nullable=False)
-                for d in ['releasedate', 'loaddate', 'collection_date']:
+                for d in ['collection_date', 'published']:
                     if d in j and j[d] is not None and j[d].lower() not in ACTUALLY_MISSING:
                         try:
-                            j[d] = iso8601.parse_date(j[d])
+                            if d == 'collection_date':
+                                new_key = 'collection_date_parsed'
+                            else:
+                                new_key = d
+                            j[new_key] = iso8601.parse_date(j[d])
                         except iso8601.ParseError:
                             logging.warning("Unexpected date value for %s: %s" % (acc, j[d]))
 
-                if 'biosamplemodel' in j:
-                    del j['biosamplemodel_sam']  #Assume it is defined in the associated sample metadata
+                # if 'biosamplemodel' in j:
+                #     del j['biosamplemodel_sam']  #Assume it is defined in the associated sample metadata
 
-                # Unclear to me why these exist as arrays rather than single values, but eh
-                for d in ['geo_loc_name', 'ena_first_public_run', 'ena_last_update_run', 'sample_name']:
-                    if d in j:
-                        if len(j[d]) > 1:
-                            logging.warning(
-                                "Unexpectedly found a metadata array for {} in {}: {}, just taking the first one".
-                                format(d, acc, j[d]))
-                            j[d] = j[d][0]
-                        try:
-                            j[d] = j[d][0]
-                        except IndexError:
-                            del j[d]
-                meta = NcbiMetadata(**j)
+                # Create a new NcbiMetadata entry, which is the dict, but only include columns that are in the DB column names
+                ncbi_metadata_columns = NcbiMetadata.__table__.columns.keys()
+                # ncbi_metadata_datetime_columns = [col for col in ncbi_metadata_columns if NcbiMetadata.__table__.columns[col].type.python_type == datetime]
+                for_ncbi_metadata = {}
+                not_for_ncbi_metadata = {}
+                for (k, v) in j.items():
+                    if k in ncbi_metadata_columns and k != 'id': #.e.g ERR10798492
+                        for_ncbi_metadata[k] = v
+                    else:
+                        if v is not None:
+                            not_for_ncbi_metadata[k] = v
+                for_ncbi_metadata['acc'] = acc
+                del not_for_ncbi_metadata['run']
+
+                meta = NcbiMetadata(**for_ncbi_metadata)
                 db.session.add(meta)
                 last_metadata_id += 1
                 run_accession_to_id[acc] = last_metadata_id
 
                 # Write biosample attributes
-                for attribute in attributes:
+                for k, v in not_for_ncbi_metadata.items():
                     # Don't record bases/bytes as these aren't really biosample attributes
-                    if attribute['k'] not in ('bases', 'bytes'):
-                        attribute['run_id'] = last_metadata_id
+                    if k not in ('bases', 'bytes'):
+                        attribute = {
+                            'run_id': last_metadata_id,
+                            'k': k,
+                            'v': v
+                        }
                         db.session.add(BiosampleAttribute(**attribute))
                         attribute_count += 1
 
-                # Parsed data
-                j['attributes'] = attributes
-                lat_lon = parse_lat_lons(j['acc'], parse_json_to_lat_lon_dict(j))
+                # Parsed data                            
+                # Unclear to me why these exist as arrays rather than single values, but eh
+                for d in ['geo_loc_name', 'ena_first_public_run', 'ena_last_update_run', 'sample_name']:
+                    if d in attributes:
+                        if len(attributes[d]) > 1:
+                            logging.warning(
+                                "Unexpectedly found a metadata array for {} in {}: {}, just taking the first one".
+                                format(d, acc, j[d]))
+                            attributes[d] = attributes[d][0]
+                        try:
+                            attributes[d] = attributes[d][0]
+                        except IndexError:
+                            del attributes[d]
+
+                attributes = {
+                    'acc': acc,
+                    'attributes': attributes
+                }
+                lat_lon = parse_lat_lons(acc, parse_json_to_lat_lon_dict(attributes))
                 # logging.info("Parsed lat_lon to {}".format(lat_lon))
-                collection_year, collection_month = parse_extra_sample_attributes(j, ['collection_date'])
+                collection_year, collection_month = parse_extra_sample_attributes(attributes, ['collection_date'])
                 if collection_year == '':
                     collection_year = None
                 if collection_month == '':
                     collection_month = None
-                depth = parse_extra_sample_attributes(j, ['depth'])[0]
+                depth = parse_extra_sample_attributes(attributes, ['depth'])[0]
                 if depth == '':
                     depth = None
-                temperature = parse_extra_sample_attributes(j, ['temperature'])[0]
+                temperature = parse_extra_sample_attributes(attributes, ['temperature'])[0]
                 if temperature == '':
                     temperature = None
                 db.session.add(
@@ -618,16 +639,28 @@ def add_smf(db, run_accession_to_id, smf_tsv):
     db.session.commit()
     logging.info("Wrote {} SMF predictions to DB".format(num_smf_predictions))
 
+
 def read_run_accession_to_id(db):
     # select NcbiMetadata.id, NcbiMetadata.acc
-    # from NcbiMetadata
-    raise
+    # from NcbiMetadata -> return dict
+    run_accession_to_id = {x[1]: x[0] for x in db.session.query(NcbiMetadata.id, NcbiMetadata.acc).all()}
+    logging.info("Loaded {} run accessions".format(len(run_accession_to_id)))
+    return run_accession_to_id
+
+
+def read_taxonomy_name_to_id(db):
+    # select Taxonomy.id, Taxonomy.name
+    # from Taxonomy -> return dict
+    taxonomy_name_to_id = {x[1]: x[0] for x in db.session.query(Taxonomy.id, Taxonomy.name).all()}
+    logging.info("Loaded {} taxonomies".format(len(taxonomy_name_to_id)))
+    return taxonomy_name_to_id
+
 
 def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id, db_path):
     # For each OTU in the input, create a new line in the otus_indexed table,
     # which is supposed to have better query performance when searhcing for
     # specific samples.
-    logging.info("Indexing OTU table")
+    logging.info("Creating and indexing OTU table")
 
     count = 0
 
@@ -725,9 +758,21 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
         logging.warning("Last time I tried this is took ages (>1 days, likely months if I hadn't killed it) to import, so imported manually")
         logging.info("Importing {} OTU lines into DB".format(count))
         # This could be made faster by turning off journaling etc.
-        extern.run("sqlite3 {}".format(db_path), stdin= \
+        # sqlite3 your_database.db
+        # sqlite> BEGIN;
+        # sqlite> PRAGMA journal_mode = OFF;
+        # sqlite> PRAGMA synchronous = OFF;
+        # sqlite> .mode csv
+        # sqlite> .import your_file.csv your_table
+        # sqlite> COMMIT;
+        extern.run("sqlite3 {}".format(db_path), stdin=
+            'PRAGMA journal_mode = OFF;\n' \
+            'PRAGMA synchronous = OFF;\n' \
+            # 'PRAGMA temp_store = MEMORY;\n' \ # might make it faster? Untested and eh for now
+            'BEGIN;\n' \
             '.separator "\\t"\n' \
-            ".import {} otus_indexed".format(f.name))
+            '.import {} otus_indexed\n' \
+            'COMMIT;'.format(f.name))
         logging.info("Imported {} OTU lines into DB".format(db.session.query(OtuIndexed).count()))
 
     # drop the otus table since we don't need it anymore
@@ -835,7 +880,7 @@ def add_bioproject_associated_publications(db, db_path, tsv_path):
             run_ids = bioproject_to_run_ids[row.bioproject]
             for run_id in run_ids:
                 try:
-                    current_study_links = run_id_to_study_link_data[link.run_id]
+                    current_study_links = run_id_to_study_link_data[run_id]
                 except KeyError:
                     current_study_links = []
                 already_there = False
@@ -864,7 +909,6 @@ def add_bioproject_associated_publications(db, db_path, tsv_path):
 
 
 def index_condensed_profiles_multi_column(db, db_path):
-
     # This vastly speeds up search by taxonomy
     logging.info("Indexing condensed profiles tax+relabund ..")
     extern.run("sqlite3 {}".format(db_path), stdin= \
@@ -935,7 +979,7 @@ if __name__ == '__main__':
     parent_parser.add_argument('--bioproject-associated-publications', help='tsv from bioprjoect_metadata.py')
     parent_parser.add_argument('--smf-file', help='SMF file to read')
 
-    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'tags'], required=True)
+    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'stage2', 'tags', 'otus'], required=True)
 
     args = parent_parser.parse_args()
 
@@ -958,26 +1002,7 @@ if __name__ == '__main__':
     app.config['SQLALCHEMY_ECHO'] = args.debug is True
     db = SQLAlchemy(app)
     with app.app_context():
-
-        if args.stage == 'start':
-            if not args.metapackage_describe:
-                raise Exception("metapackage-describe must be specified for stage 'start'")
-            if not args.otu_table:
-                raise Exception("otu-table must be specified for stage 'start'")
-            if not args.condensed_otu_table:
-                raise Exception("condensed-otu-table must be specified for stage 'start'")
-            if not args.metadata_json_files:
-                raise Exception("metadata-json-files must be specified for stage 'start'")
-            if not args.host_predictions_tsv:
-                raise Exception("host-predictions-tsv must be specified for stage 'start'")
-            if not args.bioproject_associated_publications:
-                raise Exception("bioproject-associated-publications must be specified for stage 'start'")
-            if not args.smf_file:
-                raise Exception("smf-file must be specified for stage 'start'")
-
-            # Read corrections in
-            corrections = read_corrections()
-
+        if args.stage == 'start' or args.stage == 'stage2':
             blacklist = set()
             if args.run_blacklist:
                 with open(args.run_blacklist) as f:
@@ -985,6 +1010,20 @@ if __name__ == '__main__':
                         if line != 'acc':
                             blacklist.add(line.strip())
                 logging.info("Ignoring {} runs".format(len(blacklist)))
+            else:
+                logging.info("No run blacklist specified")
+                blacklist = set()
+            
+        if args.stage == 'start':
+            if not args.metapackage_describe:
+                raise Exception("metapackage-describe must be specified for stage 'start'")
+            if not args.condensed_otu_table:
+                raise Exception("condensed-otu-table must be specified for stage 'start'")
+            # if not args.metadata_json_files:
+            #     raise Exception("metadata-json-files must be specified for stage 'start'")
+
+            # Read corrections in
+            corrections = read_corrections()
 
             # Create new DB
             logging.info("Removing old DB if it exists ..")
@@ -1002,30 +1041,38 @@ if __name__ == '__main__':
             # Create markers
             create_markers_table(db, args.metapackage_describe)
 
+            kingfisher_metadata_file_paths = []
+            if args.kingfisher_annotate_path:
+                kingfisher_metadata_file_paths = [args.kingfisher_annotate_path]
+            if args.kingfisher_annotate_path_list:
+                with open(args.kingfisher_annotate_path_list) as f:
+                    for line in f:
+                        file_path = line.strip()
+                        kingfisher_metadata_file_paths.append(file_path)
+
             # Create sample metadata table, restricting it to just those samples
             # that we have condensed profiles for.
             run_accession_to_id = create_sample_metadata(db, args.condensed_otu_table, blacklist,
-                                                         args.metadata_json_files, corrections)
+                                                         kingfisher_metadata_file_paths, corrections)
+
+        elif args.stage == 'stage2':
+            if not args.host_predictions_tsv:
+                raise Exception("host-predictions-tsv must be specified for stage 'stage2'")
+            if not args.bioproject_associated_publications:
+                raise Exception("bioproject-associated-publications must be specified for stage 'stage2'")
+            if not args.smf_file:
+                raise Exception("smf-file must be specified for stage 'stage2'")
+
+            run_accession_to_id = read_run_accession_to_id(db)
 
             add_smf(db, run_accession_to_id, args.smf_file)
 
             taxonomy_name_to_id = fill_condensed_and_taxonomy_tables(db, sqlite_db_path, args.condensed_otu_table,
                                                                      blacklist, run_accession_to_id)
 
-            if args.kingfisher_annotate_path:
-                add_metadata_from_kingfisher_annotate(db, run_accession_to_id, args.kingfisher_annotate_path)
-            if args.kingfisher_annotate_path_list:
-                with open(args.kingfisher_annotate_path_list) as f:
-                    for line in f:
-                        file_path = line.strip()
-                        logging.info("Adding metadata from {} ..".format(file_path))
-                        add_metadata_from_kingfisher_annotate(db, run_accession_to_id, file_path)
-
             add_bioproject_associated_publications(db, sqlite_db_path, args.bioproject_associated_publications)
 
             add_host_predictions(db, run_accession_to_id, args.host_predictions_tsv)
-
-            index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, sqlite_db_path)
         
             add_host_prediction_counts_to_taxonomy(db, sqlite_db_path)
 
@@ -1033,6 +1080,14 @@ if __name__ == '__main__':
 
         elif args.stage == 'tags':
             add_enriched_community_tags(db, sqlite_db_path)
+
+        elif args.stage == 'otus':
+            if not args.otu_table:
+                raise Exception("otu-table must be specified for stage {}".format(args.stage))
+
+            run_accession_to_id = read_run_accession_to_id(db)
+            taxonomy_name_to_id = read_taxonomy_name_to_id(db)
+            index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, sqlite_db_path)
 
         else:
             raise Exception("Unknown stage {}".format(args.stage))

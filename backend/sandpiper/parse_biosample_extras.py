@@ -12,7 +12,7 @@ import iso8601
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 
-ACTUALLY_MISSING = set([s.lower() for s in [
+ACTUALLY_MISSING = set([None]+[s.lower() for s in [
     'missing','not applicable','NA','Missing','Not collected','not provided','Missing: Not provided','', 'uncalculated','not applicable','no applicable','unspecified','restricted access']])
 
 def validate_lat_lon(lat, lon):
@@ -23,18 +23,7 @@ def validate_lat_lon(lat, lon):
 def parse_json_to_lat_lon_dict(j):
     lat_long_dict = {}
 
-    biosample_keys_for_lat_long_parsing = [
-        'lat_lon',
-        'geographic_location__latitude',
-        'geographic_location__longitude',
-        'latitude_start',
-        'longitude_start',
-        'latitude',
-        'longitude',
-        'sampling_event__latitude__start',
-        'sampling_event__longitude__start',
-        'geographic_location__latitude_and_longitude'
-    ]
+    biosample_keys_for_lat_long_parsing = LAT_LON_KEYS
 
     for attr in j['attributes']:
         if attr['k'] in biosample_keys_for_lat_long_parsing and attr['v'].lower() not in ACTUALLY_MISSING:
@@ -275,28 +264,13 @@ def parse_date(acc, date):
     # return ['']*2
 
 def parse_lat_lons(acc, lat_long_dict):
-    single_part_keys = [
-        'lat_lon',
-        'geographic_location__latitude_and_longitude'
-    ]
-    two_part_keys = [
-        ['geographic_location__latitude',
-        'geographic_location__longitude'],
-        ['latitude_start',
-        'longitude_start'],
-        ['latitude',
-        'longitude'],
-        ['sampling_event__latitude__start',
-        'sampling_event__longitude__start'],
-    ]
-
     to_return = []
 
     got_a_lat_lon = False
-    for k in single_part_keys:
+    for k in LAT_LON_SINGLE_PART_KEYS:
         if k in lat_long_dict:
             returned = parse_lat_lon_sam(lat_long_dict[k])
-            if returned is not None: # Happens when validation fails
+            if returned is not None:  # Happens when validation fails
                 got_a_lat_lon, lat_lon = returned
                 if got_a_lat_lon:
                     to_return.append(lat_lon[0])
@@ -304,7 +278,7 @@ def parse_lat_lons(acc, lat_long_dict):
                     break
 
     if not got_a_lat_lon:
-        for k in two_part_keys:
+        for k in LAT_LON_TWO_PART_KEYS:
             if k[0] in lat_long_dict and k[1] in lat_long_dict:
                 got_a_lat_lon, lat_lon = parse_two_part_lat_lon(acc, lat_long_dict[k[0]], lat_long_dict[k[1]])
                 if got_a_lat_lon:
@@ -318,6 +292,22 @@ def parse_lat_lons(acc, lat_long_dict):
 
     return to_return
 
+
+LAT_LON_SINGLE_PART_KEYS = [
+    'lat_lon',
+    'geographic location (latitude and longitude)'
+]
+LAT_LON_TWO_PART_KEYS = [
+    ['geographic location (latitude)',
+    'geographic location (longitude)'],
+    ['latitude_start',
+    'longitude_start'],
+    ['latitude',
+    'longitude'],
+    ['sampling event (latitude)_start',
+    'sampling event (longitude)_start'],
+]
+LAT_LON_KEYS = [key for sublist in (LAT_LON_SINGLE_PART_KEYS, LAT_LON_TWO_PART_KEYS) for key in (sublist if isinstance(sublist, list) else [sublist])]
 # Special parsing methods
 parsing_hash = {
     'depth': parse_depth,
@@ -333,7 +323,7 @@ def parse_attribute_fields(j, extra_sample_keys):
     result_hash = {}
 
     for attr in j['attributes']:
-        if attr['k'] in extra_sample_keys and attr['v'].lower() not in ACTUALLY_MISSING:
+        if attr['v'] and attr['k'] in extra_sample_keys and attr['v'].lower() not in ACTUALLY_MISSING:
             if attr['k'] in parsing_hash:
                 # Special parsing function
                 result_hash[attr['k']] = parsing_hash[attr['k']](j['acc'], attr['v'])
@@ -368,6 +358,8 @@ def prepare_attributes(attributes):
 
     attr2 = []
     for attr in attributes:
+        if attr['v'] is None:
+            continue
         # apply re1 and re2, replace with ''
         real_key = re1.sub('', attr['k'])
         real_key = re2.sub('', real_key)

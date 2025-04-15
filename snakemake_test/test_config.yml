@@ -19,3 +19,4 @@ HOST_OR_NOT_PREDICTION: '../test/data/more_runs/host_or_not_preds.tsv.gz'
 SMF_FILE: '../test/data/more_runs/smf.csv'
 
 TEST_OR_PROD: 'test'
+SCRATCH_DIR: '/scratch/sandpiper'
