@@ -11,7 +11,7 @@ class BaseConfig:
     DB_NAME = 'sandpiper_31.sqlite3'
     # DB_NAME = 'sandpiper_18_test.sqlite3'
     LYRA_DB_PATH = 'sqlite:///'+os.path.join(os.path.dirname(__file__), '../db/{}'.format(DB_NAME))
-    LYRA_DB_PATH = 'sqlite:////scratch/sandpiper/sandpiper_33.sqlite3.after_tags'
+    LYRA_DB_PATH = 'sqlite:////scratch/sandpiper/sandpiper_33.sqlite3'
     # LYRA_DB_PATH = 'sqlite:////scratch/sandpiper/sandpiper_19_test.sqlite3'
     # '+os.path.join(os.path.dirname(__file__), '../db/{}'.format(DB_NAME))
     PROD_DB_PATH = LYRA_DB_PATH #'sqlite:////data/{}'.format(DB_NAME)

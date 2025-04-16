@@ -50,3 +50,9 @@ export function fetchRandomAccession(host: boolean, ecological: boolean, two_gbp
 export function fetchAccession(accession: string) {
   return axios.get(`${API_URL}/accession/${accession}`)
 }
+
+export function verifyRecaptcha (token: string) {
+  return axios.post(`${API_URL}/verify-recaptcha`, {
+    token
+  })
+}

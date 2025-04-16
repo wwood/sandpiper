@@ -188,7 +188,7 @@ export default {
         .attr("stroke", "black")
         .style("stroke-width", function(d){ return d.data.key })
         .style("opacity", 1)
-      console.log('species_fraction: ' + known_species_fraction)
+      // console.log('species_fraction: ' + known_species_fraction)
 
 
       function clicked (_event, p) {

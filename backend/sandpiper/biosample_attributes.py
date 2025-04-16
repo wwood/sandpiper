@@ -71,13 +71,13 @@ class NcbiMetadataExtraInfos:
         ['geo_loc_name_sam', 'geographic location', SAMPLE_INFO_TYPE_METADATA, 'Full location of collection'],
         ['ena_first_public_run', IDENTIFIERS_TYPE_METADATA, 'Date when INSDC partner record was public'],
         ['ena_last_update_run', IDENTIFIERS_TYPE_METADATA, 'Date when INSDC partner record was updated'],
-        ['sample accession', 'INSDC sample name', SAMPLE_INFO_TYPE_METADATA, 'INSDC sample name'],
+        ['sample accession', 'INSDC sample name', IDENTIFIERS_TYPE_METADATA, 'SRA Sample accession in the form of SRS######## (ERS or DRS for INSDC partners)'],
 
         # Below descriptions were cobbled together from submit ncbi template sheets, etc.
         ['experiment_title',SAMPLE_INFO_TYPE_METADATA,'Title of the experiment the sequencing is associated with'],
         ['library_strategy',SEQUENCING_TYPE_METADATA,'The strategy used to prepare nucleic acids for sequencing e.g. WGS, AMPLICON'],
         ['instrument_model',SEQUENCING_TYPE_METADATA,'The specific model used for sequencing'],
-        ['submitter', 'organisation', CONTACT_TYPE_METADATA,'Part of submitter contact details'],
+        ['submitter', 'submitter', CONTACT_TYPE_METADATA,'Part of submitter contact details'],
         ['organisation', 'organisation', CONTACT_TYPE_METADATA,'Part of submitter contact details'],
         ['organisation_name', 'organisation', CONTACT_TYPE_METADATA,'Part of submitter contact details'],
         ['organisation_department', 'organisation: department', CONTACT_TYPE_METADATA,'Part of submitter contact details'],
@@ -86,6 +86,7 @@ class NcbiMetadataExtraInfos:
         ['organisation_city', 'organisation: city', CONTACT_TYPE_METADATA,'Part of submitter contact details'],
         ['organisation_country', 'organisation: country', CONTACT_TYPE_METADATA,'Part of submitter contact details'],
         ['organisation_contact_name', 'organisation: contact name', CONTACT_TYPE_METADATA,'Part of submitter contact details'],
+        ['organisation contact email', 'organisation: contact email', CONTACT_TYPE_METADATA,'Part of submitter contact details'],
         ['study_title',SAMPLE_INFO_TYPE_METADATA,'Title of the study the sequencing is associated with'],
         ['study_abstract', SAMPLE_INFO_TYPE_METADATA,'Abstract of associated study'],
         ['design_description', SEQUENCING_TYPE_METADATA,'Free-form description of the methods used to create the sequencing library; a brief \'materials and methods\' section.'],

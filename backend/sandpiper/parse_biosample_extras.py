@@ -400,7 +400,7 @@ if __name__ == '__main__':
     extra_attributes = args.extra_attributes
     extra_sample_keys = args.extra_sample_keys
 
-    headers = ['sample_name', 'latitude', 'longitude']+extra_attributes
+    headers = ['run', 'latitude', 'longitude']+extra_attributes
 
     for k in extra_sample_keys:
         if k in non_standard_output_field_names_hash:

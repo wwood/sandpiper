@@ -9,7 +9,7 @@
 
     <section class="section is-small container has-text-justified">
       <h1 class="title">Team</h1>
-      <p>This website, and SingleM itself, is the result of a collaboration between (in no particular order) <a href="https://research.qut.edu.au/cmr/team/ben-woodcroft/">Ben Woodcroft</a>, Rossen Zhao, Mitchell Cunningham, Joshua Mitchell, Samuel Aroney, <a href="https://findanexpert.unimelb.edu.au/profile/753413-linda-blackall">Linda Blackall</a>, <a href="https://research.qut.edu.au/cmr/team/gene-tyson/">Gene Tyson</a>, <a href="https://www.alberdilab.dk/members">Raphael Eisenhofer</a> and <a href="https://www.alberdilab.dk/members">Antton Alberdi</a>.</p><br />
+      <p>This website, and SingleM itself, is the result of a collaboration between (in no particular order) <a href="https://research.qut.edu.au/cmr/team/ben-woodcroft/">Ben Woodcroft</a>, Rossen Zhao, Mitchell Cunningham, Joshua Mitchell, Samuel Aroney, Rizky Nurdiansyah1, <a href="https://findanexpert.unimelb.edu.au/profile/753413-linda-blackall">Linda Blackall</a>, <a href="https://research.qut.edu.au/cmr/team/gene-tyson/">Gene Tyson</a>, <a href="https://www.alberdilab.dk/members">Raphael Eisenhofer</a> and <a href="https://www.alberdilab.dk/members">Antton Alberdi</a>.</p><br />
       <p>Most of us are at the <a href="https://research.qut.edu.au/cmr/">Centre for Microbiome Research</a>, School of Biomedical Sciences, Queensland University of Technology (<a href="qut.edu.au">QUT</a>), Translational Research Institute, Woolloongabba, Australia. Mitchell Cunningham and Linda Blackall are at the School of BioSciences, The University of Melbourne, Victoria, Australia. Raphael Eisenhofer and Antton Alberdi are at the Centre for Evolutionary Hologenomics, Globe Institute, University of Copenhagen, Denmark.</p>
     </section>
 
@@ -66,9 +66,12 @@
         <div class="columns has-text-left"> 
           <div class="column content">  
             <ul> 
-              <li>Updated SRA samples up to 20/2/2025.</li>
-              <li>Update profiles to use GTDB R226, generated using SingleM renew v0.18.3.</li>
-            </ul> 
+              <li>Raw metagenomes up to 20 Feb 2025 scanned using SingleM 'pipe' version 0.18.3. Metagenomes included in the previous version were scanned from scratch, for better detection of lineages using translation table 4, and a very minor improvement in novel species detection.</li>
+              <li>Taxonomic annotations, profiles and SMF values updated to use GTDB R226 (metapackage S5.4.0.GTDB_r226.metapackage_20250331.smpkg), using a development version conceptually identical to SingleM renew v0.18.3.</li>
+              <li>Metadata annotations for each run procured using <a href="https://github.com/wwood/kingfisher-download/">Kingfisher</a> on 14 April, 2025.</li>
+              <li>Email addresses of contacts are sometimes available. To prevent spam of submitters, they are hidden by default but can be revealed by human interaction (via reCAPTCHA).</li>
+              <li>Minor improvements to the website. The download button of taxonomy search results now includes latitude and longitude of each sample where the taxon is detected.</li>
+            </ul>
           </div> 
         </div>
       <h2 class="title is-5">v0.3.0</h2>

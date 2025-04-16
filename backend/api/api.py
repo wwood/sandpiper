@@ -5,6 +5,7 @@ api.py
 """
 from email import header
 import re
+import requests
 
 from flask import Blueprint, jsonify, request, make_response, current_app
 
@@ -672,4 +673,33 @@ def accession(acc):
     else:
         return jsonify({ 
             'result_type': 'fail',
-            'error': 'No accession identified when searching for "'+acc+'". Please let us know if you believe this is a valid identifier.' })
+            'error': 'No accession identified when searching for "'+acc+'". Please let us know if you believe this is a valid identifier.'})
+
+
+RECAPTCHA_SECRET_KEY = '6LdZXhorAAAAAJOtcFJj6SBkOKW4bhKu80khNcH2'
+
+
+@api.route('/verify-recaptcha', methods=['POST'])
+def verify_recaptcha():
+    data = request.json
+    token = data.get('recaptchaResponse')
+    if token is None:  # Sometimes get either (in localhost testing at least)? Bit confused as to why
+        token = data.get('token')
+
+    if not token:
+        return jsonify(success=False, message='No token provided'), 400
+
+    response = requests.post(
+        'https://www.google.com/recaptcha/api/siteverify',
+        data={
+            'secret': RECAPTCHA_SECRET_KEY,
+            'response': token
+        }
+    )
+
+    result = response.json()
+
+    if result.get('success'):
+        return jsonify(success=True)
+    else:
+        return jsonify(success=False, errors=result.get('error-codes', [])), 400

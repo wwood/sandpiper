@@ -433,12 +433,12 @@ def create_sample_metadata(db, condensed_otu_table_path, blacklist, kingfisher_a
                     ParsedSampleAttribute(
                         **{
                             'run_id': last_metadata_id,
-                            'collection_year': collection_year,
-                            'collection_month': collection_month,
-                            'depth': depth,
-                            'temperature': temperature,
-                            'latitude': lat_lon[0],
-                            'longitude': lat_lon[1]
+                            # 'collection_year': collection_year,
+                            # 'collection_month': collection_month,
+                            # 'depth': depth,
+                            # 'temperature': temperature,
+                            # 'latitude': lat_lon[0],
+                            # 'longitude': lat_lon[1]
                         }))
 
                 if last_metadata_id % 10000 == 0:
@@ -960,6 +960,36 @@ def create_markers_table(db, describe_csv):
     db.session.commit()
 
 
+def add_parsed_metadata(db, run_accession_to_id, parsed_metadata):
+    # e.g.
+    # sample_name     latitude        longitude       depth   temperature     collection_year collection_month
+    # ERR1914274                                      2014    1
+    # SRR10875094
+    # SRR3401492      35.43885        -138.26435                      2008    9
+    # SRR7051324      38.7906 -75.1638                        2016    11
+
+    df = pl.read_csv(parsed_metadata, separator='\t')
+    logging.info("Adding {} parsed metadata to DB".format(df.shape[0]))
+    updates = []
+    cols_to_update = [col for col in df.columns if col != 'run']
+    for row in tqdm(df.rows(named=True), total=df.shape[0]):
+        if row['run'] not in run_accession_to_id:
+            logging.debug("Skipping {} as there was no condense data for it".format(row['run']))
+            continue  # No condensed data for this run I guess
+        run_id = run_accession_to_id[row['run']]
+        update = {'id': run_id}
+        for col in cols_to_update:
+            if row[col] is not None:
+                update[col] = row[col]
+        if len(update) > 1:
+            updates.append(update)
+    
+    logging.info("Committing parsed metadata updates for {} samples to DB".format(len(updates)))
+    db.session.bulk_update_mappings(ParsedSampleAttribute, updates)
+    db.session.commit()
+    logging.info("Added parsed metadata for {} samples to DB".format(len(updates)))
+
+
 if __name__ == '__main__':
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument('--debug', help='output debug information', action="store_true")
@@ -979,8 +1009,9 @@ if __name__ == '__main__':
     parent_parser.add_argument('--host-predictions-tsv', help='host predictions TSV output')
     parent_parser.add_argument('--bioproject-associated-publications', help='tsv from bioprjoect_metadata.py')
     parent_parser.add_argument('--smf-file', help='SMF file to read')
+    parent_parser.add_argument('--parsed-metadata-table', help='parsed metadata table to read')
 
-    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'stage2', 'tags', 'otus'], required=True)
+    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'stage2', 'tags', 'otus', 'parsed_metadata'], required=True)
 
     args = parent_parser.parse_args()
 
@@ -1089,6 +1120,14 @@ if __name__ == '__main__':
             run_accession_to_id = read_run_accession_to_id(db)
             taxonomy_name_to_id = read_taxonomy_name_to_id(db)
             index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, sqlite_db_path)
+
+        elif args.stage == 'parsed_metadata':
+            # --parsed-metadata-table
+            if not args.parsed_metadata_table:
+                raise Exception("parsed-metadata-table must be specified for stage {}".format(args.stage))
+
+            run_accession_to_id = read_run_accession_to_id(db)
+            add_parsed_metadata(db, run_accession_to_id, args.parsed_metadata_table)
 
         else:
             raise Exception("Unknown stage {}".format(args.stage))

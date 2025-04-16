@@ -52,7 +52,7 @@ else:
 
 rule all:
     input:
-        '{test_or_prod}/{version}/backend_db/otus_done'.format(
+        '{test_or_prod}/{version}/backend_db/parsed_metadata_done'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION']),
         '{test_or_prod}/gather_bioproject_pubs/{date}/done'.format(
@@ -254,8 +254,65 @@ rule add_otus_to_backend_db:
         'cd ../backend && ' \
         # cp to remain idempotent, e.g. if this step fails
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_tags {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
-        # cp the otus because scratch will be faster than /work/microbiome
-        'cp {config[OTU_TABLE]} {config[SCRATCH_DIR]}/otus && ' \
-        'pixi run -e sandpiper ./bin/generate_backend_db --stage otus --otu-table <(pigz -cd {config[SCRATCH_DIR]}/otus) -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 db/'
+        # cp the otus because scratch will be faster than /work/microbiome (didn't end up being any faster)
+        # 'cp {config[OTU_TABLE]} {config[SCRATCH_DIR]}/otus && ' \
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage otus --otu-table <(pigz -cd {config[OTU_TABLE]}) -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_otus'
 
+rule generate_parsed_metadata_from_kingfisher:
+    input:
+        file_list='{test_or_prod}/kingfisher_metadata/{date}/kingfisher_metadata_file_list'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD'])
+    output:
+        parsed_metadata='{test_or_prod}/kingfisher_metadata/{date}/parsed_metadata.tsv'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD']),
+        done=touch('{test_or_prod}/kingfisher_metadata/{date}/parsed_metadata_done'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD'])),
+    resources:
+        mem_mb=32000,
+        runtime='1h'
+    log:
+        '{test_or_prod}/kingfisher_metadata/{date}/logs/kingfisher_metadata_parsed.log'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD'])
+    shell:
+        'pixi run -e sandpiper ../backend/sandpiper/parse_biosample_extras.py --kingfisher-annotate-tsv-list {input.file_list} --extra-sample-keys depth temperature collection_date > {output.parsed_metadata} 2> {log}'
+
+rule add_parsed_metadata_from_kingfisher:
+    input:
+        parsed_metadata='{test_or_prod}/kingfisher_metadata/{date}/parsed_metadata.tsv'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD']),
+        done=touch('{test_or_prod}/kingfisher_metadata/{date}/parsed_metadata_done'.format(
+            date=config['KINGFISHER_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD'])),
+        # After OTUs because then it can be changed up until the last minute
+        done_db=touch('{test_or_prod}/{version}/backend_db/otus_done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION']))
+    resources:
+        mem_mb=64000,
+        runtime='24h'
+    output:
+        done=touch('{test_or_prod}/{version}/backend_db/parsed_metadata_done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])),
+    log:
+        '{test_or_prod}/{version}/backend_db/parsed_metadata.log'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
+    params:
+        # abspath to input.parsed_metadata
+        parsed_metadata=lambda wildcards, input: os.path.abspath(input.parsed_metadata),
+    shell:
+        'export SNAKE_WORKING_DIR=`pwd` && ' \
+        'cd ../backend && ' \
+        # cp to remain idempotent, e.g. if this step fails
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_otus {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
+        # cp the otus because scratch will be faster than /work/microbiome (didn't end up being any faster)
+        # 'cp {config[OTU_TABLE]} {config[SCRATCH_DIR]}/otus && ' \
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage parsed_metadata --parsed-metadata-table {params.parsed_metadata} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 db/'
