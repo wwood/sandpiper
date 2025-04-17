@@ -27,6 +27,8 @@ RUN pip install --user --no-cache-dir \
     'iso8601~=1.1.0' \
     'zenodo-backpack~=0.2.0' \
     'sqlalchemy~=1.4.49' \
+    'polars~=1.5.0' \
+    # Up to date singlem requires sqlalchemy 2.0, but haven't migrated sandpiper yet
     git+https://github.com/wwood/singlem.git@v1.0.0beta2
 
 COPY backend /sandpiper
