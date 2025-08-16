@@ -62,13 +62,13 @@
 // If you need to reference 'L', such as in 'L.icon', then be sure to
 // explicitly import 'leaflet' into your component
 // import L from 'leaflet'
-import { LMap, LTileLayer, LMarker } from 'vue2-leaflet'
+import { LMap, LTileLayer, LMarker } from '@vue-leaflet/vue-leaflet'
 
-// Make the marker appear https://vue2-leaflet.netlify.app/quickstart/#marker-icons-are-missing
 import { Icon, latLng } from 'leaflet'
 
 import RunMetadataTable from '@/components/RunMetadataTable.vue'
 
+// Make the marker appear https://vue-leaflet.github.io/vue-leaflet/#/quick-start#marker-icons-are-missing
 delete Icon.Default.prototype._getIconUrl
 Icon.Default.mergeOptions({
   iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),

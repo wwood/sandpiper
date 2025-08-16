@@ -1,4 +1,4 @@
-# sandpiper
+# sandpiper (Vue 3)
 
 ## Project setup
 ```
