@@ -4,7 +4,7 @@ It is probably not useful on its own. Instead you might like to visit the websit
 
 A separate repository https://github.com/wwood/public_sequencing_metadata_corrections contains manually collected corrections to metadata. These corrections are applied here for the sandpiper website.
 
-# Dev on lyra
+# Dev on aqua
 
 backend:
 ```
@@ -21,7 +21,7 @@ pixi run -e sandpiper API_URL=localhost:5000 npm run serve -- --host localhost
 
 # Testing for deplyment
 
-To ensure that the build process works, before release test that the following works. So far this has only been tested on b2, because docker is available on aqua, which means the DB is unavailable and full testing cannot be done. But at least the containers should build.
+To ensure that the build process works, before release test that the following works. So far this has only been tested on b2, because docker is unavailable on aqua, which means the DB is unavailable and full testing cannot be done. But at least the containers should build.
 
 ```
 docker-compose up

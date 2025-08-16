@@ -107,6 +107,9 @@
 
           <p>The taxonomic profile of this sample can be downloaded in <a :href="profile_csv_link">tab-separated "SingleM condensed" format</a>. In this format the coverage of each lineage is the coverage assigned to that taxon and not more specifically e.g. the coverage of a species is not included in the coverage shown for its genus.</p>
           <br />
+
+          <p>This taxonomic profile can be converted to other forms (e.g. one that gives the relative abundance instead of the coverage) using the <a href="https://wwood.github.io/singlem/tools/summarise">SingleM summarise</a> tool.</p>
+          <br />
           
           <p>The <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> is a tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.</p>
           <!-- <br /> -->
