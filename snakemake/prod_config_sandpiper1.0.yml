@@ -20,4 +20,4 @@ HOST_OR_NOT_PREDICTION: '/work/microbiome/msingle/mess/198_R226_renew_mach2/proc
 SMF_FILE: '/work/microbiome/msingle/mess/198_R226_renew_mach2/processing_20250409/microbial_fractions.csv'
 
 TEST_OR_PROD: 'prod'
-SCRATCH_DIR: '/scratch/sandpiper'
+SCRATCH_DIR: '/scratch/microbiome/woodcrob/sandpiper'

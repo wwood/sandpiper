@@ -89,7 +89,7 @@ rule run_kingfisher_metadata:
         mem_mb=16000,
         runtime='6h'
     shell:
-        "pixi run -e kingfisher ~/git/kingfisher/bin/kingfisher annotate --debug -f tsv --all-columns --run-identifiers-list {input.chunk} -o {output.metadata} > {log} 2>&1"
+        "pixi run -e kingfisher kingfisher annotate --debug -f tsv --all-columns --run-identifiers-list {input.chunk} -o {output.metadata} > {log} 2>&1"
 
 rule gather_kingfisher_metadata:
     input:
@@ -286,13 +286,13 @@ rule add_parsed_metadata_from_kingfisher:
         parsed_metadata='{test_or_prod}/kingfisher_metadata/{date}/parsed_metadata.tsv'.format(
             date=config['KINGFISHER_METADATA_DATE'],
             test_or_prod=config['TEST_OR_PROD']),
-        done=touch('{test_or_prod}/kingfisher_metadata/{date}/parsed_metadata_done'.format(
+        done='{test_or_prod}/kingfisher_metadata/{date}/parsed_metadata_done'.format(
             date=config['KINGFISHER_METADATA_DATE'],
-            test_or_prod=config['TEST_OR_PROD'])),
+            test_or_prod=config['TEST_OR_PROD']),
         # After OTUs because then it can be changed up until the last minute
-        done_db=touch('{test_or_prod}/{version}/backend_db/otus_done'.format(
+        done_db='{test_or_prod}/{version}/backend_db/otus_done'.format(
             test_or_prod=config['TEST_OR_PROD'],
-            version=config['SANDPIPER_VERSION']))
+            version=config['SANDPIPER_VERSION'])
     resources:
         mem_mb=64000,
         runtime='24h'
