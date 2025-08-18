@@ -103,12 +103,11 @@ export default {
   },
   computed: {
     map_style: function () {
-      const style = 'height: 300px; width: '
       // Make the width fit for smaller screens, but max out the width.
       if (window.innerWidth < 600) {
-        return style+'100%'
+        return { height: '300px', width: '100%' }
       } else {
-        return style+'550px'
+        return { height: '300px', width: '550px' }
       }
     },
   },

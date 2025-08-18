@@ -1,9 +1,14 @@
+<script setup>
+import sandpiperLogo from "@/assets/sandpiper_logo.png";
+</script>
+
 <template>
   <div>
     <section class="section container is-small">
     <b-image
-            :src="require('@/assets/sandpiper_logo.png')"
+            :src="sandpiperLogo"
             style="height: 230px; width: 400px; margin: auto"
+            alt="Sandpiper Logo"
             />
     </section>
 
