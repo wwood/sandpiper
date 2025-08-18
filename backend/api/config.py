@@ -8,8 +8,13 @@ class BaseConfig:
     DEBUG = True
 
     # Recently, it because required somehow that the DB path is an absolute path
-    DB_NAME = 'sandpiper_33.sqlite3'
-    # DB_NAME = 'sandpiper_18_test.sqlite3'
+    # Check if we're in testing mode
+    if os.environ.get('SANDPIPER_TESTING'):
+        print("Running in DB testing mode")
+        DB_NAME = 'sandpiper_19_test.sqlite3'
+    else:
+        print("Running in DB production mode")
+        DB_NAME = 'sandpiper_33.sqlite3'
     LYRA_DB_PATH = 'sqlite:///'+os.path.join(os.path.dirname(__file__), '../db/{}'.format(DB_NAME))
     # LYRA_DB_PATH = 'sqlite:////scratch/sandpiper/sandpiper_33.sqlite3'
     # LYRA_DB_PATH = 'sqlite:////scratch/sandpiper/sandpiper_19_test.sqlite3'
