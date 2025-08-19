@@ -6,8 +6,9 @@ from pathlib import Path
 import pytest
 import requests
 
-BACKEND_PORT = 5001
+BACKEND_PORT = 5000
 FRONTEND_PORT = 8080
+
 
 def _wait_for_server(url: str, timeout: int = 120):
     """Wait until a server responds at the given URL."""
@@ -28,18 +29,19 @@ def backend_server():
     env["FLASK_APP"] = "api.application:create_app"
     cmd = [
         "pixi",
-        "shell",
+        "run",
         "-e",
         "sandpiper",
-        "-c",
         f"flask run --port {BACKEND_PORT} --host 127.0.0.1",
     ]
+    print("Running backend server... {}".format(" ".join(cmd)))
     proc = subprocess.Popen(
         cmd,
         cwd=Path(__file__).resolve().parents[1] / "backend",
         env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT,
+        stdout=None,
+        stderr=None,
+        timeout=30,
     )
     try:
         _wait_for_server(f"http://127.0.0.1:{BACKEND_PORT}")
@@ -49,6 +51,9 @@ def backend_server():
         try:
             proc.wait(timeout=30)
         except subprocess.TimeoutExpired:
+            proc.kill()
+        # Ensure process is killed
+        if proc.poll() is None:
             proc.kill()
 
 
@@ -62,18 +67,18 @@ def frontend_server(backend_server):
         pytest.fail("node_modules missing - run npm install")
     cmd = [
         "pixi",
-        "shell",
+        "run",
         "-e",
         "sandpiper",
-        "-c",
         f"npm run serve -- --port {FRONTEND_PORT}",
     ]
     proc = subprocess.Popen(
         cmd,
         cwd=vue_dir,
         env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT,
+        stdout=None,
+        stderr=None,
+        timeout=30,
     )
     try:
         _wait_for_server(f"http://127.0.0.1:{FRONTEND_PORT}", timeout=240)
@@ -83,4 +88,7 @@ def frontend_server(backend_server):
         try:
             proc.wait(timeout=30)
         except subprocess.TimeoutExpired:
+            proc.kill()
+        # Ensure process is killed
+        if proc.poll() is None:
             proc.kill()
