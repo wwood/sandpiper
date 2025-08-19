@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@vue-leaflet/vue-leaflet": "^0.10.1",
@@ -13,18 +13,17 @@
     "buefy": "^1.0.2",
     "d3": "^7.9.0",
     "leaflet": "^1.9.4",
+    "lodash": "^4.17.21",
+    "bulma": "^0.9.4",
     "vue": "^3.5.18",
     "vue-gtag-next": "^1.14.0",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "^5.0.8",
-    "@vue/cli-plugin-router": "^5.0.8",
-    "@vue/cli-plugin-typescript": "^5.0.8",
-    "@vue/cli-service": "^5.0.8",
+    "@vitejs/plugin-vue": "^5.0.0",
     "@vue/compiler-sfc": "^3.5.18",
     "sass": "^1.77.0",
-    "sass-loader": "^16.0.5",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vite": "^5.0.0"
   }
 }

@@ -2,6 +2,7 @@
 backend/api/running_on_lyra
 vue/node_modules
 vue3/node_modules
+vue/dist
 snakemake/14_test
 backend/db/*sqlite3
 snakemake/prod
