@@ -4,8 +4,8 @@ import time
 import requests
 from html.parser import HTMLParser
 
-BACKEND_URL = "http://localhost:5000"
-FRONTEND_URL = "http://localhost:5173"
+BACKEND_URL = "http://localhost:6000"
+FRONTEND_URL = "http://localhost:6173"
 
 class LinkParser(HTMLParser):
     def __init__(self):
@@ -43,12 +43,30 @@ def servers():
     env["SANDPIPER_TESTING"] = "1"
 
     backend_cmd = [
-        "pixi", "run", "-e", "sandpiper", "flask", "--app", "wsgi.py", "run"
+        "pixi",
+        "run",
+        "-e",
+        "sandpiper",
+        "flask",
+        "--app",
+        "wsgi.py",
+        "run",
+        "-p",
+        "6000",
     ]
     backend = subprocess.Popen(backend_cmd, cwd="backend", env=env)
 
     frontend_cmd = [
-        "pixi", "run", "-e", "sandpiper", "npm", "run", "dev", "--", "--port", "5173"
+        "pixi",
+        "run",
+        "-e",
+        "sandpiper",
+        "npm",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "6173",
     ]
     frontend = subprocess.Popen(frontend_cmd, cwd="vue", env=env)
 
@@ -90,10 +108,10 @@ def test_pages():
 
     api_links = set()
     for href in parser.links:
-        if href.startswith("http://localhost:5000"):
+        if href.startswith("http://localhost:6000"):
             api_links.add(href)
-        elif href.startswith("http://localhost:5173"):
-            pages.add(href[len("http://localhost:5173"):])
+        elif href.startswith("http://localhost:6173"):
+            pages.add(href[len("http://localhost:6173"):])
         elif href.startswith("/"):
             pages.add(href)
 
