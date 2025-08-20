@@ -1,4 +1,5 @@
 import os
+import signal
 import subprocess
 import time
 import requests
@@ -53,8 +54,11 @@ def servers():
         "run",
         "-p",
         "6000",
+        "--no-reload",
     ]
-    backend = subprocess.Popen(backend_cmd, cwd="backend", env=env)
+    backend = subprocess.Popen(
+        backend_cmd, cwd="backend", env=env, start_new_session=True
+    )
 
     frontend_cmd = [
         "pixi",
@@ -68,23 +72,28 @@ def servers():
         "--port",
         "6173",
     ]
-    frontend = subprocess.Popen(frontend_cmd, cwd="vue", env=env)
+    frontend = subprocess.Popen(
+        frontend_cmd, cwd="vue", env=env, start_new_session=True
+    )
 
     try:
         wait_for(f"{BACKEND_URL}/api/sandpiper_stats")
         wait_for(FRONTEND_URL)
         yield
     finally:
-        frontend.terminate()
-        backend.terminate()
-        try:
-            frontend.wait(timeout=10)
-        except Exception:
-            frontend.kill()
-        try:
-            backend.wait(timeout=10)
-        except Exception:
-            backend.kill()
+        for proc in (frontend, backend):
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+        for proc in (frontend, backend):
+            try:
+                proc.wait(timeout=10)
+            except Exception:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
 
 
 def test_pages():
