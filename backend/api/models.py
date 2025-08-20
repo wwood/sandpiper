@@ -92,6 +92,7 @@ class CondensedProfile(db.Model):
     # relative_abundance is a filled coverage
     relative_abundance = db.Column(db.Float, nullable=False, index=True)
     taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False, index=True)
+    taxonomy_type = db.Column(db.String, nullable=False, index=True)
 
     # domain_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
     # phylum_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
@@ -116,6 +117,7 @@ class Taxonomy(db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
     name = db.Column(db.String, nullable=False, index=True)
     full_name = db.Column(db.String, nullable=False)
+    taxonomy_type = db.Column(db.String, nullable=False, index=True)
     host_sample_count = db.Column(db.Integer)
     ecological_sample_count = db.Column(db.Integer)
 
