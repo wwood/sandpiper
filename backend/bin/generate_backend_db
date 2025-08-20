@@ -77,7 +77,12 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
 
     skipped_runs = set()
 
-    compute_known_species = (taxonomy_type == 'gtdb')
+    compute_known_species = taxonomy_type in ('gtdb', 'globdb')
+    known_species_field = (
+        'known_species_fraction'
+        if taxonomy_type == 'gtdb'
+        else 'globdb_known_species_fraction'
+    )
     current_sample_species_coverage = 0.0
     current_sample_non_species_coverage = 0.0
     known_species_fractions = []
@@ -98,7 +103,7 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
                     if compute_known_species:
                         known_species_fractions.append({
                             'id': run_accession_to_id[current_sample],
-                            'known_species_fraction': current_sample_species_coverage / (
+                            known_species_field: current_sample_species_coverage / (
                                 current_sample_species_coverage + current_sample_non_species_coverage)})
                 current_sample = row[0]
                 current_sample_entries = []
@@ -123,7 +128,7 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
             if compute_known_species:
                 known_species_fractions.append({
                     'id': run_accession_to_id[current_sample],  # We test that id == run_id in the add_smf function
-                    'known_species_fraction': current_sample_species_coverage / (
+                    known_species_field: current_sample_species_coverage / (
                         current_sample_species_coverage + current_sample_non_species_coverage)})
 
         # Commit taxonomy entries
@@ -143,7 +148,11 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
             logging.info("Committing known species fractions ..")
             db.session.bulk_update_mappings(ParsedSampleAttribute, known_species_fractions)
             db.session.commit()
-            logging.info("Wrote {} known species fractions to DB".format(len(known_species_fractions)))
+            logging.info(
+                "Wrote {} known species fractions to DB".format(
+                    len(known_species_fractions)
+                )
+            )
 
     return taxonomy_name_to_id, next_taxonomy_id
 

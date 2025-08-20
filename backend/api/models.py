@@ -173,6 +173,7 @@ class ParsedSampleAttribute(db.Model):
     smf = db.Column(db.Float)
     smf_warning = db.Column(db.Boolean)
     known_species_fraction = db.Column(db.Float)
+    globdb_known_species_fraction = db.Column(db.Float)
 
     def to_displayable_dict(self):
         return dict(
@@ -188,7 +189,8 @@ class ParsedSampleAttribute(db.Model):
             bacterial_archaeal_bases=self.bacterial_archaeal_bases,
             smf=self.smf,
             smf_warning=self.smf_warning,
-            known_species_fraction=self.known_species_fraction)
+            known_species_fraction=self.known_species_fraction,
+            globdb_known_species_fraction=self.globdb_known_species_fraction)
 
 
 class StudyLink(db.Model):
