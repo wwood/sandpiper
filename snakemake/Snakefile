@@ -212,7 +212,7 @@ rule generate_backend_db_stage2:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
-        'pixi run -e sandpiper ./bin/generate_backend_db --stage stage2 --run-blacklist db/metagenome_assembly_acc_list.csv --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION]} --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage stage2 --run-blacklist db/metagenome_assembly_acc_list.csv --condensed-otu-table {config[CONDENSED_OTU_TABLE]} --globdb-condensed-otu-table {config[GLOBDB_CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION]} --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_stage2'
 
 rule add_tags_to_backend_db:

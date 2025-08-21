@@ -221,6 +221,11 @@ def fetch_metadata(sample_name):
         'smf': round(metadata_dict['parsed_sample_attributes']['smf']),
         'smf_warning': metadata_dict['parsed_sample_attributes']['smf_warning'],
         'known_species_fraction': round(metadata_dict['parsed_sample_attributes']['known_species_fraction']*100),
+        'globdb_known_species_fraction': (
+            round(metadata_dict['parsed_sample_attributes']['globdb_known_species_fraction'] * 100)
+            if metadata_dict['parsed_sample_attributes']['globdb_known_species_fraction'] is not None
+            else None
+        ),
         'sample_name': metadata_dict['sample_name'],
         'study_title': metadata_dict['study_title'],
         'bioproject': metadata_dict['bioproject'],

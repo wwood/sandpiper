@@ -92,6 +92,7 @@ class CondensedProfile(db.Model):
     # relative_abundance is a filled coverage
     relative_abundance = db.Column(db.Float, nullable=False, index=True)
     taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False, index=True)
+    taxonomy_type = db.Column(db.String, nullable=False, index=True)
 
     # domain_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
     # phylum_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
@@ -116,6 +117,7 @@ class Taxonomy(db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
     name = db.Column(db.String, nullable=False, index=True)
     full_name = db.Column(db.String, nullable=False)
+    taxonomy_type = db.Column(db.String, nullable=False, index=True)
     host_sample_count = db.Column(db.Integer)
     ecological_sample_count = db.Column(db.Integer)
 
@@ -171,6 +173,7 @@ class ParsedSampleAttribute(db.Model):
     smf = db.Column(db.Float)
     smf_warning = db.Column(db.Boolean)
     known_species_fraction = db.Column(db.Float)
+    globdb_known_species_fraction = db.Column(db.Float)
 
     def to_displayable_dict(self):
         return dict(
@@ -186,7 +189,8 @@ class ParsedSampleAttribute(db.Model):
             bacterial_archaeal_bases=self.bacterial_archaeal_bases,
             smf=self.smf,
             smf_warning=self.smf_warning,
-            known_species_fraction=self.known_species_fraction)
+            known_species_fraction=self.known_species_fraction,
+            globdb_known_species_fraction=self.globdb_known_species_fraction)
 
 
 class StudyLink(db.Model):

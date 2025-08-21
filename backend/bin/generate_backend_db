@@ -60,10 +60,15 @@ from singlem.condense import WordNode
 from singlem.otu_table_collection import StreamingOtuTableCollection
 
 
-def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, blacklist, run_accession_to_id):
-    taxonomy_name_to_id = {}
-    next_taxonomy_id = 0
-    count = 0
+def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, blacklist, run_accession_to_id,
+                                       taxonomy_type, taxonomy_name_to_id=None, next_taxonomy_id=None):
+    if taxonomy_name_to_id is None:
+        taxonomy_name_to_id = {}
+    if taxonomy_type not in taxonomy_name_to_id:
+        taxonomy_name_to_id[taxonomy_type] = {}
+    if next_taxonomy_id is None:
+        next_taxonomy_id = db.session.query(Taxonomy).count()
+    count = db.session.query(CondensedProfile).count()
     sample_count = 0
 
     current_sample = None
@@ -72,6 +77,12 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
 
     skipped_runs = set()
 
+    compute_known_species = taxonomy_type in ('gtdb', 'globdb')
+    known_species_field = (
+        'known_species_fraction'
+        if taxonomy_type == 'gtdb'
+        else 'globdb_known_species_fraction'
+    )
     current_sample_species_coverage = 0.0
     current_sample_non_species_coverage = 0.0
     known_species_fractions = []
@@ -87,11 +98,13 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
                 if current_sample is not None:
                     (taxonomy_name_to_id, next_taxonomy_id,
                      count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries,
-                                                              taxonomy_name_to_id, next_taxonomy_id, count, tf)
-                    known_species_fractions.append({
-                        'id': run_accession_to_id[current_sample],
-                        'known_species_fraction': current_sample_species_coverage / (
-                            current_sample_species_coverage + current_sample_non_species_coverage)})
+                                                              taxonomy_name_to_id, next_taxonomy_id, count, tf,
+                                                              taxonomy_type)
+                    if compute_known_species:
+                        known_species_fractions.append({
+                            'id': run_accession_to_id[current_sample],
+                            known_species_field: current_sample_species_coverage / (
+                                current_sample_species_coverage + current_sample_non_species_coverage)})
                 current_sample = row[0]
                 current_sample_entries = []
                 sample_count += 1
@@ -101,19 +114,22 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
                     logging.info("Processed condensed profiles for {} samples".format(sample_count))
 
             current_sample_entries.append(row)
-            if '; s__' in row[2]:
-                current_sample_species_coverage += float(row[1])
-            else:
-                current_sample_non_species_coverage += float(row[1])
+            if compute_known_species:
+                if '; s__' in row[2]:
+                    current_sample_species_coverage += float(row[1])
+                else:
+                    current_sample_non_species_coverage += float(row[1])
 
         if current_sample is not None:
             (taxonomy_name_to_id, next_taxonomy_id,
              count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries,
-                                                      taxonomy_name_to_id, next_taxonomy_id, count, tf)
-            known_species_fractions.append({
-                'id': run_accession_to_id[current_sample],  # We test that id == run_id in the add_smf function
-                'known_species_fraction': current_sample_species_coverage / (
-                    current_sample_species_coverage + current_sample_non_species_coverage)})
+                                                      taxonomy_name_to_id, next_taxonomy_id, count, tf,
+                                                      taxonomy_type)
+            if compute_known_species:
+                known_species_fractions.append({
+                    'id': run_accession_to_id[current_sample],  # We test that id == run_id in the add_smf function
+                    known_species_field: current_sample_species_coverage / (
+                        current_sample_species_coverage + current_sample_non_species_coverage)})
 
         # Commit taxonomy entries
         logging.info("Committing taxonomy entries from condensed profiles ..")
@@ -128,16 +144,17 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
             count, len(skipped_runs)))
 
         # Commit known species fractions
-        logging.info("Committing known species fractions ..")
-        # update_stmt = update(ParsedSampleAttribute).values(
-        #     id=bindparam('id'),
-        #     known_species_fraction=bindparam('known_species_fraction'))
-        # db.session.execute(update_stmt, known_species_fractions)
-        db.session.bulk_update_mappings(ParsedSampleAttribute, known_species_fractions)
-        db.session.commit()
-        logging.info("Wrote {} known species fractions to DB".format(len(known_species_fractions)))
+        if compute_known_species:
+            logging.info("Committing known species fractions ..")
+            db.session.bulk_update_mappings(ParsedSampleAttribute, known_species_fractions)
+            db.session.commit()
+            logging.info(
+                "Wrote {} known species fractions to DB".format(
+                    len(known_species_fractions)
+                )
+            )
 
-    return taxonomy_name_to_id
+    return taxonomy_name_to_id, next_taxonomy_id
 
 
 def iterate_condensed_profiles(condensed_otu_table_path, blacklist):
@@ -164,7 +181,8 @@ def iterate_condensed_profile_reader_gzip_or_not(condensed_otu_table_path):
             yield from reader
 
 
-def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_name_to_id, next_taxonomy_id, count, tf):
+def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_name_to_id, next_taxonomy_id, count, tf,
+                                   taxonomy_type):
     total_coverage = sum([float(x[1]) for x in entries])
 
     # Generate WordNode tree so we can calculate relative abundance later
@@ -198,7 +216,7 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
         # Get the taxonomy id, creating a new entry if necessary
         taxonomy_ids_here = []
         for (i, species_aware_taxonomy) in enumerate(taxons):
-            if species_aware_taxonomy not in taxonomy_name_to_id:
+            if species_aware_taxonomy not in taxonomy_name_to_id[taxonomy_type]:
                 if species_aware_taxonomy == 'Root':
                     level = 'root'
                     parent_id = 'NULL'
@@ -212,7 +230,7 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
                         level = ['domain', 'phylum', 'class', 'order', 'family', 'genus', 'species'][level_id]
                         # Will throw KeyError if something is amiss
 
-                    parent_id = taxonomy_name_to_id[taxons[i - 1]]
+                    parent_id = taxonomy_name_to_id[taxonomy_type][taxons[i - 1]]
                     full_taxonomy = '; '.join(taxons[1:(i + 1)])
 
                 db.session.add(
@@ -220,12 +238,13 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
                              taxonomy_level=level,
                              parent_id=parent_id,
                              name=species_aware_taxonomy,
-                             full_name=full_taxonomy))
+                             full_name=full_taxonomy,
+                             taxonomy_type=taxonomy_type))
 
-                taxonomy_name_to_id[species_aware_taxonomy] = next_taxonomy_id
+                taxonomy_name_to_id[taxonomy_type][species_aware_taxonomy] = next_taxonomy_id
                 next_taxonomy_id += 1
 
-            taxonomy_ids_here.append(taxonomy_name_to_id[species_aware_taxonomy])
+            taxonomy_ids_here.append(taxonomy_name_to_id[taxonomy_type][species_aware_taxonomy])
 
         def add_a_condensed_profile_taxon(
                 count, taxon_name, taxon_level_index,
@@ -261,7 +280,8 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
                 taxons_to_wordnode[taxon_name].coverage,
                 taxons_to_wordnode[taxon_name].get_full_coverage(),
                 taxons_to_wordnode[taxon_name].get_full_coverage() / total_coverage,
-                taxonomy_name_to_id[taxon_name],
+                taxonomy_name_to_id[taxonomy_type][taxon_name],
+                taxonomy_type,
             ]
             # for (idx, column_name) in zip(taxonomy_ids_here[:(taxon_level_index+1)], Taxonomy.taxonomy_level_columns):
             #     to_print.append(idx)
@@ -275,9 +295,9 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
         # profile. So that searching condensed profiles for taxonomy returns
         # results for c__Coriobacteriia, we need to add an inferred entry.
         for (i, taxon) in enumerate(taxons):
-            if taxonomy_name_to_id[taxon] not in inserted_taxonomy_ids:
+            if taxonomy_name_to_id[taxonomy_type][taxon] not in inserted_taxonomy_ids:
                 count = add_a_condensed_profile_taxon(count, taxon, i, tf)
-                inserted_taxonomy_ids.add(taxonomy_name_to_id[taxon])
+                inserted_taxonomy_ids.add(taxonomy_name_to_id[taxonomy_type][taxon])
 
     return (taxonomy_name_to_id, next_taxonomy_id, count)
 
@@ -649,10 +669,11 @@ def read_run_accession_to_id(db):
     return run_accession_to_id
 
 
-def read_taxonomy_name_to_id(db):
+def read_taxonomy_name_to_id(db, taxonomy_type='gtdb'):
     # select Taxonomy.id, Taxonomy.name
     # from Taxonomy -> return dict
-    taxonomy_name_to_id = {x[1]: x[0] for x in db.session.query(Taxonomy.id, Taxonomy.name).all()}
+    taxonomy_name_to_id = {x[1]: x[0] for x in db.session.query(Taxonomy.id, Taxonomy.name)
+                           .filter_by(taxonomy_type=taxonomy_type).all()}
     logging.info("Loaded {} taxonomies".format(len(taxonomy_name_to_id)))
     return taxonomy_name_to_id
 
@@ -689,9 +710,10 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
         db.session.add(
             Taxonomy(id=next_taxonomy_id,
                      taxonomy_level=level,
-                     parent_id=db.session.query(Taxonomy).filter_by(taxonomy_level='root').first().id,
+                     parent_id=db.session.query(Taxonomy).filter_by(taxonomy_level='root', taxonomy_type='gtdb').first().id,
                      name=taxon,
-                     full_name=taxon))
+                     full_name=taxon,
+                     taxonomy_type='gtdb'))
 
         taxonomy_name_to_id[taxon] = next_taxonomy_id
         next_taxonomy_id += 1
@@ -739,7 +761,8 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
                                          taxonomy_level=level,
                                          parent_id=parent_id,
                                          name=taxon,
-                                         full_name='; '.join(full_taxonomy)))
+                                         full_name='; '.join(full_taxonomy),
+                                         taxonomy_type='gtdb'))
 
                             taxonomy_name_to_id[taxon] = next_taxonomy_id
                             parent_id = next_taxonomy_id
@@ -830,7 +853,7 @@ def add_host_prediction_counts_to_taxonomy(db, db_path):
             f.write(("\t".join([
                 str(x) for x in [
                     taxonomy.id, taxonomy.taxonomy_level, taxonomy.parent_id, taxonomy.name, taxonomy.full_name,
-                    num_host_runs, num_ecological_runs
+                    taxonomy.taxonomy_type, num_host_runs, num_ecological_runs
                 ]
             ]) + "\n").encode())
         f.flush()
@@ -999,6 +1022,8 @@ if __name__ == '__main__':
     parent_parser.add_argument(
         '--otu-table', help='OTU table of the singlem db')  # Commented out for now since unsure it will be used.
     parent_parser.add_argument('--condensed-otu-table', help='condensed OTU table input')
+    parent_parser.add_argument('--globdb-condensed-otu-table',
+                               help='condensed OTU table input built on globdb taxonomy')
     parent_parser.add_argument('-o', help='sqlite3 file to generate', required=True)
     parent_parser.add_argument('--metapackage-describe', help='metapackage describe CSV file')
     parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files')
@@ -1099,8 +1124,14 @@ if __name__ == '__main__':
 
             add_smf(db, run_accession_to_id, args.smf_file)
 
-            taxonomy_name_to_id = fill_condensed_and_taxonomy_tables(db, sqlite_db_path, args.condensed_otu_table,
-                                                                     blacklist, run_accession_to_id)
+            taxonomy_name_to_id, next_taxonomy_id = fill_condensed_and_taxonomy_tables(
+                db, sqlite_db_path, args.condensed_otu_table,
+                blacklist, run_accession_to_id, 'gtdb')
+
+            if args.globdb_condensed_otu_table:
+                taxonomy_name_to_id, next_taxonomy_id = fill_condensed_and_taxonomy_tables(
+                    db, sqlite_db_path, args.globdb_condensed_otu_table,
+                    blacklist, run_accession_to_id, 'globdb', taxonomy_name_to_id, next_taxonomy_id)
 
             add_bioproject_associated_publications(db, sqlite_db_path, args.bioproject_associated_publications)
 

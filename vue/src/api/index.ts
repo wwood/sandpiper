@@ -1,8 +1,8 @@
 import axios from 'axios'
 
 let API_URL = 'unset'
-if (process.env.NODE_ENV === 'production') {
-  API_URL = `https://${process.env.VUE_APP_API_URL}/api`
+if (import.meta.env.PROD) {
+  API_URL = `https://${import.meta.env.VITE_API_URL}/api`
 } else {
   API_URL = 'http://localhost:5000/api'
 }
