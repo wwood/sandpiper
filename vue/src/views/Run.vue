@@ -39,7 +39,7 @@
               </span>
       <!-- {{ related_runs_short }}  -->
             <br />
-            Microbial fraction <span style="smf_low">{{ metadata.metadata_parsed.smf }}%</span> | Known species fraction {{ metadata.metadata_parsed.known_species_fraction }}%
+            Microbial fraction <span style="smf_low">{{ metadata.metadata_parsed.smf }}%</span> | Known species fraction {{ known_species_fraction }}%
             <br />
           </div>
 
@@ -78,6 +78,12 @@
       <section class="section">
         <div class="container">
           <h3 class="title">Taxonomic profile</h3>
+          <b-field label="Profile">
+            <b-select v-model="taxonomy_db" @input="fetchCondensed">
+              <option value="globdb">GlobDB</option>
+              <option value="gtdb">GTDB</option>
+            </b-select>
+          </b-field>
           <div class="sunburst">
             <template v-if="condensed_tree != null">
               <Sunburst3 :json_tree="sunburst_tree" :overall_coverage="10.3" :known_species_fraction="known_species_fraction" />
@@ -89,6 +95,12 @@
       <section class="section">
         <div class="container">
           <h3 class="title">Microbial fraction</h3>
+          <b-field label="Profile">
+            <b-select v-model="taxonomy_db" @input="fetchCondensed">
+              <option value="globdb">GlobDB</option>
+              <option value="gtdb">GTDB</option>
+            </b-select>
+          </b-field>
           <div v-if="metadata.metadata_parsed.smf || metadata.metadata_parsed.smf==0">
             <br />
             <br />
@@ -104,14 +116,20 @@
       <section class="section">
         <div class="container is-large">
           <h3 class="title">Download</h3>
+          <b-field label="Profile">
+            <b-select v-model="taxonomy_db" @input="fetchCondensed">
+              <option value="globdb">GlobDB</option>
+              <option value="gtdb">GTDB</option>
+            </b-select>
+          </b-field>
 
           <p>The taxonomic profile of this sample can be downloaded in <a :href="profile_csv_link">tab-separated "SingleM condensed" format</a>. In this format the coverage of each lineage is the coverage assigned to that taxon and not more specifically e.g. the coverage of a species is not included in the coverage shown for its genus.</p>
           <br />
 
           <p>This taxonomic profile can be converted to other forms (e.g. one that gives the relative abundance instead of the coverage) using the <a href="https://wwood.github.io/singlem/tools/summarise">SingleM summarise</a> tool.</p>
           <br />
-          
-          <p>The <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> is a tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.</p>
+
+          <p v-if="taxonomy_db==='gtdb'">The <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> is a tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.</p>
           <!-- <br /> -->
 
           <!-- <p>See a <a :href="'/otus/' + accession">visualisation</a></p> -->
@@ -164,7 +182,8 @@ export default {
     return {
       condensed_tree: null,
       metadata: null,
-      error_message: null
+      error_message: null,
+      taxonomy_db: 'globdb'
     }
   },
   props: ['accession'],
@@ -187,7 +206,9 @@ export default {
       return this.condensed_tree.condensed
     },
     known_species_fraction: function () {
-      return this.metadata.metadata_parsed.known_species_fraction
+      return this.taxonomy_db === 'gtdb'
+        ? this.metadata.metadata_parsed.known_species_fraction
+        : this.metadata.metadata_parsed.globdb_known_species_fraction
     },
     sample_name_mature: function () {
       return this.metadata.metadata_parsed.sample_name
@@ -208,7 +229,7 @@ export default {
       return api_url() + '/otus/' + this.accession
     },
     profile_csv_link: function () {
-      return api_url() + '/condensed_csv/' + this.accession
+      return api_url() + '/condensed_csv/' + this.accession + '?taxonomy_type=' + this.taxonomy_db
     },
     publications: function () {
       return this.metadata.metadata.study_links.filter(function (link) {
@@ -238,14 +259,18 @@ export default {
     this.fetchData()
   },
   methods: {
+    fetchCondensed () {
+      const accession = this.accession
+      fetchRunCondensed(accession, this.taxonomy_db)
+        .then(response => {
+          this.condensed_tree = response.data
+        })
+    },
     fetchData () {
       // const accession = this.$route.params.accession
       const accession = this.accession
 
-      fetchRunCondensed(accession)
-        .then(response => {
-          this.condensed_tree = response.data
-        })
+      this.fetchCondensed()
 
       fetchRunMetadata(accession)
         .then(response => {
@@ -266,7 +291,8 @@ export default {
   },
   watch: {
     // call again the method if the route changes
-    $route: 'fetchData'
+    $route: 'fetchData',
+    taxonomy_db: 'fetchCondensed'
   }
 }
 </script>

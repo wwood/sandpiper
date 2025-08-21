@@ -19,8 +19,8 @@ export function fetchRunMetadata (runId: string) {
   return axios.get(`${API_URL}/metadata/${runId}`)
 }
 
-export function fetchRunCondensed (runId: string) {
-  return axios.get(`${API_URL}/condensed/${runId}`)
+export function fetchRunCondensed (runId: string, taxonomyType: string) {
+  return axios.get(`${API_URL}/condensed/${runId}?taxonomy_type=${taxonomyType}`)
 }
 
 export function fetchProjectMetadata (model_bioproject: string) {
