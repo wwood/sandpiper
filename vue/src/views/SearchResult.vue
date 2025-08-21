@@ -92,7 +92,6 @@
         <b-button tag="a" type="is-info" :href="csv_link()">Download CSV</b-button>
         <b-table
           :data="search_result['condensed_profiles']"
-          :loading="loading"
           :striped="true"
           :sort-icon="'arrow-up'"
           :default-sort="this.sortField"
@@ -192,7 +191,6 @@ export default {
   },
   data: function () {
     return {
-      loading: true,
       search_result: null,
       taxon_name: null,
       lineage: [], // set to empty because otherwise there's a null pointer issue until filled
@@ -249,13 +247,6 @@ export default {
         .then(response => {
           this.search_result = response.data.results
         })
-    },
-    loading () {
-      if (this.search_result === null || this.total_num_results === 0) {
-        return true
-      } else {
-        return false
-      }
     },
     onPageChange (page) {
       this.page = page
