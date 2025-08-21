@@ -15,20 +15,20 @@ export function fetchSandpiperStats () {
   return axios.get(`${API_URL}/sandpiper_stats`)
 }
 
-export function fetchRunMetadata (runId: string) {
-  return axios.get(`${API_URL}/metadata/${runId}`)
+export function fetchRunMetadata (runId: string, profileDb: string = 'gtdb') {
+  return axios.get(`${API_URL}/metadata/${runId}?profile_db=${profileDb}`)
 }
 
-export function fetchRunCondensed (runId: string) {
-  return axios.get(`${API_URL}/condensed/${runId}`)
+export function fetchRunCondensed (runId: string, profileDb: string = 'gtdb') {
+  return axios.get(`${API_URL}/condensed/${runId}?profile_db=${profileDb}`)
 }
 
 export function fetchProjectMetadata (model_bioproject: string) {
   return axios.get(`${API_URL}/project?model_bioproject=${model_bioproject}`)
 }
 
-export function fetchOtus (runId: string) {
-  return axios.get(`${API_URL}/full_profile/${runId}`)
+export function fetchOtus (runId: string, profileDb: string = 'gtdb') {
+  return axios.get(`${API_URL}/full_profile/${runId}?profile_db=${profileDb}`)
 }
 
 export function fetchRunsByTaxonomy (taxonomy: string, page: number, sortField: string, sortDirection: string, pageSize: number) {

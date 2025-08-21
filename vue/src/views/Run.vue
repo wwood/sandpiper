@@ -78,6 +78,12 @@
       <section class="section">
         <div class="container">
           <h3 class="title">Taxonomic profile</h3>
+          <div class="field">
+            <b-select v-model="profile_db">
+              <option value="gtdb">GTDB</option>
+              <option value="globdb">GlobDB</option>
+            </b-select>
+          </div>
           <div class="sunburst">
             <template v-if="condensed_tree != null">
               <Sunburst3 :json_tree="sunburst_tree" :overall_coverage="10.3" :known_species_fraction="known_species_fraction" />
@@ -89,6 +95,12 @@
       <section class="section">
         <div class="container">
           <h3 class="title">Microbial fraction</h3>
+          <div class="field">
+            <b-select v-model="profile_db">
+              <option value="gtdb">GTDB</option>
+              <option value="globdb">GlobDB</option>
+            </b-select>
+          </div>
           <div v-if="metadata.metadata_parsed.smf || metadata.metadata_parsed.smf==0">
             <br />
             <br />
@@ -104,14 +116,20 @@
       <section class="section">
         <div class="container is-large">
           <h3 class="title">Download</h3>
+          <div class="field">
+            <b-select v-model="profile_db">
+              <option value="gtdb">GTDB</option>
+              <option value="globdb">GlobDB</option>
+            </b-select>
+          </div>
 
           <p>The taxonomic profile of this sample can be downloaded in <a :href="profile_csv_link">tab-separated "SingleM condensed" format</a>. In this format the coverage of each lineage is the coverage assigned to that taxon and not more specifically e.g. the coverage of a species is not included in the coverage shown for its genus.</p>
           <br />
 
           <p>This taxonomic profile can be converted to other forms (e.g. one that gives the relative abundance instead of the coverage) using the <a href="https://wwood.github.io/singlem/tools/summarise">SingleM summarise</a> tool.</p>
           <br />
-          
-          <p>The <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> is a tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.</p>
+
+          <p v-if="profile_db !== 'globdb'">The <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> is a tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.</p>
           <!-- <br /> -->
 
           <!-- <p>See a <a :href="'/otus/' + accession">visualisation</a></p> -->
@@ -164,7 +182,8 @@ export default {
     return {
       condensed_tree: null,
       metadata: null,
-      error_message: null
+      error_message: null,
+      profile_db: 'gtdb'
     }
   },
   props: ['accession'],
@@ -205,10 +224,10 @@ export default {
       }      
     },
     full_profile_link: function () {
-      return api_url() + '/otus/' + this.accession
+      return api_url() + '/otus/' + this.accession + '?profile_db=' + this.profile_db
     },
     profile_csv_link: function () {
-      return api_url() + '/condensed_csv/' + this.accession
+      return api_url() + '/condensed_csv/' + this.accession + '?profile_db=' + this.profile_db
     },
     publications: function () {
       return this.metadata.metadata.study_links.filter(function (link) {
@@ -242,12 +261,12 @@ export default {
       // const accession = this.$route.params.accession
       const accession = this.accession
 
-      fetchRunCondensed(accession)
+      fetchRunCondensed(accession, this.profile_db)
         .then(response => {
           this.condensed_tree = response.data
         })
 
-      fetchRunMetadata(accession)
+      fetchRunMetadata(accession, this.profile_db)
         .then(response => {
           if (response.data.error !== undefined) {
             this.error_message = response.data.error
@@ -266,7 +285,8 @@ export default {
   },
   watch: {
     // call again the method if the route changes
-    $route: 'fetchData'
+    $route: 'fetchData',
+    profile_db: 'fetchData'
   }
 }
 </script>
