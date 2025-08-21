@@ -47,8 +47,7 @@ const routes = [
   {
     path: '/random_run',
     name: 'RunRandom',
-    component: RunRandom,
-    props: true
+    component: RunRandom
   },
   {
     path: '/accession/:accession',

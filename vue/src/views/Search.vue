@@ -119,7 +119,7 @@ export default {
     },
 
     search_by_random () {
-      this.$router.push({ name: 'RunRandom', params: { 
+      this.$router.push({ name: 'RunRandom', query: { 
         host: this.random_choice_host,
         ecological: this.random_choice_ecological,
         two_gbp: this.random_choice_two_gbp

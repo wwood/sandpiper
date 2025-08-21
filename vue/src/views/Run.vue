@@ -95,12 +95,6 @@
       <section class="section">
         <div class="container">
           <h3 class="title">Microbial fraction</h3>
-          <b-field label="Profile">
-            <b-select v-model="taxonomy_db" @input="fetchCondensed">
-              <option value="globdb">GlobDB</option>
-              <option value="gtdb">GTDB</option>
-            </b-select>
-          </b-field>
           <div v-if="metadata.metadata_parsed.smf || metadata.metadata_parsed.smf==0">
             <br />
             <br />
@@ -183,7 +177,7 @@ export default {
       condensed_tree: null,
       metadata: null,
       error_message: null,
-      taxonomy_db: 'globdb'
+      taxonomy_db: 'gtdb'
     }
   },
   props: ['accession'],

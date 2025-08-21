@@ -140,7 +140,7 @@ def fetch_condensed_csv(sample_name):
         columns=['sample', 'coverage', 'taxonomy']
     )
     response = make_response(df.to_csv(index=False, header=True, sep='\t'))
-    cd = 'attachment; filename=sandpiper_v{}_{}_condensed.csv'.format(__version__, sample_name)
+    cd = 'attachment; filename=sandpiper_v{}_{}_{}_condensed.csv'.format(__version__, sample_name, taxonomy_type)
     response.headers['Content-Disposition'] = cd
     response.mimetype = 'text/csv'
     return response
@@ -571,7 +571,8 @@ def otus(acc):
         columns=['gene','sample','sequence','num_hits','coverage','taxonomy']
     )
     response = make_response(df.to_csv(index=False, header=True, sep='\t'))
-    cd = 'attachment; filename=sandpiper_v{}_{}.otu_table.csv'.format(__version__, acc)
+    taxonomy_type = 'gtdb' #TODO: Add GlobDB
+    cd = 'attachment; filename=sandpiper_v{}_{}_{}.otu_table.csv'.format(__version__, acc, taxonomy_type)
     response.headers['Content-Disposition'] = cd
     response.mimetype = 'text/csv'
     return response
