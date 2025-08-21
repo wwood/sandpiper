@@ -1,6 +1,6 @@
 <template>
   <section class="section">
-    <div v-if="search_result !== null" class="container">
+    <div v-if="search_result !== null && total_num_results !== null" class="container">
       <section class="section">
         <h1 class="title" style="text-align: center;">
           The {{ taxonomy_level }}
@@ -145,7 +145,7 @@
 
       <div v-else>
         <section class="section container">
-          Searching ..
+          Loading...
         </section>
       </div>
     </div>
