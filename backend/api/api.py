@@ -373,13 +373,13 @@ def taxonomy_search_run_data(taxon):
     if worked:
         return jsonify({
             'results': {
-                'condensed_profiles': [{
-                    'sample_acc': c.acc,
-                    'relative_abundance': round(c.relative_abundance*100,2),
-                    'coverage': round(c.filled_coverage, 2),
-                    'organism': c.taxon_name.replace(' metagenome',''),
-                    'release_year': c.published.strftime('%Y'),}
-                    for c in condensed_profile_hits],                
+            'condensed_profiles': [{
+                'sample_acc': c.acc,
+                'relative_abundance': round(c.relative_abundance*100,2),
+                'coverage': round(c.filled_coverage, 2),
+                'organism': "unspecified" if c.taxon_name is None else c.taxon_name.replace(' metagenome',''),
+                'release_year': c.published.strftime('%Y'),}
+                for c in condensed_profile_hits],                
             }
         })
     else:

@@ -2,7 +2,6 @@
   <section class="section">
     <div v-if="search_result !== null" class="container">
       <section class="section">
-        <!-- <h1 class="title">Search results for {{ taxonomy }}</h1> -->
         <h1 class="title" style="text-align: center;">
           The {{ taxonomy_level }}
           <span v-if="taxonomy_level==='species' || taxonomy_level==='genus'">
@@ -191,7 +190,7 @@ export default {
       loading: true,
       search_result: null,
       taxon_name: null,
-      lineage: null,
+      lineage: [], // set to empty because otherwise there's a null pointer issue until filled
       sortIcon: 'arrow-up',
       total_num_results: null,
       page: 1,
@@ -239,14 +238,19 @@ export default {
       this.fetchData() // call here so that this and the run data are loaded by the watch in a single function
     },
     fetchData () {
-      this.loading = true
       this.search_result = null
 
       fetchRunsByTaxonomy(this.taxonomy, this.page, this.sortField, this.sortDirection, this.pageSize)
         .then(response => {
           this.search_result = response.data.results
-          this.loading = false
         })
+    },
+    loading () {
+      if (this.search_result === null || this.total_num_results === 0) {
+        return true
+      } else {
+        return false
+      }
     },
     onPageChange (page) {
       this.page = page
