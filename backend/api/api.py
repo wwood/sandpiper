@@ -88,12 +88,16 @@ def fetch_markers():
 
 @api.route('/condensed/<string:sample_name>', methods=('GET',))
 def fetch_condensed(sample_name):
+    taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
     root = WordNode(None, 'Root')
     taxons_to_wordnode = {root.word: root}
 
     condensed = db.session.execute(
-        select(CondensedProfile.coverage, Taxonomy.full_name).join(CondensedProfile.ncbi_metadata).
-            filter(NcbiMetadata.acc == sample_name).filter(CondensedProfile.taxonomy_id==Taxonomy.id)
+        select(CondensedProfile.coverage, Taxonomy.full_name)
+            .join(CondensedProfile.ncbi_metadata)
+            .filter(NcbiMetadata.acc == sample_name)
+            .filter(CondensedProfile.taxonomy_id == Taxonomy.id)
+            .filter(Taxonomy.taxonomy_type == taxonomy_type)
         ).fetchall()
     if len(condensed) is None:
         return jsonify({ sample_name: 'no condensed data found' })
@@ -116,9 +120,13 @@ def fetch_condensed(sample_name):
 
 @api.route('/condensed_csv/<string:sample_name>', methods=('GET',))
 def fetch_condensed_csv(sample_name):
+    taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
     condensed = db.session.execute(
-        select(CondensedProfile.coverage, Taxonomy.full_name).join(CondensedProfile.ncbi_metadata).
-            filter(NcbiMetadata.acc == sample_name).filter(CondensedProfile.taxonomy_id==Taxonomy.id)
+        select(CondensedProfile.coverage, Taxonomy.full_name)
+            .join(CondensedProfile.ncbi_metadata)
+            .filter(NcbiMetadata.acc == sample_name)
+            .filter(CondensedProfile.taxonomy_id == Taxonomy.id)
+            .filter(Taxonomy.taxonomy_type == taxonomy_type)
         ).fetchall()
     if len(condensed) is None:
         return jsonify({ sample_name: 'no condensed data found' })
