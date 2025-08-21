@@ -24,7 +24,6 @@ Flask-Script = "*"
 extern = "*"
 Flask-CORS = "*"
 nodejs = "*"
-vue="2.*"
 iso8601 = "*"
 pandas = "*, >=1.5" # pandas 1.1ish was broken for itertuples in generate_backend_db
 graftm = "*"

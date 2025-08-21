@@ -18,7 +18,7 @@ OTU_TABLE: '/work/microbiome/msingle/mess/198_R226_renew_mach2/processing_202504
 # OTU_TABLE: '/work/microbiome/msingle/mess/174_R220_renew/processing_20240531/otu_table.head1000000.csv.gz'
 HOST_OR_NOT_PREDICTION: '/work/microbiome/msingle/mess/198_R226_renew_mach2/processing_20250409/host_or_not_prediction/host_or_not_preds.csv'
 SMF_FILE: '/work/microbiome/msingle/mess/198_R226_renew_mach2/processing_20250409/microbial_fractions.csv'
-GLOBDB_CONDENSED_OTU_TABLE: '/path/to/globdb_condensed.csv.gz'
+GLOBDB_CONDENSED_OTU_TABLE: '/work/microbiome/ibis/deep_ocean/results/renew/20250411/condensed.tsv.gz'
 
 TEST_OR_PROD: 'prod'
 SCRATCH_DIR: '/scratch/microbiome/woodcrob/sandpiper'
