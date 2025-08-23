@@ -989,8 +989,8 @@ def add_enriched_community_tags(db, db_path):
 def create_markers_table(db, describe_csv):
     with open(describe_csv) as f:
         reader = csv.DictReader(f, delimiter='\t')
-        for row in reader:
-            db.session.add(Marker(marker=row['name']))
+        for i, row in enumerate(reader, start=1):
+            db.session.add(Marker(id=i, marker=row['name']))
     db.session.commit()
 
 
