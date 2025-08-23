@@ -1145,7 +1145,7 @@ if __name__ == '__main__':
 
             run_accession_to_id = read_run_accession_to_id(db)
             taxonomy_name_to_id = read_taxonomy_name_to_id(db)
-              index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, db_path)
+            index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, db_path)
 
         elif args.stage == 'parsed_metadata':
             # --parsed-metadata-table
