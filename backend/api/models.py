@@ -31,8 +31,8 @@ class Otu(db.Model):
 
 class OtuIndexed(db.Model):
     '''This table is intended to be quickly queried based on run_id only, with
-    taxonomy and marker names cached. SQLite seems to be slow at this query when
-    running it on the original Otu table object.'''
+      taxonomy and marker names cached. DuckDB seems to be slow at this query when
+      running it on the original Otu table object.'''
     
     __tablename__ = 'otus_indexed'
     id = db.Column(db.Integer, primary_key=True)
