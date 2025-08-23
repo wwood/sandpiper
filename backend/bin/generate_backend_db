@@ -37,11 +37,10 @@ import csv
 import json
 import tempfile
 
-import extern
+import duckdb
 import pandas as pd
 import polars as pl
 from tqdm import tqdm
-import sqlite3
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')] + sys.path
 from api.application import generate_app
@@ -137,9 +136,9 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
 
         logging.info("Committing condensed profiles ..")
         tf.flush()
-        extern.run("sqlite3 {}".format(db_path), stdin= \
-            '.separator "\\t"\n' \
-            ".import {} condensed_profiles".format(tf.name))
+        con = duckdb.connect(db_path)
+        con.execute(f"COPY condensed_profiles FROM '{tf.name}' (DELIMITER '\\t')")
+        con.close()
         logging.info("Wrote {} condensed profile rows to DB, skipping {} that were not in metadata".format(
             count, len(skipped_runs)))
 
@@ -789,14 +788,9 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
         # sqlite> .mode csv
         # sqlite> .import your_file.csv your_table
         # sqlite> COMMIT;
-        extern.run("sqlite3 {}".format(db_path), stdin=
-            'PRAGMA journal_mode = OFF;\n' \
-            'PRAGMA synchronous = OFF;\n' \
-            # 'PRAGMA temp_store = MEMORY;\n' \ # might make it faster? Untested and eh for now
-            'BEGIN;\n' \
-            '.separator "\\t"\n' \
-            '.import {} otus_indexed\n' \
-            'COMMIT;'.format(f.name))
+        con = duckdb.connect(db_path)
+        con.execute(f"COPY otus_indexed FROM '{f.name}' (DELIMITER '\t')")
+        con.close()
         logging.info("Imported {} OTU lines into DB".format(db.session.query(OtuIndexed).count()))
 
     # drop the otus table since we don't need it anymore
@@ -857,10 +851,10 @@ def add_host_prediction_counts_to_taxonomy(db, db_path):
                 ]
             ]) + "\n").encode())
         f.flush()
-        extern.run("sqlite3 {}".format(db_path), stdin= \
-            'delete from taxonomies;\n' \
-            '.separator "\\t"\n' \
-            ".import {} taxonomies".format(f.name))
+        con = duckdb.connect(db_path)
+        con.execute("DELETE FROM taxonomies")
+        con.execute(f"COPY taxonomies FROM '{f.name}' (DELIMITER '\\t')")
+        con.close()
         logging.info("Imported {} taxonomies with host prediction counts".format(db.session.query(Taxonomy).count()))
 
 
@@ -922,11 +916,11 @@ def add_bioproject_associated_publications(db, db_path, tsv_path):
         f.flush()
         logging.info("Importing {} new bioproject associated publications to DB".format(count_added))
         # Import and set empty values as NULL
-        extern.run("sqlite3 {}".format(db_path), stdin= \
-            '.separator "\\t"\n' \
-            ".import {} study_links \n ".format(f.name)) + \
-            "UPDATE study_links SET label=NULL WHERE label='';\n " \
-            "UPDATE study_links SET url=NULL WHERE url='';\n "
+        con = duckdb.connect(db_path)
+        con.execute(f"COPY study_links FROM '{f.name}' (DELIMITER '\\t')")
+        con.execute("UPDATE study_links SET label=NULL WHERE label=''")
+        con.execute("UPDATE study_links SET url=NULL WHERE url='' ")
+        con.close()
         logging.info("Imported {} bioproject associated publications".format(count_added))
 
     logging.info("Added {} bioproject associated publications to DB".format(count_added))
@@ -935,8 +929,9 @@ def add_bioproject_associated_publications(db, db_path, tsv_path):
 def index_condensed_profiles_multi_column(db, db_path):
     # This vastly speeds up search by taxonomy
     logging.info("Indexing condensed profiles tax+relabund ..")
-    extern.run("sqlite3 {}".format(db_path), stdin= \
-        'create index condensed_profiles_taxonomy_id_relative_abundance on condensed_profiles (taxonomy_id, relative_abundance);')
+    con = duckdb.connect(db_path)
+    con.execute('CREATE INDEX condensed_profiles_taxonomy_id_relative_abundance ON condensed_profiles (taxonomy_id, relative_abundance)')
+    con.close()
     logging.info("Indexed condensed profiles tax+relabund")
 
 
@@ -1024,7 +1019,7 @@ if __name__ == '__main__':
     parent_parser.add_argument('--condensed-otu-table', help='condensed OTU table input')
     parent_parser.add_argument('--globdb-condensed-otu-table',
                                help='condensed OTU table input built on globdb taxonomy')
-    parent_parser.add_argument('-o', help='sqlite3 file to generate', required=True)
+    parent_parser.add_argument('-o', help='duckdb file to generate', required=True)
     parent_parser.add_argument('--metapackage-describe', help='metapackage describe CSV file')
     parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files')
     parent_parser.add_argument('--run-blacklist', help='Ignore runs listed in this file')
@@ -1053,9 +1048,9 @@ if __name__ == '__main__':
     logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
     # Create the app and create the tables
-    sqlite_db_path = args.o
+    db_path = args.o
     app = generate_app()
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + sqlite_db_path
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'duckdb:///' + db_path
     app.config['SQLALCHEMY_ECHO'] = args.debug is True
     db = SQLAlchemy(app)
     with app.app_context():
@@ -1084,10 +1079,10 @@ if __name__ == '__main__':
 
             # Create new DB
             logging.info("Removing old DB if it exists ..")
-            if os.path.exists(sqlite_db_path):
-                os.remove(sqlite_db_path)
+            if os.path.exists(db_path):
+                os.remove(db_path)
             logging.info("Making new DB ..")
-            conn = sqlite3.connect(sqlite_db_path)
+            conn = duckdb.connect(db_path)
             conn.close()
 
             db.create_all()
@@ -1125,24 +1120,24 @@ if __name__ == '__main__':
             add_smf(db, run_accession_to_id, args.smf_file)
 
             taxonomy_name_to_id, next_taxonomy_id = fill_condensed_and_taxonomy_tables(
-                db, sqlite_db_path, args.condensed_otu_table,
+                db, db_path, args.condensed_otu_table,
                 blacklist, run_accession_to_id, 'gtdb')
 
             if args.globdb_condensed_otu_table:
                 taxonomy_name_to_id, next_taxonomy_id = fill_condensed_and_taxonomy_tables(
-                    db, sqlite_db_path, args.globdb_condensed_otu_table,
+                    db, db_path, args.globdb_condensed_otu_table,
                     blacklist, run_accession_to_id, 'globdb', taxonomy_name_to_id, next_taxonomy_id)
 
-            add_bioproject_associated_publications(db, sqlite_db_path, args.bioproject_associated_publications)
+            add_bioproject_associated_publications(db, db_path, args.bioproject_associated_publications)
 
             add_host_predictions(db, run_accession_to_id, args.host_predictions_tsv)
         
-            add_host_prediction_counts_to_taxonomy(db, sqlite_db_path)
+            add_host_prediction_counts_to_taxonomy(db, db_path)
 
-            index_condensed_profiles_multi_column(db, sqlite_db_path)
+            index_condensed_profiles_multi_column(db, db_path)
 
         elif args.stage == 'tags':
-            add_enriched_community_tags(db, sqlite_db_path)
+            add_enriched_community_tags(db, db_path)
 
         elif args.stage == 'otus':
             if not args.otu_table:
@@ -1150,7 +1145,7 @@ if __name__ == '__main__':
 
             run_accession_to_id = read_run_accession_to_id(db)
             taxonomy_name_to_id = read_taxonomy_name_to_id(db)
-            index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, sqlite_db_path)
+              index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, db_path)
 
         elif args.stage == 'parsed_metadata':
             # --parsed-metadata-table

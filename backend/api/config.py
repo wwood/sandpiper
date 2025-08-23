@@ -11,14 +11,14 @@ class BaseConfig:
     # Check if we're in testing mode
     if os.environ.get('SANDPIPER_TESTING'):
         print("Running in DB testing mode")
-        DB_NAME = 'sandpiper_20_test.sqlite3'
+        DB_NAME = 'sandpiper_20_test.duckdb'
     else:
         print("Running in DB production mode")
-        DB_NAME = 'sandpiper_33.sqlite3'
-    LYRA_DB_PATH = 'sqlite:///'+os.path.join(os.path.dirname(__file__), '../db/{}'.format(DB_NAME))
-    # LYRA_DB_PATH = 'sqlite:////scratch/sandpiper/sandpiper_33.sqlite3'
-    # LYRA_DB_PATH = 'sqlite:////scratch/sandpiper/sandpiper_19_test.sqlite3'
-    PROD_DB_PATH = LYRA_DB_PATH #'sqlite:////data/{}'.format(DB_NAME)
+        DB_NAME = 'sandpiper_35.duckdb'
+    LYRA_DB_PATH = 'duckdb:///'+os.path.join(os.path.dirname(__file__), '../db/{}'.format(DB_NAME))
+    # LYRA_DB_PATH = 'duckdb:////scratch/sandpiper/sandpiper_35.duckdb'
+    # LYRA_DB_PATH = 'duckdb:////scratch/sandpiper/sandpiper_19_test.duckdb'
+    PROD_DB_PATH = LYRA_DB_PATH #'duckdb:////data/{}'.format(DB_NAME)
 
     if os.path.exists(os.path.join(os.path.dirname(__file__), 'running_on_lyra')):
         SQLALCHEMY_DATABASE_URI = LYRA_DB_PATH

@@ -171,8 +171,8 @@ rule generate_backend_db_start:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
         'mkdir -p {config[SCRATCH_DIR]} && ' \
-        'pixi run -e sandpiper ./bin/generate_backend_db --stage start --run-blacklist db/metagenome_assembly_acc_list.csv --metapackage-describe {params.describe} --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --kingfisher-annotate-path-list $SNAKE_WORKING_DIR/{input.kingfisher_metadata_file_list} 2> $SNAKE_WORKING_DIR/{log} && ' \
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start'
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage start --run-blacklist db/metagenome_assembly_acc_list.csv --metapackage-describe {params.describe} --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb --kingfisher-annotate-path-list $SNAKE_WORKING_DIR/{input.kingfisher_metadata_file_list} 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_start'
 
 rule generate_backend_db_stage2:
     input:
@@ -211,9 +211,9 @@ rule generate_backend_db_stage2:
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_start {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
-        'pixi run -e sandpiper ./bin/generate_backend_db --stage stage2 --run-blacklist db/metagenome_assembly_acc_list.csv --condensed-otu-table {config[CONDENSED_OTU_TABLE]} --globdb-condensed-otu-table {config[GLOBDB_CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION]} --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_stage2'
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_start {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage stage2 --run-blacklist db/metagenome_assembly_acc_list.csv --condensed-otu-table {config[CONDENSED_OTU_TABLE]} --globdb-condensed-otu-table {config[GLOBDB_CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION]} --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_stage2'
 
 rule add_tags_to_backend_db:
     input:
@@ -232,9 +232,9 @@ rule add_tags_to_backend_db:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
         # cp to remain idempotent, e.g. if this step fails
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_stage2 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
-        'pixi run -e sandpiper ./bin/generate_backend_db --stage tags -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_tags'
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_stage2 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage tags -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_tags'
 
 rule add_otus_to_backend_db:
     input:
@@ -253,11 +253,11 @@ rule add_otus_to_backend_db:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
         # cp to remain idempotent, e.g. if this step fails
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_tags {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_tags {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
         # cp the otus because scratch will be faster than /work/microbiome (didn't end up being any faster)
         # 'cp {config[OTU_TABLE]} {config[SCRATCH_DIR]}/otus && ' \
-        'pixi run -e sandpiper ./bin/generate_backend_db --stage otus --otu-table <(pigz -cd {config[OTU_TABLE]}) -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_otus'
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage otus --otu-table <(pigz -cd {config[OTU_TABLE]}) -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_otus'
 
 rule generate_parsed_metadata_from_kingfisher:
     input:
@@ -311,8 +311,8 @@ rule add_parsed_metadata_from_kingfisher:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
         # cp to remain idempotent, e.g. if this step fails
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3.after_otus {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_otus {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
         # cp the otus because scratch will be faster than /work/microbiome (didn't end up being any faster)
         # 'cp {config[OTU_TABLE]} {config[SCRATCH_DIR]}/otus && ' \
-        'pixi run -e sandpiper ./bin/generate_backend_db --stage parsed_metadata --parsed-metadata-table {params.parsed_metadata} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 2> $SNAKE_WORKING_DIR/{log} && ' \
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.sqlite3 db/'
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage parsed_metadata --parsed-metadata-table {params.parsed_metadata} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb db/'
