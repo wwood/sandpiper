@@ -1078,6 +1078,23 @@ if __name__ == '__main__':
                 os.remove(db_path)
             logging.info("Making new DB ..")
             conn = duckdb.connect(db_path)
+            # Create sequences for autoincrementing IDs
+            seqs = [
+                'otus_id_seq',
+                'otus_indexed_id_seq',
+                'markers_id_seq',
+                'nucleotides_id_seq',
+                'condensed_profiles_id_seq',
+                'taxonomies_id_seq',
+                'biosample_attributes_id_seq',
+                'parsed_sample_attributes_id_seq',
+                'study_links_id_seq',
+                'ncbi_metadata_id_seq',
+                'tags_id_seq',
+                'run_tags_id_seq',
+            ]
+            for seq in seqs:
+                conn.execute(f"CREATE SEQUENCE {seq}")
             conn.close()
 
             db.create_all()

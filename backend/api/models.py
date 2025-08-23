@@ -4,13 +4,14 @@ models.py
 """
 
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 
 db = SQLAlchemy()
 
 class Otu(db.Model):
     ''' This table is actually dropped during DB generation '''
     __tablename__ = 'otus'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, server_default=text("nextval('otus_id_seq')"), primary_key=True)
     # sample_name|num_hits|coverage|taxonomy|marker_id|sequence_id
     sample_name = db.Column(db.String, nullable=False)
     num_hits = db.Column(db.Integer, nullable=False)
@@ -35,7 +36,7 @@ class OtuIndexed(db.Model):
       running it on the original Otu table object.'''
     
     __tablename__ = 'otus_indexed'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, server_default=text("nextval('otus_indexed_id_seq')"), primary_key=True)
     # sample_name|num_hits|coverage|taxonomy|marker_id|sequence_id
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     num_hits = db.Column(db.Integer, nullable=False)
@@ -59,7 +60,7 @@ class OtuIndexed(db.Model):
 
 class Marker(db.Model):
     __tablename__ = 'markers'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, server_default=text("nextval('markers_id_seq')"), primary_key=True)
     marker = db.Column(db.String, nullable=False)
     otus = db.relationship('Otu', backref='marker')
 
@@ -69,7 +70,7 @@ class Marker(db.Model):
 
 class Nucleotide(db.Model):
     __tablename__ = 'nucleotides'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, server_default=text("nextval('nucleotides_id_seq')"), primary_key=True)
     marker_id = db.Column(db.Integer, db.ForeignKey('markers.id'), nullable=False)
     sequence = db.Column(db.String, nullable=False)
     marker_wise_id = db.Column(db.Integer, nullable=False)
@@ -85,7 +86,7 @@ class CondensedProfile(db.Model):
     __tablename__ = 'condensed_profiles'
     #     "CREATE TABLE condensed_profiles (id INTEGER PRIMARY KEY,"
     #     " sample_name text, coverage float, taxonomy_id INTEGER);\n")
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, server_default=text("nextval('condensed_profiles_id_seq')"), primary_key=True)
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     coverage = db.Column(db.Float, nullable=False, index=True)
     filled_coverage = db.Column(db.Float, nullable=False, index=True)
@@ -112,7 +113,7 @@ class Taxonomy(db.Model):
 
     #     "CREATE TABLE taxonomies (id INTEGER PRIMARY KEY, taxonomy_level TEXT, parent_id INTEGER, name TEXT); \n"
     __tablename__ = 'taxonomies'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, server_default=text("nextval('taxonomies_id_seq')"), primary_key=True)
     taxonomy_level = db.Column(db.String, nullable=False)
     parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
     name = db.Column(db.String, nullable=False, index=True)
@@ -143,7 +144,7 @@ class Taxonomy(db.Model):
 
 class BiosampleAttribute(db.Model):
     __tablename__ = 'biosample_attributes'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, server_default=text("nextval('biosample_attributes_id_seq')"), primary_key=True)
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     k = db.Column(db.String, nullable=False, index=True)
     v = db.Column(db.String, nullable=False)
@@ -156,7 +157,7 @@ class BiosampleAttribute(db.Model):
 
 class ParsedSampleAttribute(db.Model):
     __tablename__ = 'parsed_sample_attributes'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, server_default=text("nextval('parsed_sample_attributes_id_seq')"), primary_key=True)
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     collection_year = db.Column(db.Integer)
     collection_month = db.Column(db.Integer)
@@ -195,7 +196,7 @@ class ParsedSampleAttribute(db.Model):
 
 class StudyLink(db.Model):
     __tablename__ = 'study_links'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, server_default=text("nextval('study_links_id_seq')"), primary_key=True)
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     study_id = db.Column(db.String)
     database = db.Column(db.String)
@@ -215,7 +216,7 @@ class StudyLink(db.Model):
 
 class NcbiMetadata(db.Model):
     __tablename__ = 'ncbi_metadata'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, server_default=text("nextval('ncbi_metadata_id_seq')"), primary_key=True)
     # acc,
     # assay_type,
     # center_name,
@@ -371,7 +372,7 @@ class NcbiMetadata(db.Model):
 
 class Tag(db.Model):
     __tablename__ = 'tags'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, server_default=text("nextval('tags_id_seq')"), primary_key=True)
     name = db.Column(db.String, unique=True, nullable=False)
     description = db.Column(db.String, nullable=False)
 
@@ -382,7 +383,7 @@ class Tag(db.Model):
 
 class RunTag(db.Model):
     __tablename__ = 'run_tags'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, server_default=text("nextval('run_tags_id_seq')"), primary_key=True)
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False)
     tag_id = db.Column(db.Integer, db.ForeignKey('tags.id'), nullable=False)
 
