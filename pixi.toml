@@ -34,9 +34,10 @@ numpy = "*"
 typing_extensions="*, >4.2" #4.2 gives an Attribute error when flast starts
 biopython = "*"
 zenodo_backpack = "*"
- singlem="*"
- duckdb = "*"
- duckdb-engine = "*"
+singlem="*"
+duckdb = "*"
+duckdb-engine = "*"
+pigz = "*"
 
 [environments]
 sandpiper = ["sandpiper"]

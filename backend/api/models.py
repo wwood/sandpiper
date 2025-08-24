@@ -115,7 +115,7 @@ class Taxonomy(db.Model):
     __tablename__ = 'taxonomies'
     id = db.Column(db.Integer, server_default=text("nextval('taxonomies_id_seq')"), primary_key=True)
     taxonomy_level = db.Column(db.String, nullable=False)
-    parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=True)
     name = db.Column(db.String, nullable=False, index=True)
     full_name = db.Column(db.String, nullable=False)
     taxonomy_type = db.Column(db.String, nullable=False, index=True)

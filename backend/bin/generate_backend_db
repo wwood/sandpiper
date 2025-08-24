@@ -137,8 +137,11 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
 
         logging.info("Committing condensed profiles ..")
         tf.flush()
-        extern.run("duckdb {}".format(db_path), stdin=
-            "COPY condensed_profiles FROM '{}' (DELIMITER '\t');".format(tf.name))
+        conn = db.session.connection().connection
+        conn.execute(
+            f"COPY condensed_profiles FROM '{tf.name}' (DELIMITER '\t');"
+        )
+        conn.commit()
         logging.info("Wrote {} condensed profile rows to DB, skipping {} that were not in metadata".format(
             count, len(skipped_runs)))
 
@@ -218,7 +221,7 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
             if species_aware_taxonomy not in taxonomy_name_to_id[taxonomy_type]:
                 if species_aware_taxonomy == 'Root':
                     level = 'root'
-                    parent_id = 'NULL'
+                    parent_id = None
                     full_taxonomy = 'Root'
                 else:
                     if i == 7:
@@ -239,6 +242,7 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
                              name=species_aware_taxonomy,
                              full_name=full_taxonomy,
                              taxonomy_type=taxonomy_type))
+                db.session.flush()
 
                 taxonomy_name_to_id[taxonomy_type][species_aware_taxonomy] = next_taxonomy_id
                 next_taxonomy_id += 1
@@ -762,6 +766,7 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
                                          name=taxon,
                                          full_name='; '.join(full_taxonomy),
                                          taxonomy_type='gtdb'))
+                            db.session.flush()
 
                             taxonomy_name_to_id[taxon] = next_taxonomy_id
                             parent_id = next_taxonomy_id
@@ -785,10 +790,11 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
         # duckdb> BEGIN;
         # duckdb> COPY your_file.csv TO your_table
         # duckdb> COMMIT;
-        extern.run("duckdb {}".format(db_path), stdin=
-            'BEGIN;\n' \
-            "COPY otus_indexed FROM '{}' (DELIMITER '\t');\n" \
-            'COMMIT;'.format(f.name))
+        conn = db.session.connection().connection
+        conn.execute(
+            f"COPY otus_indexed FROM '{f.name}' (DELIMITER '\t');"
+        )
+        conn.commit()
         logging.info("Imported {} OTU lines into DB".format(db.session.query(OtuIndexed).count()))
 
     # drop the otus table since we don't need it anymore
@@ -797,9 +803,18 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
 
 
 def read_corrections():
-    with open(os.path.join(os.path.dirname(__file__),
-                           '../../public_sequencing_metadata_corrections/corrections.json')) as f:
-        corrections = json.load(f)
+    try:
+        with open(
+            os.path.join(
+                os.path.dirname(__file__),
+                '../../public_sequencing_metadata_corrections/corrections.json',
+            )
+        ) as f:
+            corrections = json.load(f)
+    except FileNotFoundError:
+        logging.warning('Corrections file not found; proceeding without overrides')
+        return {}
+
     # Convert corrections to a dict with key of bioproject
     corrections_by_key = {}
     for correction in corrections:
@@ -822,37 +837,21 @@ def read_corrections():
 
 
 def add_host_prediction_counts_to_taxonomy(db, db_path):
-    with tempfile.NamedTemporaryFile(prefix='sandpiper_generate_taxonomy') as f:
-        tax_count = db.session.query(Taxonomy).count()
-        logging.info("Caching {} host sample counts in taxonomy ..".format(tax_count))
-        for taxonomy in tqdm(db.session.query(Taxonomy).all(), total=tax_count):
-            num_host_runs = db.session.query(NcbiMetadata). \
-                join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
-                join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='host'). \
-                count()
-            num_ecological_runs = db.session.query(NcbiMetadata). \
-                join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
-                join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='ecological'). \
-                count()
-
-            # id = db.Column(db.Integer, primary_key=True)
-            # taxonomy_level = db.Column(db.String, nullable=False)
-            # parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
-            # name = db.Column(db.String, nullable=False, index=True)
-            # full_name = db.Column(db.String, nullable=False)
-            # host_sample_count = db.Column(db.Integer)
-            # ecological_sample_count = db.Column(db.Integer)
-            f.write(("\t".join([
-                str(x) for x in [
-                    taxonomy.id, taxonomy.taxonomy_level, taxonomy.parent_id, taxonomy.name, taxonomy.full_name,
-                    taxonomy.taxonomy_type, num_host_runs, num_ecological_runs
-                ]
-            ]) + "\n").encode())
-        f.flush()
-        extern.run("duckdb {}".format(db_path), stdin=
-            "DELETE FROM taxonomies;\n" \
-            "COPY taxonomies FROM '{}' (DELIMITER '\t');".format(f.name))
-        logging.info("Imported {} taxonomies with host prediction counts".format(db.session.query(Taxonomy).count()))
+    tax_count = db.session.query(Taxonomy).count()
+    logging.info("Caching {} host sample counts in taxonomy ..".format(tax_count))
+    for taxonomy in tqdm(db.session.query(Taxonomy).all(), total=tax_count):
+        num_host_runs = db.session.query(NcbiMetadata). \
+            join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
+            join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='host'). \
+            count()
+        num_ecological_runs = db.session.query(NcbiMetadata). \
+            join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
+            join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='ecological'). \
+            count()
+        taxonomy.host_sample_count = num_host_runs
+        taxonomy.ecological_sample_count = num_ecological_runs
+    db.session.commit()
+    logging.info("Imported {} taxonomies with host prediction counts".format(db.session.query(Taxonomy).count()))
 
 
 def add_bioproject_associated_publications(db, db_path, tsv_path):
@@ -913,10 +912,13 @@ def add_bioproject_associated_publications(db, db_path, tsv_path):
         f.flush()
         logging.info("Importing {} new bioproject associated publications to DB".format(count_added))
         # Import and set empty values as NULL
-        extern.run("duckdb {}".format(db_path), stdin=
-            "COPY study_links FROM '{}' (DELIMITER '\t');\n" \
-            "UPDATE study_links SET label=NULL WHERE label='';\n" \
-            "UPDATE study_links SET url=NULL WHERE url='';\n".format(f.name))
+        conn = db.session.connection().connection
+        conn.execute(
+            f"COPY study_links FROM '{f.name}' (DELIMITER '\t');"
+        )
+        conn.execute("UPDATE study_links SET label=NULL WHERE label='';")
+        conn.execute("UPDATE study_links SET url=NULL WHERE url='';")
+        conn.commit()
         logging.info("Imported {} bioproject associated publications".format(count_added))
 
     logging.info("Added {} bioproject associated publications to DB".format(count_added))
@@ -925,8 +927,12 @@ def add_bioproject_associated_publications(db, db_path, tsv_path):
 def index_condensed_profiles_multi_column(db, db_path):
     # This vastly speeds up search by taxonomy
     logging.info("Indexing condensed profiles tax+relabund ..")
-    extern.run("duckdb {}".format(db_path), stdin=
-        'create index condensed_profiles_taxonomy_id_relative_abundance on condensed_profiles (taxonomy_id, relative_abundance);')
+    conn = db.session.connection().connection
+    conn.execute(
+        'create index condensed_profiles_taxonomy_id_relative_abundance on '
+        'condensed_profiles (taxonomy_id, relative_abundance);'
+    )
+    conn.commit()
     logging.info("Indexed condensed profiles tax+relabund")
 
 
