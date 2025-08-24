@@ -47,7 +47,6 @@ sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')] + s
 from api.application import generate_app
 
 # from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import update, bindparam, select, insert, func
 
 from api.models import *
@@ -1053,7 +1052,7 @@ if __name__ == '__main__':
     app = generate_app()
     app.config['SQLALCHEMY_DATABASE_URI'] = 'duckdb:///' + db_path
     app.config['SQLALCHEMY_ECHO'] = args.debug is True
-    db = SQLAlchemy(app)
+    db.init_app(app)
     with app.app_context():
         if args.stage == 'start' or args.stage == 'stage2':
             blacklist = set()
@@ -1103,10 +1102,8 @@ if __name__ == '__main__':
                 conn.execute(f"CREATE SEQUENCE {seq}")
             conn.close()
 
-            db.create_all()
-
             # Create all the tables
-            Taxonomy.metadata.create_all(db.engine)
+            db.create_all()
 
             # Create markers
             create_markers_table(db, args.metapackage_describe)
