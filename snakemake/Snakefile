@@ -52,7 +52,7 @@ else:
 
 rule all:
     input:
-        '{test_or_prod}/{version}/backend_db/parsed_metadata_done'.format(
+        '{test_or_prod}/{version}/backend_db/cache_table_done'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION']),
         '{test_or_prod}/gather_bioproject_pubs/{date}/done'.format(
@@ -316,3 +316,22 @@ rule add_parsed_metadata_from_kingfisher:
         # 'cp {config[OTU_TABLE]} {config[SCRATCH_DIR]}/otus && ' \
         'pixi run -e sandpiper ./bin/generate_backend_db --stage parsed_metadata --parsed-metadata-table {params.parsed_metadata} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb 2> $SNAKE_WORKING_DIR/{log} && ' \
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb db/'
+
+rule precompute_api_cache:
+    input:
+        '{test_or_prod}/{version}/backend_db/parsed_metadata_done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
+    output:
+        touch('{test_or_prod}/{version}/backend_db/cache_table_done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION']))
+    log:
+        '{test_or_prod}/{version}/backend_db/cache_table.log'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
+    shell:
+        'export SNAKE_WORKING_DIR=`pwd` && ' \
+        'cd ../backend && ' \
+        'export SANDPIPER_TESTING=1 && ' \
+        'pixi run -e sandpiper ./bin/precompute_api_cache.py 2> $SNAKE_WORKING_DIR/{log}'

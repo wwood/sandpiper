@@ -391,3 +391,9 @@ class RunTag(db.Model):
         return dict(
             run_id=self.run_id,
             tag_id=self.tag_id)
+
+
+class SandpiperCache(db.Model):
+    __tablename__ = 'sandpiper_cache'
+    key = db.Column(db.String, primary_key=True)
+    value = db.Column(db.Text, nullable=False)
