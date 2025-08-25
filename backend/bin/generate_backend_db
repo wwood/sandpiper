@@ -839,50 +839,63 @@ def add_host_prediction_counts_to_taxonomy(db, db_path):
     tax_count = db.session.query(Taxonomy).count()
     logging.info("Caching {} host sample counts in taxonomy ..".format(tax_count))
 
-    # Fetch host/ecological run counts for all taxonomies in a single query
-    results = (
-        db.session.query(
-            CondensedProfile.taxonomy_id,
-            ParsedSampleAttribute.host_or_not_mature,
-            func.count(func.distinct(CondensedProfile.run_id)),
-        )
-        .join(
-            ParsedSampleAttribute,
-            CondensedProfile.run_id == ParsedSampleAttribute.run_id,
-        )
-        .filter(
-            ParsedSampleAttribute.host_or_not_mature.in_(("host", "ecological"))
-        )
-        .group_by(
-            CondensedProfile.taxonomy_id,
-            ParsedSampleAttribute.host_or_not_mature,
-        )
-        .all()
-    )
+    tax_ids = [id for (id,) in db.session.query(Taxonomy.id)]
+    chunk_size = 1000
+    total_chunks = (len(tax_ids) + chunk_size - 1) // chunk_size
 
-    host_counts = {}
-    ecological_counts = {}
-    for tax_id, host_type, count in results:
-        if host_type == "host":
-            host_counts[tax_id] = count
-        else:
-            ecological_counts[tax_id] = count
-
-    updates = []
-    for tax_id in set(host_counts) | set(ecological_counts):
-        updates.append(
-            {
-                "id": tax_id,
-                "host_sample_count": host_counts.get(tax_id, 0),
-                "ecological_sample_count": ecological_counts.get(tax_id, 0),
-            }
+    imported = 0
+    for i in tqdm(
+        range(0, len(tax_ids), chunk_size),
+        total=total_chunks,
+        desc="Caching host sample counts in taxonomy",
+    ):
+        chunk_ids = tax_ids[i : i + chunk_size]
+        results = (
+            db.session.query(
+                CondensedProfile.taxonomy_id,
+                ParsedSampleAttribute.host_or_not_mature,
+                func.count(func.distinct(CondensedProfile.run_id)),
+            )
+            .join(
+                ParsedSampleAttribute,
+                CondensedProfile.run_id == ParsedSampleAttribute.run_id,
+            )
+            .filter(
+                ParsedSampleAttribute.host_or_not_mature.in_(("host", "ecological"))
+            )
+            .filter(CondensedProfile.taxonomy_id.in_(chunk_ids))
+            .group_by(
+                CondensedProfile.taxonomy_id,
+                ParsedSampleAttribute.host_or_not_mature,
+            )
+            .all()
         )
 
-    if updates:
-        db.session.bulk_update_mappings(Taxonomy, updates)
-    db.session.commit()
+        host_counts = {}
+        ecological_counts = {}
+        for tax_id, host_type, count in results:
+            if host_type == "host":
+                host_counts[tax_id] = count
+            else:
+                ecological_counts[tax_id] = count
+
+        updates = []
+        for tax_id in chunk_ids:
+            updates.append(
+                {
+                    "id": tax_id,
+                    "host_sample_count": host_counts.get(tax_id, 0),
+                    "ecological_sample_count": ecological_counts.get(tax_id, 0),
+                }
+            )
+
+        if updates:
+            db.session.bulk_update_mappings(Taxonomy, updates)
+            db.session.commit()
+            imported += len(updates)
+
     logging.info(
-        "Imported {} taxonomies with host prediction counts".format(len(updates))
+        "Imported {} taxonomies with host prediction counts".format(imported)
     )
 
 
