@@ -14,12 +14,21 @@ from sqlalchemy.sql import func, text
 from sqlalchemy.orm import joinedload, lazyload
 from sqlalchemy.sql.expression import func
 
-from .models import NcbiMetadata, ParsedSampleAttribute, db, Marker, OtuIndexed, CondensedProfile, Taxonomy
+from .models import (
+    NcbiMetadata,
+    ParsedSampleAttribute,
+    db,
+    Marker,
+    OtuIndexed,
+    CondensedProfile,
+    Taxonomy,
+    SandpiperCache,
+)
 import pandas as pd
 # from api.models import #for flask shell
 from .version import __version__, __gtdb_version__, __scrape_date__
 
-import os, sys
+import os, sys, json
 sys.path = [os.environ['HOME']+'/git/singlem-local'] + [os.environ['HOME']+'/git/singlem'] + sys.path
 from singlem.condense import WordNode
 
@@ -42,19 +51,52 @@ def generate_cache():
     global biosample_attribute_definitions
     global ncbi_metadata_infos
 
+    if (
+        sandpiper_stats_cache is None
+        or sandpiper_taxonomy_id_to_full_name is None
+        or sandpiper_marker_id_to_name is None
+        or biosample_attribute_definitions is None
+        or ncbi_metadata_infos is None
+    ):
+        try:
+            cache_rows = SandpiperCache.query.all()
+            cache = {row.key: json.loads(row.value) for row in cache_rows}
+            if 'stats' in cache and sandpiper_stats_cache is None:
+                sandpiper_stats_cache = cache['stats']
+            if 'taxonomy_id_to_full_name' in cache and sandpiper_taxonomy_id_to_full_name is None:
+                sandpiper_taxonomy_id_to_full_name = {
+                    int(k): v for k, v in cache['taxonomy_id_to_full_name'].items()
+                }
+            if 'marker_id_to_name' in cache and sandpiper_marker_id_to_name is None:
+                sandpiper_marker_id_to_name = {
+                    int(k): v for k, v in cache['marker_id_to_name'].items()
+                }
+            if 'biosample_attribute_definitions' in cache and biosample_attribute_definitions is None:
+                biosample_attribute_definitions = {
+                    k: BioSampleAttribute(**v)
+                    for k, v in cache['biosample_attribute_definitions'].items()
+                }
+            if 'ncbi_metadata_infos' in cache and ncbi_metadata_infos is None:
+                ncbi_metadata_infos = {
+                    k: NcbiMetadataExtraInfo(**v)
+                    for k, v in cache['ncbi_metadata_infos'].items()
+                }
+        except Exception as e:
+            current_app.logger.warning(
+                'Failed to load cache table, regenerating dynamically: %s', e
+            )
+
     if sandpiper_stats_cache is None or len(sandpiper_stats_cache) != 3:
         sandpiper_stats_cache = {}
         sandpiper_stats_cache['sandpiper_total_terrabases'] = db.session.query(func.sum(NcbiMetadata.bases)).scalar()/10**12
-        sandpiper_stats_cache['sandpiper_num_runs'] = db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar() #NcbiMetadata.query.distinct(NcbiMetadata.acc).count()
+        sandpiper_stats_cache['sandpiper_num_runs'] = db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar()
         sandpiper_stats_cache['sandpiper_num_bioprojects'] = db.session.query(func.count(distinct(NcbiMetadata.bioproject))).scalar()
     if sandpiper_taxonomy_id_to_full_name is None:
-        print('Caching taxonomy names')
         cache = {}
         for taxon in Taxonomy.query.all():
             cache[taxon.id] = taxon.full_name
-        sandpiper_taxonomy_id_to_full_name = cache # Roughly atomic
+        sandpiper_taxonomy_id_to_full_name = cache
     if sandpiper_marker_id_to_name is None:
-        print('Caching marker names')
         cache = {}
         for marker in Marker.query.all():
             cache[marker.id] = marker.marker
