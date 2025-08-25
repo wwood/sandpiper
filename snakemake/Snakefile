@@ -333,5 +333,6 @@ rule precompute_api_cache:
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
-        'export SANDPIPER_TESTING=1 && ' \
-        'pixi run -e sandpiper ./bin/precompute_api_cache.py 2> $SNAKE_WORKING_DIR/{log}'
+        'pixi run -e sandpiper ./bin/precompute_api_cache.py ' \
+        'db/sandpiper_{config[SANDPIPER_VERSION]}.duckdb > ' \
+        '$SNAKE_WORKING_DIR/{log} 2>&1'

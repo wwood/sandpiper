@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import json
 import os
 import sys
@@ -6,7 +7,7 @@ import sys
 # Ensure the backend package is importable when executed as a script
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)), ".."), *sys.path]
 
-from api.application import create_app
+from api.application import generate_app
 from api.models import (
     db,
     NcbiMetadata,
@@ -20,8 +21,10 @@ from sqlalchemy import distinct
 from sandpiper.biosample_attributes import BioSampleAttributes, NcbiMetadataExtraInfos
 
 
-def main():
-    app = create_app()
+def main(db_path: str):
+    app = generate_app()
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"duckdb:///{db_path}"
+    db.init_app(app)
     with app.app_context():
         db.create_all()
         SandpiperCache.query.delete()
@@ -63,5 +66,12 @@ def main():
         db.session.commit()
 
 
-if __name__ == '__main__':
-    main()
+def parse_args():
+    parser = argparse.ArgumentParser(description="Precompute and store API caches")
+    parser.add_argument("db_path", help="Path to DuckDB database file")
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    main(args.db_path)
