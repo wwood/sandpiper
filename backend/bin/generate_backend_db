@@ -838,19 +838,52 @@ def read_corrections():
 def add_host_prediction_counts_to_taxonomy(db, db_path):
     tax_count = db.session.query(Taxonomy).count()
     logging.info("Caching {} host sample counts in taxonomy ..".format(tax_count))
-    for taxonomy in tqdm(db.session.query(Taxonomy).all(), total=tax_count):
-        num_host_runs = db.session.query(NcbiMetadata). \
-            join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
-            join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='host'). \
-            count()
-        num_ecological_runs = db.session.query(NcbiMetadata). \
-            join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
-            join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='ecological'). \
-            count()
-        taxonomy.host_sample_count = num_host_runs
-        taxonomy.ecological_sample_count = num_ecological_runs
+
+    # Fetch host/ecological run counts for all taxonomies in a single query
+    results = (
+        db.session.query(
+            CondensedProfile.taxonomy_id,
+            ParsedSampleAttribute.host_or_not_mature,
+            func.count(func.distinct(CondensedProfile.run_id)),
+        )
+        .join(
+            ParsedSampleAttribute,
+            CondensedProfile.run_id == ParsedSampleAttribute.run_id,
+        )
+        .filter(
+            ParsedSampleAttribute.host_or_not_mature.in_(("host", "ecological"))
+        )
+        .group_by(
+            CondensedProfile.taxonomy_id,
+            ParsedSampleAttribute.host_or_not_mature,
+        )
+        .all()
+    )
+
+    host_counts = {}
+    ecological_counts = {}
+    for tax_id, host_type, count in results:
+        if host_type == "host":
+            host_counts[tax_id] = count
+        else:
+            ecological_counts[tax_id] = count
+
+    updates = []
+    for tax_id in set(host_counts) | set(ecological_counts):
+        updates.append(
+            {
+                "id": tax_id,
+                "host_sample_count": host_counts.get(tax_id, 0),
+                "ecological_sample_count": ecological_counts.get(tax_id, 0),
+            }
+        )
+
+    if updates:
+        db.session.bulk_update_mappings(Taxonomy, updates)
     db.session.commit()
-    logging.info("Imported {} taxonomies with host prediction counts".format(db.session.query(Taxonomy).count()))
+    logging.info(
+        "Imported {} taxonomies with host prediction counts".format(len(updates))
+    )
 
 
 def add_bioproject_associated_publications(db, db_path, tsv_path):
