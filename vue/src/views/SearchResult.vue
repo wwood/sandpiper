@@ -10,6 +10,20 @@
           <span v-else>{{ taxon_name }}</span>
           </h1>
         <p style="text-align: center;">{{ lineage.join('; ') }}</p>
+        <p style="text-align: center;">
+          Taxonomy annotations are derived from the
+          {{ taxonomy_type === 'gtdb' ? 'GTDB' : 'GlobDB' }} taxonomy.
+        </p>
+        <p style="text-align: center;">
+          <template v-if="other_taxon_available">
+            <router-link :to="{ name: 'SearchResults', params: { taxonomy }, query: { taxonomy_type: other_taxonomy_type } }">
+              View this taxon in {{ other_taxonomy_type === 'gtdb' ? 'GTDB' : 'GlobDB' }}
+            </router-link>
+          </template>
+          <template v-else>
+            This taxon is not present in {{ other_taxonomy_type === 'gtdb' ? 'GTDB' : 'GlobDB' }}
+          </template>
+        </p>
       </section>
 
       <section class="section">
@@ -202,6 +216,8 @@ export default {
       sortDirection: 'desc',
       error_message: null,
       taxonomy_type: 'gtdb',
+      other_taxonomy_type: 'globdb',
+      other_taxon_available: null,
 
       lat_lons: null,
       lat_lons_min_relabund: null,
@@ -224,6 +240,7 @@ export default {
     },
     fetchGlobalData () {
       this.taxonomy_type = this.$route.query.taxonomy_type || 'gtdb'
+      this.other_taxonomy_type = this.taxonomy_type === 'gtdb' ? 'globdb' : 'gtdb'
       fetchGlobalDataByTaxonomy(this.taxonomy, this.taxonomy_type)
         .then(response => {
           if (response.data.total_num_results > 0) {
@@ -240,6 +257,13 @@ export default {
             this.error_message = response.data.taxon
           }
         })
+
+      fetchGlobalDataByTaxonomy(this.taxonomy, this.other_taxonomy_type)
+        .then(response => {
+          this.other_taxon_available = response.data.total_num_results > 0
+        })
+        .catch(() => { this.other_taxon_available = false })
+
       this.fetchData() // call here so that this and the run data are loaded by the watch in a single function
     },
     fetchData () {

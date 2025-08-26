@@ -81,11 +81,11 @@
           <b-field label="Profile">
             <b-switch
               v-model="taxonomy_db"
-              true-value="gtdb"
-              false-value="globdb"
+              true-value="globdb"
+              false-value="gtdb"
               @input="fetchCondensed">
-              <template #checked>GTDB</template>
-              <template #unchecked>GlobDB</template>
+              <template #checked>GlobDB</template>
+              <template #unchecked>GTDB</template>
             </b-switch>
           </b-field>
           <div class="sunburst">
