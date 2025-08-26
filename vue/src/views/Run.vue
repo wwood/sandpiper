@@ -79,10 +79,14 @@
         <div class="container">
           <h3 class="title">Taxonomic profile</h3>
           <b-field label="Profile">
-            <b-select v-model="taxonomy_db" @input="fetchCondensed">
-              <option value="globdb">GlobDB</option>
-              <option value="gtdb">GTDB</option>
-            </b-select>
+            <b-switch
+              v-model="taxonomy_db"
+              true-value="gtdb"
+              false-value="globdb"
+              @input="fetchCondensed">
+              <template #checked>GTDB</template>
+              <template #unchecked>GlobDB</template>
+            </b-switch>
           </b-field>
           <div class="sunburst">
             <template v-if="condensed_tree != null">
@@ -109,30 +113,24 @@
 
       <section class="section">
         <div class="container is-large">
-          <h3 class="title">Download</h3>
-          <b-field label="Profile">
-            <b-select v-model="taxonomy_db" @input="fetchCondensed">
-              <option value="globdb">GlobDB</option>
-              <option value="gtdb">GTDB</option>
-            </b-select>
-          </b-field>
-
-          <p>The taxonomic profile of this sample can be downloaded in <a :href="profile_csv_link">tab-separated "SingleM condensed" format</a>. In this format the coverage of each lineage is the coverage assigned to that taxon and not more specifically e.g. the coverage of a species is not included in the coverage shown for its genus.</p>
-          <br />
-
-          <p>This taxonomic profile can be converted to other forms (e.g. one that gives the relative abundance instead of the coverage) using the <a href="https://wwood.github.io/singlem/tools/summarise">SingleM summarise</a> tool.</p>
-          <br />
-
-          <p v-if="taxonomy_db==='gtdb'">The <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> is a tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.</p>
-          <!-- <br /> -->
-
-          <!-- <p>See a <a :href="'/otus/' + accession">visualisation</a></p> -->
+          <RunMetadata :mdata="metadata.metadata" :mdata_parsed="metadata.metadata_parsed" />
         </div>
       </section>
 
       <section class="section">
         <div class="container is-large">
-          <RunMetadata :mdata="metadata.metadata" :mdata_parsed="metadata.metadata_parsed" />
+          <h3 class="title">Download</h3>
+
+          <p>The taxonomic profile of this sample using the <b>GTDB</b> taxonomy can be downloaded in <a :href="profile_csv_link_gtdb">tab-separated "SingleM condensed" format</a>. In this format the coverage of each lineage is the coverage assigned to that taxon and not more specifically e.g. the coverage of a species is not included in the coverage shown for its genus.</p>
+          <br />
+
+          <p>The <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> is a tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.</p>
+          <br />
+
+          <p>The taxonomic profile using the <b>GlobDB</b> taxonomy can also be downloaded in <a :href="profile_csv_link_globdb">tab-separated "SingleM condensed" format</a>.</p>
+          <br />
+
+          <p>These taxonomic profiles can be converted to other forms (e.g. one that gives the relative abundance instead of the coverage) using the <a href="https://wwood.github.io/singlem/tools/summarise">SingleM summarise</a> tool.</p>
         </div>
       </section>
     </div>
@@ -222,8 +220,11 @@ export default {
     full_profile_link: function () {
       return api_url() + '/otus/' + this.accession
     },
-    profile_csv_link: function () {
-      return api_url() + '/condensed_csv/' + this.accession + '?taxonomy_type=' + this.taxonomy_db
+    profile_csv_link_gtdb: function () {
+      return api_url() + '/condensed_csv/' + this.accession + '?taxonomy_type=gtdb'
+    },
+    profile_csv_link_globdb: function () {
+      return api_url() + '/condensed_csv/' + this.accession + '?taxonomy_type=globdb'
     },
     publications: function () {
       return this.metadata.metadata.study_links.filter(function (link) {
