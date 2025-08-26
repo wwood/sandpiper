@@ -201,6 +201,7 @@ export default {
       sortField: 'relative_abundance',
       sortDirection: 'desc',
       error_message: null,
+      taxonomy_type: 'gtdb',
 
       lat_lons: null,
       lat_lons_min_relabund: null,
@@ -222,7 +223,8 @@ export default {
       this.zoom = default_zoom
     },
     fetchGlobalData () {
-      fetchGlobalDataByTaxonomy(this.taxonomy)
+      this.taxonomy_type = this.$route.query.taxonomy_type || 'gtdb'
+      fetchGlobalDataByTaxonomy(this.taxonomy, this.taxonomy_type)
         .then(response => {
           if (response.data.total_num_results > 0) {
             this.taxon_name = response.data.taxon_name
@@ -243,7 +245,7 @@ export default {
     fetchData () {
       this.search_result = null
 
-      fetchRunsByTaxonomy(this.taxonomy, this.page, this.sortField, this.sortDirection, this.pageSize)
+      fetchRunsByTaxonomy(this.taxonomy, this.taxonomy_type, this.page, this.sortField, this.sortDirection, this.pageSize)
         .then(response => {
           this.search_result = response.data.results
         })
@@ -275,7 +277,7 @@ export default {
       return toReturn
     },
     csv_link () {
-      return api_url() + '/taxonomy_search_csv/' + this.taxonomy
+      return api_url() + '/taxonomy_search_csv/' + this.taxonomy + '?taxonomy_type=' + this.taxonomy_type
     }
   },
   watch: {

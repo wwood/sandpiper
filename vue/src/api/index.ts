@@ -31,16 +31,23 @@ export function fetchOtus (runId: string) {
   return axios.get(`${API_URL}/full_profile/${runId}`)
 }
 
-export function fetchRunsByTaxonomy (taxonomy: string, page: number, sortField: string, sortDirection: string, pageSize: number) {
-  return axios.get(`${API_URL}/taxonomy_search_run_data/${taxonomy}?sort_field=${sortField}&sort_direction=${sortDirection}&page=${page}&page_size=${pageSize}`)
+export function fetchRunsByTaxonomy (
+  taxonomy: string,
+  taxonomyType: string,
+  page: number,
+  sortField: string,
+  sortDirection: string,
+  pageSize: number
+) {
+  return axios.get(`${API_URL}/taxonomy_search_run_data/${taxonomy}?taxonomy_type=${taxonomyType}&sort_field=${sortField}&sort_direction=${sortDirection}&page=${page}&page_size=${pageSize}`)
 }
 
-export function fetchGlobalDataByTaxonomy (taxonomy: string) {
-  return axios.get(`${API_URL}/taxonomy_search_global_data/${taxonomy}`)
+export function fetchGlobalDataByTaxonomy (taxonomy: string, taxonomyType: string) {
+  return axios.get(`${API_URL}/taxonomy_search_global_data/${taxonomy}?taxonomy_type=${taxonomyType}`)
 }
 
-export function fetchTaxonomySearchHints (taxonomy: string) {
-  return axios.get(`${API_URL}/taxonomy_search_hints/${taxonomy}`)
+export function fetchTaxonomySearchHints (taxonomy: string, taxonomyType: string) {
+  return axios.get(`${API_URL}/taxonomy_search_hints/${taxonomy}?taxonomy_type=${taxonomyType}`)
 }
 
 export function fetchRandomAccession(host: boolean, ecological: boolean, two_gbp: boolean) {

@@ -12,7 +12,17 @@
           <template #empty>No results found</template>
         </b-autocomplete>
       </b-field>
-      <p>Taxonomy annotations are derived from <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version {{ gtdb_version }}.</p>
+      <b-field label="Taxonomy database">
+        <b-switch
+          v-model="taxonomy_db"
+          true-value="gtdb"
+          false-value="globdb">
+          <template #checked>GTDB</template>
+          <template #unchecked>GlobDB</template>
+        </b-switch>
+      </b-field>
+      <p v-if="taxonomy_db === 'gtdb'">Taxonomy annotations are derived from <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version {{ gtdb_version }}.</p>
+      <p v-else>Taxonomy annotations are derived from the GlobDB taxonomy.</p>
       <br /><b-button type="is-primary" @click="search_by_taxonomy">Search</b-button>
     </section>
 
@@ -46,6 +56,7 @@ export default {
   data () {
     return {
       gtdb_version: null,
+      taxonomy_db: 'gtdb',
 
       taxonomy: 'c__Bog-38',
       autocomplete_taxons: [],
@@ -88,7 +99,7 @@ export default {
         })
     },
     search_by_taxonomy () {
-      this.$router.push({ name: 'SearchResults', params: { taxonomy: this.taxonomy } })
+      this.$router.push({ name: 'SearchResults', params: { taxonomy: this.taxonomy }, query: { taxonomy_type: this.taxonomy_db } })
     },
     getAsyncData: debounce(function (name) {
       // if undefined or empty, reset the list
@@ -97,7 +108,7 @@ export default {
         return
       }
       this.isFetching = true
-      fetchTaxonomySearchHints(name)
+      fetchTaxonomySearchHints(name, this.taxonomy_db)
         .then(({ data }) => {
           this.autocomplete_taxons = data.taxonomies
           if (this.autocomplete_taxons != undefined && this.autocomplete_taxons.length >= 30) {
