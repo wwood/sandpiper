@@ -2,7 +2,8 @@
   <section class="section container">
 
     <section class="section" @keyup.enter="search_by_taxonomy">
-      <b-field label="Search for public metagenomes by taxonomy">
+      <p class="title is-4">Search for public metagenomes by taxonomy</p>
+      <b-field>
         <b-autocomplete v-model="taxonomy" rounded
           max-height="600px"
           icon="magnify"
@@ -12,35 +13,36 @@
           <template #empty>No results found</template>
         </b-autocomplete>
       </b-field>
-      <b-field label="Taxonomy database">
-        <b-switch
-          v-model="taxonomy_db"
-          true-value="gtdb"
-          false-value="globdb">
-          <template #checked>GTDB</template>
-          <template #unchecked>GlobDB</template>
-        </b-switch>
+      <b-field>
+        <b-radio v-model="taxonomy_db" native-value="gtdb">
+          <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version {{ gtdb_version }} taxonomy
+        </b-radio>
       </b-field>
-      <p v-if="taxonomy_db === 'gtdb'">Taxonomy annotations are derived from <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version {{ gtdb_version }}.</p>
-      <p v-else>Taxonomy annotations are derived from the GlobDB taxonomy.</p>
+      <b-field>
+        <b-radio v-model="taxonomy_db" native-value="globdb">
+          <a href='http://globdb.org'>GlobDB</a> version {{ gtdb_version }} taxonomy
+        </b-radio>
+      </b-field>
       <br /><b-button type="is-primary" @click="search_by_taxonomy">Search</b-button>
     </section>
 
     <section class="section"  @keyup.enter="search_by_accession">
-      <b-field label="Search for run/sample/project accession">
+      <p class="title is-4">Search for run/sample/project accession</p>
+      <b-field>
         <b-input v-model="accession"></b-input>
       </b-field>
-      <b-button type="is-primary" @click="search_by_accession">Search</b-button>
+      <br /><b-button type="is-primary" @click="search_by_accession">Search</b-button>
     </section>
 
 
     <section class="section"  @keyup.enter="search_by_random">
-      <b-field label="Inspect a randomly chosen run">
+      <p class="title is-4">Find a random run</p>
+      <b-field>
         <b-switch v-model="random_choice_host">Eukaryote host-associated</b-switch>
         <b-switch v-model="random_choice_ecological">Ecological</b-switch>
         <b-switch v-model="random_choice_two_gbp">2+ Gbp</b-switch>
       </b-field>
-      <b-button type="is-primary" @click="search_by_random">Search</b-button>
+      <br /><b-button type="is-primary" @click="search_by_random">Search</b-button>
     </section>
 
   </section>
