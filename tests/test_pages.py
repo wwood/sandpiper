@@ -134,3 +134,15 @@ def test_pages():
     for url in api_links:
         r = session.get(url)
         assert r.status_code == 200, f"{url} returned {r.status_code}"
+
+
+def test_taxonomy_search_csv_filename():
+    session = requests.Session()
+    taxon = "d__Bacteria"
+    taxonomy_type = "globdb"
+    resp = session.get(
+        f"{BACKEND_URL}/api/taxonomy_search_csv/{taxon}?taxonomy_type={taxonomy_type}"
+    )
+    assert resp.status_code == 200
+    cd = resp.headers.get("Content-Disposition")
+    assert cd is not None and taxonomy_type in cd

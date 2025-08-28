@@ -443,6 +443,7 @@ def taxonomy_search_run_data(taxon):
 
 @api.route('/taxonomy_search_csv/<string:taxon>', methods=('GET',))
 def taxonomy_search_csv(taxon):
+    taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
     worked, condensed_profile_hits = taxonomy_search_core(taxon, request.args, no_limit=True, include_extras=True)
 
     if worked:
@@ -462,7 +463,7 @@ def taxonomy_search_csv(taxon):
             'latitude', 'longitude']
         )
         response = make_response(df.to_csv(index=False, header=True))
-        cd = 'attachment; filename=sandpiper_v{}_{}_sample_coverage.csv'.format(__version__, taxon)
+        cd = 'attachment; filename=sandpiper_v{}_{}_{}_sample_coverage.csv'.format(__version__, taxon, taxonomy_type)
         response.headers['Content-Disposition'] = cd
         response.mimetype = 'text/csv'
         return response
