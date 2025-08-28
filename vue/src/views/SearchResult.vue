@@ -10,19 +10,16 @@
           <span v-else>{{ taxon_name }}</span>
           </h1>
         <p style="text-align: center;">{{ lineage.join('; ') }}</p>
+        <br />
         <p style="text-align: center;">
-          Taxonomy annotations are derived from the
-          {{ taxonomy_type === 'gtdb' ? 'GTDB' : 'GlobDB' }} taxonomy.
-        </p>
-        <p style="text-align: center;">
-          <template v-if="other_taxon_available">
-            <router-link :to="{ name: 'SearchResults', params: { taxonomy }, query: { taxonomy_type: other_taxonomy_type } }">
-              View this taxon in {{ other_taxonomy_type === 'gtdb' ? 'GTDB' : 'GlobDB' }}
+          Viewing {{ taxonomy_type === 'gtdb' ? 'GTDB' : 'GlobDB' }} entry.
+          <span v-if="other_taxon_available">           
+             <router-link :to="{ name: 'SearchResults', params: { taxonomy }, query: { taxonomy_type: other_taxonomy_type } }">
+              Switch to {{ other_taxonomy_type === 'gtdb' ? 'GTDB' : 'GlobDB' }}.
             </router-link>
-          </template>
-          <template v-else>
-            This taxon is not present in {{ other_taxonomy_type === 'gtdb' ? 'GTDB' : 'GlobDB' }}
-          </template>
+          </span>
+          <span v-else-if="taxonomy_type==='gtdb'">Taxon not available in GlobDB view.</span>
+          <span v-else>Taxon not available in GTDB view.</span>
         </p>
       </section>
 

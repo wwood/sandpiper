@@ -395,9 +395,10 @@ def taxonomy_search_fail_json(reason):
 
 @api.route('/taxonomy_search_global_data/<string:taxon>', methods=('GET',))
 def taxonomy_search_global_data(taxon):
-    taxonomy = Taxonomy.query.filter_by(name=taxon).first()
+    taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
+    taxonomy = Taxonomy.query.filter_by(name=taxon, taxonomy_type=taxonomy_type).first()
     if taxonomy is None:
-        return taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in GTDB '+__gtdb_version__+', or no records of this taxon are recorded in Sandpiper. We recommend using the auto-complete function when searching to avoid typographical errors. Alternately, if this an NCBI taxonomy name, you could try searching for it at the GTDB website.')
+        return taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in '+taxonomy_type.upper()+', or no records of this taxon are recorded in Sandpiper. We recommend using the auto-complete function when searching to avoid typographical errors. Alternately, if this an NCBI taxonomy name, you could try searching for it at the GTDB website.')
     total_num_hits = CondensedProfile.query.filter_by(taxonomy_id=taxonomy.id).count()
     if total_num_hits == 0:
         # This happens when there's a taxonomy in the full table that didn't make it into any condensed table
@@ -477,6 +478,7 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
     sort_direction = args.get('sort_direction')
     page = args.get('page')
     page_size = args.get('page_size')
+    taxonomy_type = args.get('taxonomy_type', 'gtdb')
     sort_field = 'relative_abundance' if sort_field is None else sort_field
     sort_direction = 'desc' if sort_direction is None else sort_direction
     page = int(page) if page is not None else 0
@@ -487,9 +489,9 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
     if sort_direction not in ['asc', 'desc']:
         return False, jsonify({ 'error': 'invalid sort direction' })
 
-    taxonomy = Taxonomy.query.filter_by(name=taxon).first()
+    taxonomy = Taxonomy.query.filter_by(name=taxon, taxonomy_type=taxonomy_type).first()
     if taxonomy is None:
-        return False, taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy, or no records of this taxon are recorded in Sandpiper.')
+        return False, taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in '+taxonomy_type.upper()+', or no records of this taxon are recorded in Sandpiper.')
     else:
         # Query for samples that contain this taxon
         if include_extras:
@@ -544,10 +546,11 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
 @api.route('/taxonomy_search_hints/<string:taxon>', methods=('GET',))
 def taxonomy_search_hints(taxon):
     if len(taxon) < 3: return jsonify(['3 or more characters are required'])
+    taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
 
     # Underscores are wildcards, but we don't want that since there are names like p__Actinobacteria
-    sql = "select name from taxonomies where name like :taxon escape \'\\\' order by name limit 30"
-    results = db.session.execute(text(sql), {'taxon': '%'+taxon.replace('_','\\_')+'%'})
+    sql = "select name from taxonomies where taxonomy_type = :taxonomy_type and name like :taxon escape \'\\\' order by name limit 30"
+    results = db.session.execute(text(sql), {'taxon': '%'+taxon.replace('_','\\_')+'%', 'taxonomy_type': taxonomy_type})
     taxonomies = []
     for r in results:
         taxonomies.append(r)
