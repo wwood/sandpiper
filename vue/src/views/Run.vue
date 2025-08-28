@@ -78,15 +78,13 @@
       <section class="section">
         <div class="container">
           <h3 class="title">Taxonomic profile</h3>
-          <b-field label="Profile">
-            <b-switch
-              v-model="taxonomy_db"
-              true-value="globdb"
-              false-value="gtdb"
-              @input="fetchCondensed">
-              <template #checked>GlobDB</template>
-              <template #unchecked>GTDB</template>
-            </b-switch>
+          <b-field>
+            <b-radio-button v-model="taxonomy_db" native-value="gtdb" @input="fetchCondensed">
+              GTDB
+            </b-radio-button>
+            <b-radio-button v-model="taxonomy_db" native-value="globdb" @input="fetchCondensed">
+              GlobDB
+            </b-radio-button>
           </b-field>
           <div class="sunburst">
             <template v-if="condensed_tree != null">
