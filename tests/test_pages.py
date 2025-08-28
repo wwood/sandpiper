@@ -3,6 +3,7 @@ import signal
 import subprocess
 import time
 import requests
+from requests.exceptions import ConnectionError
 from html.parser import HTMLParser
 
 BACKEND_URL = "http://localhost:6000"
@@ -29,9 +30,11 @@ def wait_for(url, timeout=60):
     start = time.time()
     while time.time() - start < timeout:
         try:
-            requests.get(url)
-            return
-        except Exception:
+            response = requests.get(url)
+            if response.status_code == 200:
+                return
+            raise RuntimeError(f"{url} returned {response.status_code}")
+        except ConnectionError:
             time.sleep(1)
     raise RuntimeError(f"Timeout waiting for {url}")
 
