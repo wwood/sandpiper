@@ -22,7 +22,7 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
       <h1 class="title">Citations</h1>
       
       <p>The overall citation for SingleM/Sandpiper:</p><br />
-      <p>Woodcroft, Ben J., Samuel TN Aroney, Rossen Zhao, Mitchell Cunningham, Joshua AM Mitchell, Linda Blackall, and Gene W. Tyson. <i>SingleM and Sandpiper: Robust microbial taxonomic profiles from metagenomic data.</i> bioRxiv (2024): 2024-01. <a href='https://doi.org/10.1101/2024.01.30.578060'>https://doi.org/10.1101/2024.01.30.578060</a></p><br />
+      <p>Ben J. Woodcroft, Samuel T. N. Aroney, Rossen Zhao, Mitchell Cunningham, Joshua A. M. Mitchell, Rizky Nurdiansyah, Linda Blackall & Gene W. Tyson. <i>Comprehensive taxonomic identification of microbial species in metagenomic data using SingleM and Sandpiper</i>. Nat Biotechnol (2025). <a>https://doi.org/10.1038/s41587-025-02738-1</a></p><br />
 
       <p>The microbial fraction (SMF) mode of SingleM:</p><br />
       <p>Eisenhofer, Raphael, Antton Alberdi, and Ben J. Woodcroft. <i>Large-scale estimation of bacterial and archaeal DNA prevalence in metagenomes reveals biome-specific patterns.</i> bioRxiv (2024): 2024-05. <a href='https://doi.org/10.1101/2024.05.16.594470'>https://doi.org/10.1101/2024.05.16.594470</a></p><br />
@@ -36,11 +36,15 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
 
     <section class="section is-small container has-text-justified">
       <h1 class="title">How Sandpiper {{ version }} was built</h1>
-      <p>The data underlying Sandpiper was generated using the <a href="https://github.com/wwood/singlem">SingleM</a> pipeline, applied to public metagenome datasets listed in the <a href="https://www.ncbi.nlm.nih.gov/sra">NCBI SRA</a> that were designated as metagenomic, or derived from "metagenomic" organisms such as "soil metagenome". This list of public metagenomes which was generated on {{ scrape_date }}. The <a href="https://gtdb.ecogenomic.org/">Genome Taxonomy Database (GTDB)</a> version underlying these data is {{ gtdb_version }}. Community profiles derived from older GTDB versions are available as a bulk download (see above).</p><br />
+      <p>The data underlying Sandpiper was generated using the <a href="https://github.com/wwood/singlem">SingleM</a> pipeline, applied to public metagenome datasets listed in the <a href="https://www.ncbi.nlm.nih.gov/sra">NCBI SRA</a> that were designated as metagenomic, or derived from "metagenomic" organisms such as "soil metagenome". This list of public metagenomes which was generated on {{ scrape_date }}. </p><br />
+        
+      <p>The taxonomy from the community profiles was assigned using either the <a href="https://gtdb.ecogenomic.org/">Genome Taxonomy Database (GTDB)</a> {{ gtdb_version }}, or using <a href="https://globdb.org">GlobDB</a> {{ gtdb_version }}.</p><br />
 
       <p>SingleM is a tool to find the abundances of discrete operational taxonomic units (OTUs) directly from shotgun metagenome data, without heavy reliance on reference sequence databases. It operates by scanning for reads that cover highly conserved regions of single copy marker genes (35 bacterial, 37 archaeal, 59 total) when translated into amino acids. The nucleotides from each read that cover these conserved gene sections are then clustered into operational taxonomic units (OTUs). Importantly, this clustering happens before the taxonomy of the cluster is determined, setting it apart from methods which rely more heavily on reference databases. With SingleM, multiple OTUs can be assigned to one taxa, indicating e.g. strain heterogeneity within a species, or multiple families from a novel taxa.</p><br />
 
       <p>The OTU tables generated for each marker gene are then combined ("condensed") into a single taxonomic profile, representing the read coverage of each taxa in the metagenome. From this read coverage, relative abundance is found by dividing the read coverage of each taxa by the total read coverage of the metagenome. This relative abundance is then used to generate the Sandpiper visualisations.</p><br />
+
+      <p>Community profiles derived from older versions are available as a bulk download (see above).</p><br />
 
       <h2 class="title is-5">Community profiling</h2>
       <p>These raw SingleM taxonomic profiles, which contain OTUs derived from the 59 genes, are available for download from each run's page. However, for ease of interpretation and search, runs on this website are usually represented as a 'condensed' profile. These condensed profiles are a unified version of the profiles derived from each marker gene, so there is only one profile to inspect (instead of 59), though condensed profiles collapse the OTUs from each taxon into a single group.</p><br />
@@ -67,6 +71,15 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
 
     <section class="section is-small container has-text-justified">
       <h1 class="title">Changelog</h1>
+      <h2 class="title is-5">v2.0.0</h2>
+        <div class="columns has-text-left"> 
+          <div class="column content">  
+            <ul> 
+              <li>Integration of <a href="https://globdb.org">GlobDB</a> community profiles</li>
+              <li>Website infrastructure upgraded.</li>
+            </ul>
+          </div> 
+        </div>
       <h2 class="title is-5">v1.0.1</h2>
         <div class="columns has-text-left"> 
           <div class="column content">  
