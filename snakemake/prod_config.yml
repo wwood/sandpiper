@@ -1,15 +1,13 @@
 SANDPIPER_VERSION: '35'
 
-KINGFISHER_METADATA_DATE: '20250414'
+KINGFISHER_METADATA_DATE: '20250826'
 ACCESSIONS_FILE: ../sra_metadata/sra_metadata_20250220.accessions
 
 METAPACKAGE_DESCRIBE: 'metapackage_describe.csv'
 
-BIOPROJECT_METADATA_DATE: '20250411'
+BIOPROJECT_METADATA_DATE: '20250826'
 
 JSON_METADATA_FILES: '../sra_metadata/shotgun_sra_20250220/*'
-
-##  BELOW NOT CORRECT YET
 
 # PROCESSING_DIRECTORY: '/work/microbiome/msingle/mess/174_R220_renew/processing_20240531'
 CONDENSED_OTU_TABLE: '/work/microbiome/msingle/mess/198_R226_renew_mach2/processing_20250409/condensed.csv.gz'

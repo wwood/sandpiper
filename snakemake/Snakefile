@@ -48,6 +48,7 @@ if not os.path.exists('data/chunk_definitions.done'):
 else:
     print("Chunk definition files already exist, reusing them")
 
+localrules: run_kingfisher_metadata, gather_kingfisher_metadata, gather_bioproject_pubs
 
 
 rule all:
@@ -86,6 +87,7 @@ rule run_kingfisher_metadata:
             test_or_prod=config['TEST_OR_PROD'],
             chunk="{chunk}")
     resources:
+        ncbi_api=1,
         mem_mb=16000,
         runtime='6h'
     shell:
@@ -118,8 +120,14 @@ rule gather_bioproject_pubs:
         done=touch('{test_or_prod}/gather_bioproject_pubs/{date}/done'.format(
             date=config['BIOPROJECT_METADATA_DATE'],
             test_or_prod=config['TEST_OR_PROD']))
+    resources:
+        ncbi_api=1,
+    log:
+        '{test_or_prod}/gather_bioproject_pubs/{date}/logs/gather_bioproject_pubs.log'.format(
+            date=config['BIOPROJECT_METADATA_DATE'],
+            test_or_prod=config['TEST_OR_PROD'])
     shell:
-        "pixi run -e sandpiper ../backend/bin/bioproject_metadata.py --meta {config[JSON_METADATA_FILES]} --output-directory {config[TEST_OR_PROD]}/gather_bioproject_pubs/{config[BIOPROJECT_METADATA_DATE]}"
+        "pixi run -e sandpiper ../backend/bin/bioproject_metadata.py --meta {config[JSON_METADATA_FILES]} --output-directory {config[TEST_OR_PROD]}/gather_bioproject_pubs/{config[BIOPROJECT_METADATA_DATE]} &> {log}"
 
 rule process_bioproject_pubs:
     input:
@@ -245,6 +253,11 @@ rule add_otus_to_backend_db:
         touch('{test_or_prod}/{version}/backend_db/otus_done'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION']))
+    resources:
+        mem_mb=64000, # Fails with default 7g RAM
+        runtime='48h'
+    threads:
+        8
     log:
         '{test_or_prod}/{version}/backend_db/otus.log'.format(
             test_or_prod=config['TEST_OR_PROD'],
@@ -311,11 +324,11 @@ rule add_parsed_metadata_from_kingfisher:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
         # cp to remain idempotent, e.g. if this step fails
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_otus {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_otus {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.add_parsed_metadata_from_kingfisher && ' \
         # cp the otus because scratch will be faster than /work/microbiome (didn't end up being any faster)
         # 'cp {config[OTU_TABLE]} {config[SCRATCH_DIR]}/otus && ' \
-        'pixi run -e sandpiper ./bin/generate_backend_db --stage parsed_metadata --parsed-metadata-table {params.parsed_metadata} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb 2> $SNAKE_WORKING_DIR/{log} && ' \
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb db/'
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage parsed_metadata --parsed-metadata-table {params.parsed_metadata} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.add_parsed_metadata_from_kingfisher 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.add_parsed_metadata_from_kingfisher db/'
 
 rule precompute_api_cache:
     input:
@@ -333,6 +346,9 @@ rule precompute_api_cache:
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
+        # cp to remain idempotent, e.g. if this step fails
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.add_parsed_metadata_from_kingfisher {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
         'pixi run -e sandpiper ./bin/precompute_api_cache.py ' \
-        'db/sandpiper_{config[SANDPIPER_VERSION]}.duckdb > ' \
-        '$SNAKE_WORKING_DIR/{log} 2>&1'
+        '{config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb > ' \
+        '$SNAKE_WORKING_DIR/{log} 2>&1 && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb db/sandpiper_{config[SANDPIPER_VERSION]}.duckdb'
