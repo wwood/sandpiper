@@ -782,7 +782,6 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
         logging.info("Committing taxonomy entries seen only in OTU table ..")
         db.session.commit()
 
-        logging.warning("Last time I tried this is took ages (>1 days, likely months if I hadn't killed it) to import, so imported manually")
         logging.info("Importing {} OTU lines into DB".format(count))
         # This could be made faster by turning off journaling etc.
         # duckdb your_database.db
@@ -791,7 +790,8 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
         # duckdb> COMMIT;
         conn = db.session.connection().connection
         conn.execute(
-            f"COPY otus_indexed FROM '{f.name}' (DELIMITER '\t');"
+            # 50GB is a guess but lines up with the 64 specified in the Snakefile
+            f"PRAGMA memory_limit = '50GB'; COPY otus_indexed FROM '{f.name}' (DELIMITER '\t');"
         )
         conn.commit()
         logging.info("Imported {} OTU lines into DB".format(db.session.query(OtuIndexed).count()))

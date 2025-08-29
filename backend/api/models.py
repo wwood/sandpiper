@@ -36,7 +36,7 @@ class OtuIndexed(db.Model):
       running it on the original Otu table object.'''
     
     __tablename__ = 'otus_indexed'
-    id = db.Column(db.Integer, server_default=text("nextval('otus_indexed_id_seq')"), primary_key=True)
+    id = db.Column(db.BigInteger, server_default=text("nextval('otus_indexed_id_seq')"), primary_key=True)
     # sample_name|num_hits|coverage|taxonomy|marker_id|sequence_id
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     num_hits = db.Column(db.Integer, nullable=False)

@@ -254,7 +254,7 @@ rule add_otus_to_backend_db:
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION']))
     resources:
-        mem_mb=64000, # Fails with default 7g RAM
+        mem_mb=64000, # Fails with default 7g RAM, and 64G, without restricting inside script
         runtime='48h'
     threads:
         8
