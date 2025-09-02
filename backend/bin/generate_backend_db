@@ -722,78 +722,83 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
     db.session.commit()
 
     with tempfile.TemporaryDirectory() as my_tempdir:
-        # my_tempdir = '/tmp/'
-        with open(os.path.join(my_tempdir, 'otus_indexed.tsv'), 'w') as f:
-            for otu in tqdm(otus):
-                # Do not add samples where the sample is not in the rest of the DB
-                if otu.sample_name in run_accession_to_id:
-                    split_taxonomy = [t for t in otu.taxonomy.split('; ') if t != '']
-                    try:
-                        taxonomy_name_to_id[split_taxonomy[-1]]
-                    except KeyError:
-                        # Taxonomy didn't make it into any condensed profile, so hasn't been established.
-                        i = len(split_taxonomy) - 1
-                        taxons_to_add = []
-                        while i >= 0:
-                            if split_taxonomy[i] in taxonomy_name_to_id:
-                                parent_id = taxonomy_name_to_id[split_taxonomy[i]]
-                                break
-                            taxons_to_add.append(split_taxonomy[i])
-                            i -= 1
-                        if i == 0:
-                            raise Exception("Strangely didn't find any taxonomy in the table for {}".format(
-                                otu.taxonomy))
-                        taxons_to_add = reversed(taxons_to_add)
+        conn = db.session.connection().connection
+        conn.execute("PRAGMA memory_limit = '50GB';")
+        chunk_size = int(os.environ.get("OTU_CHUNK_SIZE", 10_000_000))
+        chunk_file = tempfile.NamedTemporaryFile("w", dir=my_tempdir, delete=False)
+        lines_in_chunk = 0
+        for otu in tqdm(otus):
+            if otu.sample_name in run_accession_to_id:
+                split_taxonomy = [t for t in otu.taxonomy.split('; ') if t != '']
+                try:
+                    taxonomy_name_to_id[split_taxonomy[-1]]
+                except KeyError:
+                    i = len(split_taxonomy) - 1
+                    taxons_to_add = []
+                    while i >= 0:
+                        if split_taxonomy[i] in taxonomy_name_to_id:
+                            parent_id = taxonomy_name_to_id[split_taxonomy[i]]
+                            break
+                        taxons_to_add.append(split_taxonomy[i])
+                        i -= 1
+                    if i == 0:
+                        raise Exception("Strangely didn't find any taxonomy in the table for {}".format(
+                            otu.taxonomy))
+                    taxons_to_add = reversed(taxons_to_add)
 
-                        full_taxonomy = split_taxonomy[1:(i + 1)]  # skip first element as that is Root
-                        for taxon in taxons_to_add:
-                            if split_taxonomy[1] == 'd__Eukaryota':
-                                level_id = 0
-                                level = 'phylum'  # Not quite true but doesn't matter
-                            else:
-                                prefix = taxon.split('__')[0]
-                                level_id = ['d', 'p', 'c', 'o', 'f', 'g', 's'].index(prefix)
-                                level = ['domain', 'phylum', 'class', 'order', 'family', 'genus', 'species'][level_id]
+                    full_taxonomy = split_taxonomy[1:(i + 1)]
+                    for taxon in taxons_to_add:
+                        if split_taxonomy[1] == 'd__Eukaryota':
+                            level_id = 0
+                            level = 'phylum'
+                        else:
+                            prefix = taxon.split('__')[0]
+                            level_id = ['d', 'p', 'c', 'o', 'f', 'g', 's'].index(prefix)
+                            level = ['domain', 'phylum', 'class', 'order', 'family', 'genus', 'species'][level_id]
 
-                            # Insert the new taxonomy into the DB
-                            full_taxonomy.append(taxon)
-                            logging.debug("Adding full name {}".format(full_taxonomy))
-                            db.session.add(
-                                Taxonomy(id=next_taxonomy_id,
-                                         taxonomy_level=level,
-                                         parent_id=parent_id,
-                                         name=taxon,
-                                         full_name='; '.join(full_taxonomy),
-                                         taxonomy_type='gtdb'))
-                            db.session.flush()
+                        full_taxonomy.append(taxon)
+                        logging.debug("Adding full name {}".format(full_taxonomy))
+                        db.session.add(
+                            Taxonomy(id=next_taxonomy_id,
+                                     taxonomy_level=level,
+                                     parent_id=parent_id,
+                                     name=taxon,
+                                     full_name='; '.join(full_taxonomy),
+                                     taxonomy_type='gtdb'))
+                        db.session.flush()
+                        taxonomy_name_to_id[taxon] = next_taxonomy_id
+                        parent_id = next_taxonomy_id
+                        next_taxonomy_id += 1
 
-                            taxonomy_name_to_id[taxon] = next_taxonomy_id
-                            parent_id = next_taxonomy_id
-                            next_taxonomy_id += 1
+                chunk_file.write("\t".join([
+                    str(x) for x in [
+                        count + 1, run_accession_to_id[otu.sample_name], otu.count, otu.coverage,
+                        taxonomy_name_to_id[split_taxonomy[-1]], marker_name_to_id[otu.marker], otu.sequence
+                    ]
+                ]) + "\n")
+                count += 1
+                lines_in_chunk += 1
+                if lines_in_chunk >= chunk_size:
+                    chunk_file.flush()
+                    chunk_file.close()
+                    conn.execute(
+                        f"COPY otus_indexed FROM '{chunk_file.name}' (DELIMITER '\t');"
+                    )
+                    conn.commit()
+                    os.remove(chunk_file.name)
+                    chunk_file = tempfile.NamedTemporaryFile("w", dir=my_tempdir, delete=False)
+                    lines_in_chunk = 0
 
-                    f.write("\t".join([
-                        str(x) for x in [
-                            count + 1, run_accession_to_id[otu.sample_name], otu.count, otu.coverage,
-                            taxonomy_name_to_id[split_taxonomy[-1]], marker_name_to_id[otu.marker], otu.sequence
-                        ]
-                    ]) + "\n")
-                    count += 1
-
+        chunk_file.flush()
+        chunk_file.close()
+        if lines_in_chunk:
+            conn.execute(
+                f"COPY otus_indexed FROM '{chunk_file.name}' (DELIMITER '\t');"
+            )
+            conn.commit()
+        os.remove(chunk_file.name)
         logging.info("Committing taxonomy entries seen only in OTU table ..")
         db.session.commit()
-
-        logging.info("Importing {} OTU lines into DB".format(count))
-        # This could be made faster by turning off journaling etc.
-        # duckdb your_database.db
-        # duckdb> BEGIN;
-        # duckdb> COPY your_file.csv TO your_table
-        # duckdb> COMMIT;
-        conn = db.session.connection().connection
-        conn.execute(
-            # 50GB is a guess but lines up with the 64 specified in the Snakefile
-            f"PRAGMA memory_limit = '50GB'; COPY otus_indexed FROM '{f.name}' (DELIMITER '\t');"
-        )
-        conn.commit()
         logging.info("Imported {} OTU lines into DB".format(db.session.query(OtuIndexed).count()))
 
     # drop the otus table since we don't need it anymore
