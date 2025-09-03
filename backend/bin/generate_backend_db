@@ -697,7 +697,7 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
         marker_name_to_id[marker.marker] = marker.id
     logging.info("Loaded {} markers".format(len(marker_name_to_id)))
 
-    next_taxonomy_id = db.session.query(Taxonomy).count() + 1
+    next_taxonomy_id = db.session.query(Taxonomy.id).max() + 1
     logging.info("Next taxonomy ID is {}".format(next_taxonomy_id))
 
     # Put Eukaryotes in as a special case, as these are never in the condensed
@@ -724,6 +724,9 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
     with tempfile.TemporaryDirectory() as my_tempdir:
         conn = db.session.connection().connection
         conn.execute("PRAGMA memory_limit = '50GB';")
+        # no preserve insertion order when using multiple threads
+        # conn.execute("PRAGMA synchronous=OFF;")
+        conn.execute("PRAGMA threads=32;")
         chunk_size = int(os.environ.get('OTU_CHUNK_SIZE', 10_000_000))
         rows = []
         chunk_index = 0
@@ -777,14 +780,14 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
                 ])
                 count += 1
                 if len(rows) >= chunk_size:
-                    df = pl.DataFrame(rows, schema=["id", "run_id", "num_hits", "coverage", "taxonomy_id", "marker_id", "sequence"])
-                    chunk_path = os.path.join(my_tempdir, f"chunk_{chunk_index:05d}.parquet")
+                    df = pl.DataFrame(rows, orient="row", schema=["id", "run_id", "num_hits", "coverage", "taxonomy_id", "marker_id", "sequence"])
+                    chunk_path = os.path.join(my_tempdir, f"chunk_{chunk_index}.parquet")
                     df.write_parquet(chunk_path)
                     rows = []
                     chunk_index += 1
         if rows:
             df = pl.DataFrame(rows, schema=["id", "run_id", "num_hits", "coverage", "taxonomy_id", "marker_id", "sequence"])
-            chunk_path = os.path.join(my_tempdir, f"chunk_{chunk_index:05d}.parquet")
+            chunk_path = os.path.join(my_tempdir, f"chunk_{chunk_index}.parquet")
             df.write_parquet(chunk_path)
         glob_path = os.path.join(my_tempdir, '*.parquet')
         conn.execute(f"COPY otus_indexed FROM '{glob_path}' (FORMAT PARQUET);")
