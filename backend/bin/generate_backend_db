@@ -66,7 +66,7 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
     if taxonomy_type not in taxonomy_name_to_id:
         taxonomy_name_to_id[taxonomy_type] = {}
     if next_taxonomy_id is None:
-        next_taxonomy_id = db.session.query(Taxonomy).count()
+        next_taxonomy_id = (db.session.query(func.max(Taxonomy.id)).scalar() or 0) + 1
     count = db.session.query(CondensedProfile).count()
     sample_count = 0
 
@@ -697,7 +697,7 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
         marker_name_to_id[marker.marker] = marker.id
     logging.info("Loaded {} markers".format(len(marker_name_to_id)))
 
-    next_taxonomy_id = db.session.query(Taxonomy).count() + 1
+    next_taxonomy_id = (db.session.query(func.max(Taxonomy.id)).scalar() or 0) + 1
     logging.info("Next taxonomy ID is {}".format(next_taxonomy_id))
 
     # Put Eukaryotes in as a special case, as these are never in the condensed
