@@ -244,9 +244,36 @@ rule add_tags_to_backend_db:
         'pixi run -e sandpiper ./bin/generate_backend_db --stage tags -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb 2> $SNAKE_WORKING_DIR/{log} && ' \
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_tags'
 
-rule add_otus_to_backend_db:
+rule generate_otus_parquet:
     input:
         '{test_or_prod}/{version}/backend_db/tags_done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
+    output:
+        touch('{test_or_prod}/{version}/backend_db/otus_parquet_done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION']))
+    resources:
+        mem_mb=128000,
+        runtime='48h'
+    threads:
+        8
+    log:
+        '{test_or_prod}/{version}/backend_db/otus_parquet.log'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
+    params:
+        parquet_dir=lambda wildcards: os.path.join(config['SCRATCH_DIR'], 'otus_parquet')
+    shell:
+        'export SNAKE_WORKING_DIR=`pwd` && ' \
+        'cd ../backend && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_tags {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage otus_parquet --otu-table <(pigz -cd {config[OTU_TABLE]}) --otu-parquet-dir {params.parquet_dir} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_otus_parquet'
+
+rule add_otus_to_backend_db:
+    input:
+        '{test_or_prod}/{version}/backend_db/otus_parquet_done'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION'])
     output:
@@ -254,7 +281,7 @@ rule add_otus_to_backend_db:
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION']))
     resources:
-        mem_mb=128000, # Fails with default 7g RAM, and 64G, without restricting inside script
+        mem_mb=128000,
         runtime='48h'
     threads:
         8
@@ -262,14 +289,13 @@ rule add_otus_to_backend_db:
         '{test_or_prod}/{version}/backend_db/otus.log'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION'])
+    params:
+        parquet_dir=lambda wildcards: os.path.join(config['SCRATCH_DIR'], 'otus_parquet')
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
-        # cp to remain idempotent, e.g. if this step fails
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_tags {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
-        # cp the otus because scratch will be faster than /work/microbiome (didn't end up being any faster)
-        # 'cp {config[OTU_TABLE]} {config[SCRATCH_DIR]}/otus && ' \
-        'pixi run -e sandpiper ./bin/generate_backend_db --stage otus --otu-table <(pigz -cd {config[OTU_TABLE]}) -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb 2> $SNAKE_WORKING_DIR/{log} && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_otus_parquet {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
+        'pixi run -e sandpiper ./bin/generate_backend_db --stage otus_load --otu-parquet-dir {params.parquet_dir} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb 2> $SNAKE_WORKING_DIR/{log} && ' \
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_otus'
 
 rule generate_parsed_metadata_from_kingfisher:

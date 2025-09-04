@@ -680,10 +680,10 @@ def read_taxonomy_name_to_id(db, taxonomy_type='gtdb'):
     return taxonomy_name_to_id
 
 
-def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id, db_path):
-    # For each OTU in the input, create a new line in the otus_indexed table,
-    # which is supposed to have better query performance when searhcing for
-    # specific samples.
+def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id, db_path,
+                    parquet_dir=None, load=True):
+    """Create OTU parquet chunks and optionally load them into the DB."""
+
     logging.info("Creating and indexing OTU table")
 
     count = 0
@@ -721,84 +721,113 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
         next_taxonomy_id += 1
     db.session.commit()
 
-    with tempfile.TemporaryDirectory() as my_tempdir:
-        my_tempdir = '/scratch/microbiome/woodcrob/sandpiper/otus' # For debugging
-        conn = db.session.connection().connection
-        # conn.execute("PRAGMA memory_limit = '50GB';")
-        # no preserve insertion order when using multiple threads
-        conn.execute("PRAGMA preserve_insertion_order=false;")
-        conn.execute("PRAGMA threads=8;")
-        chunk_size = int(os.environ.get('OTU_CHUNK_SIZE', 10_000_000))
-        rows = []
-        chunk_index = 0
-        for otu in tqdm(otus):
-            if otu.sample_name in run_accession_to_id:
-                split_taxonomy = [t for t in otu.taxonomy.split('; ') if t != '']
-                try:
-                    taxonomy_name_to_id[split_taxonomy[-1]]
-                except KeyError:
-                    i = len(split_taxonomy) - 1
-                    taxons_to_add = []
-                    while i >= 0:
-                        if split_taxonomy[i] in taxonomy_name_to_id:
-                            parent_id = taxonomy_name_to_id[split_taxonomy[i]]
-                            break
-                        taxons_to_add.append(split_taxonomy[i])
-                        i -= 1
-                    if i == 0:
-                        raise Exception(f"Strangely didn't find any taxonomy in the table for {otu.taxonomy}")
-                    taxons_to_add = reversed(taxons_to_add)
-                    full_taxonomy = split_taxonomy[1:(i + 1)]
-                    for taxon in taxons_to_add:
-                        if split_taxonomy[1] == 'd__Eukaryota':
-                            level_id = 0
-                            level = 'phylum'
-                        else:
-                            prefix = taxon.split('__')[0]
-                            level_id = ['d', 'p', 'c', 'o', 'f', 'g', 's'].index(prefix)
-                            level = ['domain', 'phylum', 'class', 'order', 'family', 'genus', 'species'][level_id]
-                        full_taxonomy.append(taxon)
-                        logging.debug(f"Adding full name {full_taxonomy}")
-                        db.session.add(
-                            Taxonomy(id=next_taxonomy_id,
-                                     taxonomy_level=level,
-                                     parent_id=parent_id,
-                                     name=taxon,
-                                     full_name='; '.join(full_taxonomy),
-                                     taxonomy_type='gtdb'))
-                        db.session.flush()
-                        taxonomy_name_to_id[taxon] = next_taxonomy_id
-                        parent_id = next_taxonomy_id
-                        next_taxonomy_id += 1
-                rows.append([
-                    count + 1,
-                    run_accession_to_id[otu.sample_name],
-                    otu.count,
-                    otu.coverage,
-                    taxonomy_name_to_id[split_taxonomy[-1]],
-                    marker_name_to_id[otu.marker],
-                    otu.sequence,
-                ])
-                count += 1
-                if len(rows) >= chunk_size:
-                    df = pl.DataFrame(rows, orient="row", schema=["id", "run_id", "num_hits", "coverage", "taxonomy_id", "marker_id", "sequence"])
-                    chunk_path = os.path.join(my_tempdir, f"chunk_{chunk_index}.parquet")
-                    df.write_parquet(chunk_path)
-                    rows = []
-                    chunk_index += 1
-        if rows:
-            df = pl.DataFrame(rows, orient="row", schema=["id", "run_id", "num_hits", "coverage", "taxonomy_id", "marker_id", "sequence"])
-            chunk_path = os.path.join(my_tempdir, f"chunk_{chunk_index}.parquet")
-            df.write_parquet(chunk_path)
-        logging.info('Committing taxonomy entries seen only in OTU table ..')
-        db.session.commit()
-        
-        glob_path = os.path.join(my_tempdir, '*.parquet')
-        conn.execute(f"COPY otus_indexed FROM '{glob_path}' (FORMAT PARQUET);")
-        conn.commit()
-        logging.info(f"Imported {db.session.query(OtuIndexed).count()} OTU lines into DB")
+    if parquet_dir:
+        os.makedirs(parquet_dir, exist_ok=True)
+        my_tempdir = parquet_dir
+    else:
+        tmpdir = tempfile.TemporaryDirectory()
+        my_tempdir = tmpdir.name
+
+    conn = db.session.connection().connection
+    # no preserve insertion order when using multiple threads
+    conn.execute("PRAGMA preserve_insertion_order=false;")
+    conn.execute("PRAGMA threads=8;")
+    chunk_size = int(os.environ.get('OTU_CHUNK_SIZE', 10_000_000))
+    rows = []
+    chunk_index = 0
+    for otu in tqdm(otus):
+        if otu.sample_name in run_accession_to_id:
+            split_taxonomy = [t for t in otu.taxonomy.split('; ') if t != '']
+            try:
+                taxonomy_name_to_id[split_taxonomy[-1]]
+            except KeyError:
+                i = len(split_taxonomy) - 1
+                taxons_to_add = []
+                while i >= 0:
+                    if split_taxonomy[i] in taxonomy_name_to_id:
+                        parent_id = taxonomy_name_to_id[split_taxonomy[i]]
+                        break
+                    taxons_to_add.append(split_taxonomy[i])
+                    i -= 1
+                if i == 0:
+                    raise Exception(f"Strangely didn't find any taxonomy in the table for {otu.taxonomy}")
+                taxons_to_add = reversed(taxons_to_add)
+                full_taxonomy = split_taxonomy[1:(i + 1)]
+                for taxon in taxons_to_add:
+                    if split_taxonomy[1] == 'd__Eukaryota':
+                        level_id = 0
+                        level = 'phylum'
+                    else:
+                        prefix = taxon.split('__')[0]
+                        level_id = ['d', 'p', 'c', 'o', 'f', 'g', 's'].index(prefix)
+                        level = ['domain', 'phylum', 'class', 'order', 'family', 'genus', 'species'][level_id]
+                    full_taxonomy.append(taxon)
+                    logging.debug(f"Adding full name {full_taxonomy}")
+                    db.session.add(
+                        Taxonomy(id=next_taxonomy_id,
+                                 taxonomy_level=level,
+                                 parent_id=parent_id,
+                                 name=taxon,
+                                 full_name='; '.join(full_taxonomy),
+                                 taxonomy_type='gtdb'))
+                    db.session.flush()
+                    taxonomy_name_to_id[taxon] = next_taxonomy_id
+                    parent_id = next_taxonomy_id
+                    next_taxonomy_id += 1
+            rows.append([
+                count + 1,
+                run_accession_to_id[otu.sample_name],
+                otu.count,
+                otu.coverage,
+                taxonomy_name_to_id[split_taxonomy[-1]],
+                marker_name_to_id[otu.marker],
+                otu.sequence,
+            ])
+            count += 1
+            if len(rows) >= chunk_size:
+                df = pl.DataFrame(rows, orient="row", schema=["id", "run_id", "num_hits", "coverage", "taxonomy_id", "marker_id", "sequence"])
+                chunk_path = os.path.join(my_tempdir, f"chunk_{chunk_index}.parquet")
+                df.write_parquet(chunk_path)
+                rows = []
+                chunk_index += 1
+    if rows:
+        df = pl.DataFrame(rows, orient="row", schema=["id", "run_id", "num_hits", "coverage", "taxonomy_id", "marker_id", "sequence"])
+        chunk_path = os.path.join(my_tempdir, f"chunk_{chunk_index}.parquet")
+        df.write_parquet(chunk_path)
+    logging.info('Committing taxonomy entries seen only in OTU table ..')
+    db.session.commit()
+
+    if not load:
+        logging.info(f"Wrote OTU parquet chunks to {my_tempdir}")
+        if not parquet_dir:
+            tmpdir.cleanup()
+        return
+
+    glob_path = os.path.join(my_tempdir, '*.parquet')
+    conn.execute(f"COPY otus_indexed FROM '{glob_path}' (FORMAT PARQUET);")
+    conn.commit()
+    logging.info(f"Imported {db.session.query(OtuIndexed).count()} OTU lines into DB")
 
     # drop the otus table since we don't need it anymore
+    logging.info("Dropping old otus table ..")
+    Otu.__table__.drop(db.session.connection())
+
+    if not parquet_dir:
+        tmpdir.cleanup()
+
+
+def load_otu_table_from_parquet(db, parquet_dir, db_path):
+    """Load OTU parquet chunks into the database."""
+
+    logging.info(f"Loading OTU parquet files from {parquet_dir} into DB")
+    conn = db.session.connection().connection
+    conn.execute("PRAGMA preserve_insertion_order=false;")
+    conn.execute("PRAGMA threads=8;")
+    glob_path = os.path.join(parquet_dir, '*.parquet')
+    conn.execute(f"COPY otus_indexed FROM '{glob_path}' (FORMAT PARQUET);")
+    conn.commit()
+    logging.info(f"Imported {db.session.query(OtuIndexed).count()} OTU lines into DB")
+
     logging.info("Dropping old otus table ..")
     Otu.__table__.drop(db.session.connection())
 
@@ -1065,8 +1094,9 @@ if __name__ == '__main__':
     parent_parser.add_argument('--bioproject-associated-publications', help='tsv from bioprjoect_metadata.py')
     parent_parser.add_argument('--smf-file', help='SMF file to read')
     parent_parser.add_argument('--parsed-metadata-table', help='parsed metadata table to read')
+    parent_parser.add_argument('--otu-parquet-dir', help='directory for OTU parquet chunks')
 
-    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'stage2', 'tags', 'otus', 'parsed_metadata'], required=True)
+    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'stage2', 'tags', 'otus_parquet', 'otus_load', 'parsed_metadata'], required=True)
 
     args = parent_parser.parse_args()
 
@@ -1189,13 +1219,20 @@ if __name__ == '__main__':
         elif args.stage == 'tags':
             add_enriched_community_tags(db, db_path)
 
-        elif args.stage == 'otus':
-            if not args.otu_table:
-                raise Exception("otu-table must be specified for stage {}".format(args.stage))
+        elif args.stage == 'otus_parquet':
+            if not args.otu_table or not args.otu_parquet_dir:
+                raise Exception("otu-table and otu-parquet-dir must be specified for stage {}".format(args.stage))
 
             run_accession_to_id = read_run_accession_to_id(db)
             taxonomy_name_to_id = read_taxonomy_name_to_id(db)
-            index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, db_path)
+            index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, db_path,
+                            parquet_dir=args.otu_parquet_dir, load=False)
+
+        elif args.stage == 'otus_load':
+            if not args.otu_parquet_dir:
+                raise Exception("otu-parquet-dir must be specified for stage {}".format(args.stage))
+
+            load_otu_table_from_parquet(db, args.otu_parquet_dir, db_path)
 
         elif args.stage == 'parsed_metadata':
             # --parsed-metadata-table
