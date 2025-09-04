@@ -722,11 +722,12 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
     db.session.commit()
 
     with tempfile.TemporaryDirectory() as my_tempdir:
+        my_tempdir = '/scratch/microbiome/woodcrob/sandpiper/otus' # For debugging
         conn = db.session.connection().connection
-        conn.execute("PRAGMA memory_limit = '50GB';")
+        # conn.execute("PRAGMA memory_limit = '50GB';")
         # no preserve insertion order when using multiple threads
-        # conn.execute("PRAGMA synchronous=OFF;")
-        conn.execute("PRAGMA threads=32;")
+        conn.execute("PRAGMA preserve_insertion_order=false;")
+        conn.execute("PRAGMA threads=8;")
         chunk_size = int(os.environ.get('OTU_CHUNK_SIZE', 10_000_000))
         rows = []
         chunk_index = 0
@@ -786,14 +787,15 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
                     rows = []
                     chunk_index += 1
         if rows:
-            df = pl.DataFrame(rows, schema=["id", "run_id", "num_hits", "coverage", "taxonomy_id", "marker_id", "sequence"])
+            df = pl.DataFrame(rows, orient="row", schema=["id", "run_id", "num_hits", "coverage", "taxonomy_id", "marker_id", "sequence"])
             chunk_path = os.path.join(my_tempdir, f"chunk_{chunk_index}.parquet")
             df.write_parquet(chunk_path)
+        logging.info('Committing taxonomy entries seen only in OTU table ..')
+        db.session.commit()
+        
         glob_path = os.path.join(my_tempdir, '*.parquet')
         conn.execute(f"COPY otus_indexed FROM '{glob_path}' (FORMAT PARQUET);")
         conn.commit()
-        logging.info('Committing taxonomy entries seen only in OTU table ..')
-        db.session.commit()
         logging.info(f"Imported {db.session.query(OtuIndexed).count()} OTU lines into DB")
 
     # drop the otus table since we don't need it anymore
