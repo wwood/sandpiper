@@ -57,6 +57,7 @@ from sandpiper.parse_biosample_extras import *
 
 from singlem.condense import WordNode
 from singlem.otu_table_collection import StreamingOtuTableCollection
+import glob
 
 
 def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, blacklist, run_accession_to_id,
@@ -803,17 +804,7 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
             tmpdir.cleanup()
         return
 
-    glob_path = os.path.join(my_tempdir, '*.parquet')
-    conn.execute(f"COPY otus_indexed FROM '{glob_path}' (FORMAT PARQUET);")
-    conn.commit()
-    logging.info(f"Imported {db.session.query(OtuIndexed).count()} OTU lines into DB")
-
-    # drop the otus table since we don't need it anymore
-    logging.info("Dropping old otus table ..")
-    Otu.__table__.drop(db.session.connection())
-
-    if not parquet_dir:
-        tmpdir.cleanup()
+    raise Exception("Bad code path, load should be false")
 
 
 def load_otu_table_from_parquet(db, parquet_dir, db_path):
@@ -822,11 +813,35 @@ def load_otu_table_from_parquet(db, parquet_dir, db_path):
     logging.info(f"Loading OTU parquet files from {parquet_dir} into DB")
     conn = db.session.connection().connection
     conn.execute("PRAGMA preserve_insertion_order=false;")
-    conn.execute("PRAGMA threads=8;")
-    glob_path = os.path.join(parquet_dir, '*.parquet')
-    conn.execute(f"COPY otus_indexed FROM '{glob_path}' (FORMAT PARQUET);")
+    conn.execute("PRAGMA threads=32;")
+    
+    parquet_files = glob.glob(os.path.join(parquet_dir, '*.parquet'))
+    # Sort parquet files numerically by chunk number to maintain insertion order at least partially.
+    parquet_files.sort(key=lambda x: int(os.path.basename(x).split('_')[1].split('.')[0]))
+
+    # Drop indexes to speed up loading
+    logging.info("Dropping indexes on otus_indexed ..")
+    conn.execute("DROP INDEX IF EXISTS idx_otus_indexed_run_id;")
+    conn.execute("DROP INDEX IF EXISTS idx_otus_indexed_taxonomy_id;")
+    conn.execute("DROP INDEX IF EXISTS idx_otus_indexed_marker_id;")
+    # Drop foreign keys constraints to speed up loading (apparently impossible at runtime)
+    
+    for i, parquet_file in enumerate(parquet_files):
+        logging.info(f"Loading parquet file {i+1}/{len(parquet_files)}: {os.path.basename(parquet_file)}")
+        conn.execute(f"COPY otus_indexed FROM '{parquet_file}' (FORMAT PARQUET);")
+
+        ## If we commit here, it saves RAM. But the CPU cost is just too high, so just commit at the end.
+        # if (i + 1) % 1000 == 0:
+        #     logging.info(f"Committing ..")
+        #     conn.commit()
     conn.commit()
     logging.info(f"Imported {db.session.query(OtuIndexed).count()} OTU lines into DB")
+
+    logging.info("Recreating indexes on otus_indexed ..")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_otus_indexed_run_id ON otus_indexed (run_id);")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_otus_indexed_taxonomy_id ON otus_indexed (taxonomy_id);")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_otus_indexed_marker_id ON otus_indexed (marker_id);")
+    conn.commit()
 
     logging.info("Dropping old otus table ..")
     Otu.__table__.drop(db.session.connection())

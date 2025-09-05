@@ -254,16 +254,16 @@ rule generate_otus_parquet:
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION']))
     resources:
-        mem_mb=128000,
+        mem_mb=16000,
         runtime='48h'
     threads:
-        8
+        1
     log:
         '{test_or_prod}/{version}/backend_db/otus_parquet.log'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION'])
     params:
-        parquet_dir=lambda wildcards: os.path.join(config['SCRATCH_DIR'], 'otus_parquet')
+        parquet_dir=lambda wildcards: os.path.join(config['SCRATCH_DIR'], 'otus_parquet', config['TEST_OR_PROD'], config['SANDPIPER_VERSION'])
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
@@ -281,16 +281,16 @@ rule add_otus_to_backend_db:
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION']))
     resources:
-        mem_mb=128000,
-        runtime='48h'
+        mem_mb=2048 * 1024, # Actually took ~500 GB without cache, 1.4TB with cache
+        runtime='48h' # Actually took ~4 hours
     threads:
-        8
+        32
     log:
         '{test_or_prod}/{version}/backend_db/otus.log'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION'])
     params:
-        parquet_dir=lambda wildcards: os.path.join(config['SCRATCH_DIR'], 'otus_parquet')
+        parquet_dir=lambda wildcards: os.path.join(config['SCRATCH_DIR'], 'otus_parquet', config['TEST_OR_PROD'], config['SANDPIPER_VERSION'])
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
         'cd ../backend && ' \
