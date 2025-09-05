@@ -25,6 +25,7 @@ from .models import (
     SandpiperCache,
 )
 import pandas as pd
+import polars as pl
 # from api.models import #for flask shell
 from .version import __version__, __gtdb_version__, __scrape_date__
 
@@ -444,25 +445,32 @@ def taxonomy_search_run_data(taxon):
 @api.route('/taxonomy_search_csv/<string:taxon>', methods=('GET',))
 def taxonomy_search_csv(taxon):
     taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
+    from datetime import datetime
+    print('=== {}: running core'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     worked, condensed_profile_hits = taxonomy_search_core(taxon, request.args, no_limit=True, include_extras=True)
+    print('=== {}: after core'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
     if worked:
-        df = pd.DataFrame(
+        print('=== {}: worked core'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        df = pl.DataFrame(
             [[
-                c.acc,
-                round(c.relative_abundance*100,2),
-                round(c.filled_coverage, 2),
-                c.taxon_name,
-                c.published.strftime('%Y'),
-                c.host_or_not_mature,
-                c.latitude,
-                c.longitude,]
-                for c in condensed_profile_hits],
-            columns=['sample', 'relative_abundance', 'coverage', 'taxon_name', 'release_year', 
+            c.acc,
+            round(c.relative_abundance*100,2),
+            round(c.filled_coverage, 2),
+            c.taxon_name,
+            c.published.strftime('%Y'),
+            c.host_or_not_mature,
+            c.latitude,
+            c.longitude,]
+            for c in condensed_profile_hits],
+            orient="row",
+            schema=['sample', 'relative_abundance', 'coverage', 'taxon_name', 'release_year', 
             'eukaryotic_host_association',
             'latitude', 'longitude']
         )
-        response = make_response(df.to_csv(index=False, header=True))
+        print('=== {}: df made'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        response = make_response(df.write_csv())
+        print('=== {}: after csv'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         cd = 'attachment; filename=sandpiper_v{}_{}_{}_sample_coverage.csv'.format(__version__, taxon, taxonomy_type)
         response.headers['Content-Disposition'] = cd
         response.mimetype = 'text/csv'
@@ -537,9 +545,12 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
         if not no_limit:
             hits_query = hits_query.limit(page_size).offset((page-1)*page_size)
             
+        from datetime import datetime
+        print('=== {}: before exe'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         condensed_profile_hits = db.session.execute(
             hits_query.where(
                 CondensedProfile.taxonomy_id == taxonomy.id))
+        print('=== {}: after exe'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
         return True, condensed_profile_hits
 

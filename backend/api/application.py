@@ -41,6 +41,7 @@ def create_app(app_name='SURVEY_API'):
 
 
 def generate_app(app_name='SURVEY_API'):
+    
     app = Flask(app_name)
     app.config.from_object('api.config.BaseConfig')
 
