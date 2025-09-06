@@ -561,8 +561,12 @@ def taxonomy_search_hints(taxon):
     taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
 
     # Underscores are wildcards, but we don't want that since there are names like p__Actinobacteria
-    sql = "select name from taxonomies where taxonomy_type = :taxonomy_type and name like :taxon escape \'\\\' order by name limit 30"
-    results = db.session.execute(text(sql), {'taxon': '%'+taxon.replace('_','\\_')+'%', 'taxonomy_type': taxonomy_type})
+    search = '%'+taxon.lower().replace('_','\\_')+'%'
+    sql = (
+        "select name from taxonomies where taxonomy_type = :taxonomy_type "
+        "and lower(name) like :taxon escape \'\\' order by name limit 30"
+    )
+    results = db.session.execute(text(sql), {'taxon': search, 'taxonomy_type': taxonomy_type})
     taxonomies = []
     for r in results:
         taxonomies.append(r)

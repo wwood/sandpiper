@@ -146,3 +146,16 @@ def test_taxonomy_search_csv_filename():
     assert resp.status_code == 200
     cd = resp.headers.get("Content-Disposition")
     assert cd is not None and taxonomy_type in cd
+
+
+def test_taxonomy_search_hints_case_insensitive():
+    session = requests.Session()
+    resp_lower = session.get(
+        f"{BACKEND_URL}/api/taxonomy_search_hints/bac?taxonomy_type=gtdb"
+    )
+    resp_mixed = session.get(
+        f"{BACKEND_URL}/api/taxonomy_search_hints/BaC?taxonomy_type=gtdb"
+    )
+    assert resp_lower.status_code == 200
+    assert resp_lower.json() == resp_mixed.json()
+    assert resp_lower.json().get("taxonomies")
