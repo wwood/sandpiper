@@ -3,7 +3,6 @@ api.py
 - provides the API endpoints for consuming and producing
   REST requests and responses
 """
-from email import header
 import re
 import requests
 
@@ -12,7 +11,6 @@ from flask import Blueprint, jsonify, request, make_response, current_app
 from sqlalchemy import select, distinct, or_
 from sqlalchemy.sql import func, text
 from sqlalchemy.orm import joinedload, lazyload
-from sqlalchemy.sql.expression import func
 
 from .models import (
     NcbiMetadata,
@@ -21,6 +19,7 @@ from .models import (
     Marker,
     OtuIndexed,
     CondensedProfile,
+    CondensedProfileCtas1,
     Taxonomy,
     SandpiperCache,
 )
@@ -506,36 +505,36 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
         if include_extras:
             stmt = select(
                 NcbiMetadata.acc,
-                CondensedProfile.relative_abundance,
-                CondensedProfile.filled_coverage,
+                CondensedProfileCtas1.relative_abundance,
+                CondensedProfileCtas1.filled_coverage,
                 NcbiMetadata.taxon_name,
                 NcbiMetadata.published,
                 # TODO: Add experiment title here, not currently in DB
                 ParsedSampleAttribute.host_or_not_mature,
                 ParsedSampleAttribute.latitude, ParsedSampleAttribute.longitude,
-            ).where(CondensedProfile.run_id == NcbiMetadata.id
+            ).where(CondensedProfileCtas1.run_id == NcbiMetadata.id
             ).where(ParsedSampleAttribute.run_id == NcbiMetadata.id)
         else:
             stmt = select(
                 NcbiMetadata.acc,
-                CondensedProfile.relative_abundance,
-                CondensedProfile.filled_coverage,
+                CondensedProfileCtas1.relative_abundance,
+                CondensedProfileCtas1.filled_coverage,
                 NcbiMetadata.taxon_name,
                 NcbiMetadata.published,
                 # TODO: Add experiment title here, not currently in DB
-            ).where(CondensedProfile.run_id == NcbiMetadata.id)
+            ).where(CondensedProfileCtas1.run_id == NcbiMetadata.id)
 
         
         if sort_field == 'relative_abundance':
             if sort_direction == 'desc':
-                hits_query = stmt.order_by(CondensedProfile.relative_abundance.desc())
+                hits_query = stmt.order_by(CondensedProfileCtas1.relative_abundance.desc())
             else:
-                hits_query = stmt.order_by(CondensedProfile.relative_abundance.asc())
+                hits_query = stmt.order_by(CondensedProfileCtas1.relative_abundance.asc())
         elif sort_field == 'coverage':
             if sort_direction == 'desc':
-                hits_query = stmt.order_by(CondensedProfile.filled_coverage.desc())
+                hits_query = stmt.order_by(CondensedProfileCtas1.filled_coverage.desc())
             else:
-                hits_query = stmt.order_by(CondensedProfile.filled_coverage.asc())
+                hits_query = stmt.order_by(CondensedProfileCtas1.filled_coverage.asc())
         elif sort_field == 'release_year':
             if sort_direction == 'desc':
                 hits_query = stmt.order_by(NcbiMetadata.releasedate.desc())
@@ -545,12 +544,9 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
         if not no_limit:
             hits_query = hits_query.limit(page_size).offset((page-1)*page_size)
             
-        from datetime import datetime
-        print('=== {}: before exe'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         condensed_profile_hits = db.session.execute(
             hits_query.where(
-                CondensedProfile.taxonomy_id == taxonomy.id))
-        print('=== {}: after exe'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                CondensedProfileCtas1.taxonomy_id == taxonomy.id))
 
         return True, condensed_profile_hits
 

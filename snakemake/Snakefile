@@ -53,7 +53,7 @@ localrules: run_kingfisher_metadata, gather_kingfisher_metadata, gather_bioproje
 
 rule all:
     input:
-        '{test_or_prod}/{version}/backend_db/cache_table_done'.format(
+        '{test_or_prod}/{version}/backend_db/condensed_profiles_ctas_done'.format(
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION']),
         '{test_or_prod}/gather_bioproject_pubs/{date}/done'.format(
@@ -377,4 +377,27 @@ rule precompute_api_cache:
         'pixi run -e sandpiper ./bin/precompute_api_cache.py ' \
         '{config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb > ' \
         '$SNAKE_WORKING_DIR/{log} 2>&1 && ' \
-        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb db/sandpiper_{config[SANDPIPER_VERSION]}.duckdb'
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_precompute_api_cache && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_precompute_api_cache db/sandpiper_{config[SANDPIPER_VERSION]}.duckdb'
+
+rule create_condensed_profiles_ctas:
+    input:
+        '{test_or_prod}/{version}/backend_db/cache_table_done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
+    output:
+        touch('{test_or_prod}/{version}/backend_db/condensed_profiles_ctas_done'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION']))
+    log:
+        '{test_or_prod}/{version}/backend_db/condensed_profiles_ctas.log'.format(
+            test_or_prod=config['TEST_OR_PROD'],
+            version=config['SANDPIPER_VERSION'])
+    shell:
+        'export SNAKE_WORKING_DIR=`pwd` && ' \
+        'cd ../backend && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_precompute_api_cache {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
+        'pixi run -e sandpiper ./bin/create_condensed_profiles_ctas.py {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb > ' \
+        '$SNAKE_WORKING_DIR/{log} 2>&1 && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_condensed_profiles_ctas && ' \
+        'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_condensed_profiles_ctas db/sandpiper_{config[SANDPIPER_VERSION]}.duckdb'

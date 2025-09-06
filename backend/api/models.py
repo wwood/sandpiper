@@ -107,6 +107,15 @@ class CondensedProfile(db.Model):
     taxonomy = db.relationship("Taxonomy", back_populates="condensed_profiles", foreign_keys=[taxonomy_id])
 
 
+class CondensedProfileCtas1(db.Model):
+    '''Materialized subset of CondensedProfile for taxonomy search performance.'''
+    __tablename__ = 'condensed_profiles_ctas1'
+    taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), primary_key=True, index=True)
+    run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), primary_key=True, index=True)
+    relative_abundance = db.Column(db.Float, nullable=False, index=True)
+    filled_coverage = db.Column(db.Float, nullable=False, index=True)
+
+
 class Taxonomy(db.Model):
     # Not used here but this is the logical place to put it since it is used in the condensed profile, plus maybe otus in the future
     # taxonomy_level_columns = ['domain_id','phylum_id','class_id','order_id','family_id','genus_id','species_id']
