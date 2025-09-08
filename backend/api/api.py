@@ -107,6 +107,36 @@ def generate_cache():
         ncbi_metadata_infos = NcbiMetadataExtraInfos().extra_info
 
 
+
+######## DEBUG to find slow SQL queries ########
+# Set up SQL logging for debugging
+from sqlalchemy import event
+import time
+def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    context._query_start_time = time.perf_counter()
+def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    total = time.perf_counter() - getattr(context, "_query_start_time", 0)
+    print(f"[SQL] {statement} - {total:.6f} sec")
+# Attach listeners when the application context is available (on first request).
+# Attaching at import time caused "Working outside of application context" because
+# db.engine requires the current_app to be set up.
+@api.before_app_request
+def setup_sql_logging():
+    # Only enable SQL timing when in debug mode (or if explicitly enabled via config)
+    try:
+        event.listen(db.engine, "before_cursor_execute", before_cursor_execute)
+        event.listen(db.engine, "after_cursor_execute", after_cursor_execute)
+    except RuntimeError:
+        # If for some reason the app context is still not available, log a warning.
+        try:
+            current_app.logger.warning("Could not attach SQL event listeners at setup_sql_logging()")
+        except Exception:
+            # Fallback to printing if logger isn't available
+            print("Warning: Could not attach SQL event listeners at setup_sql_logging()")
+######## END DEBUG to find slow SQL queries ########
+
+
+
 @api.route('/sandpiper_stats', methods=['GET'])
 def sandpiper_stats():
     global sandpiper_stats_cache, sandpiper_taxonomy_id_to_full_name, sandpiper_marker_id_to_name
@@ -399,7 +429,7 @@ def taxonomy_search_global_data(taxon):
     taxonomy = Taxonomy.query.filter_by(name=taxon, taxonomy_type=taxonomy_type).first()
     if taxonomy is None:
         return taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in '+taxonomy_type.upper()+', or no records of this taxon are recorded in Sandpiper. We recommend using the auto-complete function when searching to avoid typographical errors. Alternately, if this an NCBI taxonomy name, you could try searching for it at the GTDB website.')
-    total_num_hits = CondensedProfile.query.filter_by(taxonomy_id=taxonomy.id).count()
+    total_num_hits = CondensedProfileCtas1.query.filter_by(taxonomy_id=taxonomy.id).count()
     if total_num_hits == 0:
         # This happens when there's a taxonomy in the full table that didn't make it into any condensed table
         return taxonomy_search_fail_json('"'+taxon+'" is a known taxonomy, however no records of it are recorded in Sandpiper.')
@@ -557,8 +587,12 @@ def taxonomy_search_hints(taxon):
     taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
 
     # Underscores are wildcards, but we don't want that since there are names like p__Actinobacteria
-    sql = "select name from taxonomies where taxonomy_type = :taxonomy_type and name like :taxon escape \'\\\' order by name limit 30"
-    results = db.session.execute(text(sql), {'taxon': '%'+taxon.replace('_','\\_')+'%', 'taxonomy_type': taxonomy_type})
+    search = '%'+taxon.lower().replace('_','\\_')+'%'
+    sql = (
+        "select name from taxonomies where taxonomy_type = :taxonomy_type "
+        "and lower(name) like :taxon escape \'\\' order by name limit 30"
+    )
+    results = db.session.execute(text(sql), {'taxon': search, 'taxonomy_type': taxonomy_type})
     taxonomies = []
     for r in results:
         taxonomies.append(r)
@@ -569,12 +603,12 @@ def taxonomy_search_hints(taxon):
 
 def get_lat_lons(taxonomy_id, max_to_show):
     lat_lon_db_entries = db.session.execute(
-        select(NcbiMetadata.acc, ParsedSampleAttribute.latitude, ParsedSampleAttribute.longitude, NcbiMetadata.study_title, CondensedProfile.relative_abundance).where(
-            CondensedProfile.taxonomy_id == taxonomy_id).where(
+        select(NcbiMetadata.acc, ParsedSampleAttribute.latitude, ParsedSampleAttribute.longitude, NcbiMetadata.study_title, CondensedProfileCtas1.relative_abundance).where(
+            CondensedProfileCtas1.taxonomy_id == taxonomy_id).where(
             NcbiMetadata.id == ParsedSampleAttribute.run_id).where(
-            NcbiMetadata.id == CondensedProfile.run_id).where(
+            NcbiMetadata.id == CondensedProfileCtas1.run_id).where(
             ParsedSampleAttribute.latitude.is_not(None)
-            ).order_by(CondensedProfile.relative_abundance.desc(), CondensedProfile.id).limit(max_to_show).distinct()).fetchall()
+            ).order_by(CondensedProfileCtas1.relative_abundance.desc(), CondensedProfileCtas1.run_id).limit(max_to_show).distinct()).fetchall()
 
     lat_lons = {}
     lat_lons_count = 0

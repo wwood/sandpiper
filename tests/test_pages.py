@@ -46,20 +46,6 @@ def servers():
     env = os.environ.copy()
     env["SANDPIPER_TESTING"] = "1"
 
-    # Ensure CTAS table exists for tests
-    subprocess.run(
-        [
-            "pixi",
-            "run",
-            "-e",
-            "sandpiper",
-            "./bin/create_condensed_profiles_ctas.py",
-            "db/sandpiper_21_test.duckdb",
-        ],
-        cwd="backend",
-        check=True,
-    )
-
     backend_cmd = [
         "pixi",
         "run",

@@ -24,7 +24,7 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
       <p>The overall citation for SingleM/Sandpiper:</p><br />
       <p>Ben J. Woodcroft, Samuel T. N. Aroney, Rossen Zhao, Mitchell Cunningham, Joshua A. M. Mitchell, Rizky Nurdiansyah, Linda Blackall & Gene W. Tyson. <i>Comprehensive taxonomic identification of microbial species in metagenomic data using SingleM and Sandpiper</i>. Nat Biotechnol (2025). <a>https://doi.org/10.1038/s41587-025-02738-1</a></p><br />
 
-      <p>The microbial fraction (SMF) mode of SingleM:</p><br />
+      <p>The prokaryotic fraction (SPF) mode of SingleM:</p><br />
       <p>Eisenhofer, Raphael, Antton Alberdi, and Ben J. Woodcroft. <i>Large-scale estimation of bacterial and archaeal DNA prevalence in metagenomes reveals biome-specific patterns.</i> bioRxiv (2024): 2024-05. <a href='https://doi.org/10.1101/2024.05.16.594470'>https://doi.org/10.1101/2024.05.16.594470</a></p><br />
     </section>
 
@@ -51,8 +51,8 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
 
       <p>For more complicated analyses, such as searching for OTUs that cannot be easily isolated through their taxonomy (e.g. if they are novel), a more bespoke search procedure might be more appropriate. These kinds of analyses cannot currently be done on the sandpiper website, but in such cases please <a :href="'mailto:'+decode('o.jbbqpebsg@dhg.rqh.nh')">get in touch</a> with us.</p><br />
 
-      <h2 class="title is-5">SingleM Microbial Fraction (SMF)</h2>
-      <p>To estimate the number of reads in each metagenome which are either bacterial or archaeal, the <a href="https://wwood.github.io/singlem/tools/microbial_fraction">microbial_fraction</a> (SMF) mode of SingleM was used. SMF bases its estimate on the coverage of each taxon in the SingleM community profile, the genome lengths of those taxons, and the total size of the metagenome. It does not rely on mapping reads to non-microbial reference genomes.</p><br />
+      <h2 class="title is-5">SingleM Prokaryotic Fraction (SPF)</h2>
+      <p>To estimate the number of reads in each metagenome which are either bacterial or archaeal, the <a href="https://wwood.github.io/singlem/tools/prokaryotic_fraction">prokaryotic_fraction</a> (SPF) mode of SingleM was used. SPF bases its estimate on the coverage of each taxon in the SingleM community profile, the genome lengths of those taxons, and the total size of the metagenome. It does not rely on mapping reads to non-prokaryotic reference genomes.</p><br />
 
       <h2 class="title is-5">Prediction of whether the metagenome is associated with a eukaryotic host</h2>
       <p>Each metagenome was predicted as either host-associated or ecological based upon a machine learning algorithm (an <a href="https://xgboost.ai/">XGBoost</a> one achieving ~93% accuracy), using the "organism" metadata field recorded at NCBI as the target for prediction, and the taxonomic profile as the input data. Metagenomes are either classified as "eukaryote host-associated" or "ecological". Host-associated samples are recorded or predicted to be under the <a href="https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=410656">organismal metagenome</a> NCBI taxonomy, ecological ones are all others. We anticipate that predictions based on microbial community profiles will become an increasingly important method for characterising microbiomes in the future, and we hope that future versions of this website will provide more detailed predictions about each community.</p><br />
@@ -129,8 +129,8 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
         <div class="column content"> 
           <ul>
             <li>Updated to use SingleM 0.16.0, changing the species assignment and "condense" procedures</li>
-            <li>Added "SMF" (SingleM Microbial Fraction) statistics</li>
-            <li>Community profile and SMF data: originally generated from SRA metadata collected Dec 15, 2021, using git commit of SingleM e97d171 and metapackage 'S3.metapackage_20211101.smpkg. Then renewed with SingleM v0.16.0 using metapackage S3.2.1.GTDB_r214.metapackage_20231006.smpkg.</li>
+            <li>Added "SPF" (SingleM Prokaryotic Fraction) statistics, previously known as "SMF" / SingleM Microbial Fraction</li>
+            <li>Community profile and SPF data: originally generated from SRA metadata collected Dec 15, 2021, using git commit of SingleM e97d171 and metapackage 'S3.metapackage_20211101.smpkg. Then renewed with SingleM v0.16.0 using metapackage S3.2.1.GTDB_r214.metapackage_20231006.smpkg.</li>
             <li>Community profiles can be downloaded in bulk from <a href="https://zenodo.org/doi/10.5281/zenodo.10547493">Zenodo</a>.</li>
           </ul>
         </div> 

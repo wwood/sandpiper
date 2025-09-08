@@ -39,7 +39,7 @@
               </span>
       <!-- {{ related_runs_short }}  -->
             <br />
-            Microbial fraction <span style="smf_low">{{ metadata.metadata_parsed.smf }}%</span> | Known species fraction {{ known_species_fraction }}%
+            SingleM prokaryotic fraction (SPF) <span style="smf_low">{{ metadata.metadata_parsed.smf }}%</span> | Known species fraction {{ known_species_fraction }}%
             <br />
           </div>
 
@@ -96,15 +96,15 @@
 
       <section class="section">
         <div class="container">
-          <h3 class="title">Microbial fraction</h3>
+          <h3 class="title">Prokaryotic fraction</h3>
           <div v-if="metadata.metadata_parsed.smf || metadata.metadata_parsed.smf==0">
             <br />
             <br />
             <b-progress :value="Math.max(0.5, metadata.metadata_parsed.smf)" :max="100" :type=get_smf_category size="is-medium"  />
-            <p><span v-if="metadata.metadata_parsed.smf_warning">Warning!</span> SingleM Microbial Fraction (<a href="https://wwood.github.io/singlem/tools/microbial_fraction">SMF</a>) estimated that {{ metadata.metadata_parsed.smf }}% of the reads in this metagenome are bacterial or archaeal.
+            <p><span v-if="metadata.metadata_parsed.smf_warning">Warning!</span> SingleM Prokaryotic Fraction (<a href="https://wwood.github.io/singlem/tools/prokaryotic_fraction">SPF</a>) estimated that {{ metadata.metadata_parsed.smf }}% of the reads in this metagenome are bacterial or archaeal.
             <span v-if="metadata.metadata_parsed.smf_warning">However, this community has dominating lineages which are not known to the species level, so the estimate is less reliable.</span></p>
             <br />
-            <p>If the non-microbial DNA is from a sequenced genome, <a :href="'https://trace.ncbi.nlm.nih.gov/Traces/?view=run_browser&acc='+accession+'&display=analysis'">NCBI STAT</a> may provide some insight into its source(s).</p>
+            <p>If the non-prokaryotic DNA is from a sequenced genome, <a :href="'https://trace.ncbi.nlm.nih.gov/Traces/?view=run_browser&acc='+accession+'&display=analysis'">NCBI STAT</a> may provide some insight into its source(s).</p>
           </div>
         </div>
       </section>
