@@ -16,7 +16,7 @@
             <b-radio-button
               v-model="taxonomy_type"
               native-value="gtdb"
-              :disabled="disableGtdb" type="is-warning"
+              :disabled="disableGtdb" type="is-info"
               @input="onTaxonomyTypeChange('gtdb')">
               GTDB
             </b-radio-button>
