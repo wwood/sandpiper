@@ -11,16 +11,29 @@
           </h1>
         <p style="text-align: center;">{{ lineage.join('; ') }}</p>
         <br />
-        <p style="text-align: center;">
-          Viewing {{ taxonomy_type === 'gtdb' ? 'GTDB' : 'GlobDB' }} entry.
-          <span v-if="other_taxon_available">           
-             <router-link :to="{ name: 'SearchResults', params: { taxonomy }, query: { taxonomy_type: other_taxonomy_type } }">
-              Switch to {{ other_taxonomy_type === 'gtdb' ? 'GTDB' : 'GlobDB' }}.
-            </router-link>
-          </span>
-          <span v-else-if="taxonomy_type==='gtdb'">Taxon not available in GlobDB view.</span>
-          <span v-else>Taxon not available in GTDB view.</span>
-        </p>
+        <div class="has-text-centered taxonomy-switcher">
+          <b-field grouped position="is-centered">
+            <b-radio-button
+              v-model="taxonomy_type"
+              native-value="gtdb"
+              :disabled="disableGtdb"
+              @input="onTaxonomyTypeChange">
+              GTDB
+            </b-radio-button>
+            <b-radio-button
+              v-model="taxonomy_type"
+              native-value="globdb"
+              :disabled="disableGlobdb"
+              @input="onTaxonomyTypeChange">
+              GlobDB
+            </b-radio-button>
+          </b-field>
+          <p class="help">Viewing {{ taxonomy_type === 'gtdb' ? 'GTDB' : 'GlobDB' }} entry.</p>
+          <p class="help" v-if="other_taxon_available === false">
+            <span v-if="taxonomy_type==='gtdb'">Taxon not available in GlobDB view.</span>
+            <span v-else>Taxon not available in GTDB view.</span>
+          </p>
+        </div>
       </section>
 
       <section class="section">
@@ -226,6 +239,14 @@ export default {
       zoom: default_zoom
     }
   },
+  computed: {
+    disableGtdb () {
+      return this.taxonomy_type === 'globdb' && this.other_taxon_available === false
+    },
+    disableGlobdb () {
+      return this.taxonomy_type === 'gtdb' && this.other_taxon_available === false
+    }
+  },
   created () {
     // fetch the data when the view is created and the data is
     // already being observed
@@ -238,6 +259,7 @@ export default {
     fetchGlobalData () {
       this.taxonomy_type = this.$route.query.taxonomy_type || 'gtdb'
       this.other_taxonomy_type = this.taxonomy_type === 'gtdb' ? 'globdb' : 'gtdb'
+      this.other_taxon_available = null
       fetchGlobalDataByTaxonomy(this.taxonomy, this.taxonomy_type)
         .then(response => {
           if (response.data.total_num_results > 0) {
@@ -270,6 +292,17 @@ export default {
         .then(response => {
           this.search_result = response.data.results
         })
+    },
+    onTaxonomyTypeChange (value) {
+      if (value === this.$route.query.taxonomy_type) {
+        return
+      }
+
+      this.$router.push({
+        name: 'SearchResults',
+        params: { taxonomy: this.taxonomy },
+        query: { taxonomy_type: value }
+      })
     },
     onPageChange (page) {
       this.page = page

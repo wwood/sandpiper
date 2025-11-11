@@ -13,16 +13,24 @@
           <template #empty>No results found</template>
         </b-autocomplete>
       </b-field>
-      <b-field>
-        <b-radio v-model="taxonomy_db" native-value="gtdb">
-          <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version {{ gtdb_version }} taxonomy
-        </b-radio>
-      </b-field>
-      <b-field>
-        <b-radio v-model="taxonomy_db" native-value="globdb">
-          <a href='http://globdb.org'>GlobDB</a> version {{ gtdb_version }} taxonomy
-        </b-radio>
-      </b-field>
+      <div class="taxonomy-switcher">
+        <b-field>
+          <b-radio-button v-model="taxonomy_db" native-value="gtdb">
+            GTDB
+          </b-radio-button>
+          <b-radio-button v-model="taxonomy_db" native-value="globdb">
+            GlobDB
+          </b-radio-button>
+        </b-field>
+        <p class="help">
+          <span v-if="taxonomy_db === 'gtdb'">
+            <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version {{ gtdb_version }} taxonomy
+          </span>
+          <span v-else>
+            <a href='http://globdb.org'>GlobDB</a> version {{ gtdb_version }} taxonomy
+          </span>
+        </p>
+      </div>
       <br /><b-button type="is-primary" @click="search_by_taxonomy">Search</b-button>
     </section>
 
