@@ -171,6 +171,7 @@ export default {
   data: function () {
     return {
       condensed_tree: null,
+      condensed_cache: {},
       metadata: null,
       error_message: null,
       taxonomy_db: 'gtdb'
@@ -254,14 +255,25 @@ export default {
   methods: {
     fetchCondensed () {
       const accession = this.accession
-      fetchRunCondensed(accession, this.taxonomy_db)
+      const taxonomy = this.taxonomy_db
+
+      if (this.condensed_cache[taxonomy] !== undefined) {
+        this.condensed_tree = this.condensed_cache[taxonomy]
+        return
+      }
+
+      fetchRunCondensed(accession, taxonomy)
         .then(response => {
           this.condensed_tree = response.data
+          this.condensed_cache[taxonomy] = response.data
         })
     },
     fetchData () {
       // const accession = this.$route.params.accession
       const accession = this.accession
+
+      this.condensed_cache = {}
+      this.condensed_tree = null
 
       this.fetchCondensed()
 
