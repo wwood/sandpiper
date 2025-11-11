@@ -13,24 +13,11 @@
           <template #empty>No results found</template>
         </b-autocomplete>
       </b-field>
-      <div class="taxonomy-switcher">
-        <b-field>
-          <b-radio-button v-model="taxonomy_db" native-value="gtdb" type="is-info">
-            GTDB
-          </b-radio-button>
-          <b-radio-button v-model="taxonomy_db" native-value="globdb" type="is-info">
-            GlobDB
-          </b-radio-button>
-        </b-field>
-        <p class="help">
-          <span v-if="taxonomy_db === 'gtdb'">
-            Searching for <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version {{ gtdb_version }} taxonomy
-          </span>
-          <span v-else>
-            Searching for <a href='http://globdb.org'>GlobDB</a> version {{ gtdb_version }} taxonomy
-          </span>
-        </p>
-      </div>
+      <p class="help">
+        Suggestions include <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a>
+        <span v-if="gtdb_version">version {{ gtdb_version }}</span>
+        and <a href='http://globdb.org'>GlobDB</a> taxonomies.
+      </p>
       <br /><b-button type="is-primary" @click="search_by_taxonomy">Search</b-button>
     </section>
 
@@ -66,7 +53,6 @@ export default {
   data () {
     return {
       gtdb_version: null,
-      taxonomy_db: 'gtdb',
 
       taxonomy: 'c__Bog-38',
       autocomplete_taxons: [],
@@ -109,7 +95,7 @@ export default {
         })
     },
     search_by_taxonomy () {
-      this.$router.push({ name: 'SearchResults', params: { taxonomy: this.taxonomy }, query: { taxonomy_type: this.taxonomy_db } })
+      this.$router.push({ name: 'SearchResults', params: { taxonomy: this.taxonomy } })
     },
     getAsyncData: debounce(function (name) {
       // if undefined or empty, reset the list
@@ -118,7 +104,7 @@ export default {
         return
       }
       this.isFetching = true
-      fetchTaxonomySearchHints(name, this.taxonomy_db)
+      fetchTaxonomySearchHints(name)
         .then(({ data }) => {
           this.autocomplete_taxons = data.taxonomies
           if (this.autocomplete_taxons != undefined && this.autocomplete_taxons.length >= 30) {

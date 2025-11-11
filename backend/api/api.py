@@ -584,15 +584,23 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
 @api.route('/taxonomy_search_hints/<string:taxon>', methods=('GET',))
 def taxonomy_search_hints(taxon):
     if len(taxon) < 3: return jsonify(['3 or more characters are required'])
-    taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
+    taxonomy_type = request.args.get('taxonomy_type', None)
 
     # Underscores are wildcards, but we don't want that since there are names like p__Actinobacteria
     search = '%'+taxon.lower().replace('_','\\_')+'%'
-    sql = (
-        "select name from taxonomies where taxonomy_type = :taxonomy_type "
-        "and lower(name) like :taxon escape \'\\' order by name limit 30"
-    )
-    results = db.session.execute(text(sql), {'taxon': search, 'taxonomy_type': taxonomy_type})
+    if taxonomy_type is None:
+        sql = (
+            "select name from taxonomies "
+            "where lower(name) like :taxon escape \'\\' "
+            "order by taxonomy_type, name limit 30"
+        )
+        results = db.session.execute(text(sql), {'taxon': search})
+    else:
+        sql = (
+            "select name from taxonomies where taxonomy_type = :taxonomy_type "
+            "and lower(name) like :taxon escape \'\\' order by name limit 30"
+        )
+        results = db.session.execute(text(sql), {'taxon': search, 'taxonomy_type': taxonomy_type})
     taxonomies = []
     for r in results:
         taxonomies.append(r)

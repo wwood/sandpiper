@@ -16,14 +16,14 @@
             <b-radio-button
               v-model="taxonomy_type"
               native-value="gtdb"
-              :disabled="disableGtdb" type="is-info"
+              :disabled="disableGtdb" type="is-warning"
               @input="onTaxonomyTypeChange('gtdb')">
               GTDB
             </b-radio-button>
             <b-radio-button
               v-model="taxonomy_type"
               native-value="globdb"
-              :disabled="disableGlobdb" type="is-info"
+              :disabled="disableGlobdb" type="is-warning"
               @input="onTaxonomyTypeChange('globdb')">
               GlobDB
             </b-radio-button>
@@ -256,36 +256,90 @@ export default {
     reset_map: function () {
       this.zoom = default_zoom
     },
-    fetchGlobalData () {
-      this.taxonomy_type = this.$route.query.taxonomy_type || 'gtdb'
-      this.other_taxonomy_type = this.taxonomy_type === 'gtdb' ? 'globdb' : 'gtdb'
+    async fetchGlobalData () {
       this.other_taxon_available = null
-      fetchGlobalDataByTaxonomy(this.taxonomy, this.taxonomy_type)
-        .then(response => {
-          if (response.data.total_num_results > 0) {
-            this.taxon_name = response.data.taxon_name
-            this.lineage = response.data.lineage
-            this.taxonomy_level = response.data.taxonomy_level
-            this.total_num_results = response.data.total_num_results
-            this.lat_lons = response.data.lat_lons
-            this.lat_lons_min_relabund = response.data.lat_lons_min_relabund
-            this.num_lat_lon_runs = response.data.num_lat_lon_runs
-            this.num_host_runs = response.data.num_host_runs
-            this.num_ecological_runs = response.data.num_ecological_runs
-          } else {
-            this.error_message = response.data.taxon
-          }
-        })
+      this.error_message = null
+      this.search_result = null
+      this.total_num_results = null
 
-      fetchGlobalDataByTaxonomy(this.taxonomy, this.other_taxonomy_type)
-        .then(response => {
-          this.other_taxon_available = response.data.total_num_results > 0
-        })
-        .catch(() => { this.other_taxon_available = false })
+      const requestedTaxonomyType = this.$route.query.taxonomy_type
 
-      this.fetchData() // call here so that this and the run data are loaded by the watch in a single function
+      if (requestedTaxonomyType) {
+        const globalDataResult = await this.fetchGlobalDataForType(requestedTaxonomyType)
+        if (!globalDataResult.success) {
+          this.error_message = globalDataResult.error
+          return
+        }
+        this.taxonomy_type = requestedTaxonomyType
+        this.populateGlobalData(globalDataResult.data)
+      } else {
+        const detected = await this.determineInitialTaxonomyType()
+        if (!detected) {
+          return
+        }
+      }
+
+      this.other_taxonomy_type = this.taxonomy_type === 'gtdb' ? 'globdb' : 'gtdb'
+      this.fetchData()
+      this.checkOtherTaxonomyAvailability()
+    },
+    async fetchGlobalDataForType (taxonomyType) {
+      try {
+        const response = await fetchGlobalDataByTaxonomy(this.taxonomy, taxonomyType)
+        if (typeof response.data.total_num_results === 'number' && response.data.total_num_results > 0) {
+          return { success: true, data: response.data }
+        }
+        const errorMessage = response.data && response.data.taxon ? response.data.taxon : 'No results found.'
+        return { success: false, error: errorMessage }
+      } catch (error) {
+        return { success: false, error: error.message }
+      }
+    },
+    populateGlobalData (data) {
+      this.taxon_name = data.taxon_name
+      this.lineage = data.lineage
+      this.taxonomy_level = data.taxonomy_level
+      this.total_num_results = data.total_num_results
+      this.lat_lons = data.lat_lons
+      this.lat_lons_min_relabund = data.lat_lons_min_relabund
+      this.num_lat_lon_runs = data.num_lat_lon_runs
+      this.num_host_runs = data.num_host_runs
+      this.num_ecological_runs = data.num_ecological_runs
+    },
+    async determineInitialTaxonomyType () {
+      const gtdbResult = await this.fetchGlobalDataForType('gtdb')
+      if (gtdbResult.success) {
+        this.taxonomy_type = 'gtdb'
+        this.populateGlobalData(gtdbResult.data)
+        return true
+      }
+
+      const globdbResult = await this.fetchGlobalDataForType('globdb')
+      if (globdbResult.success) {
+        this.taxonomy_type = 'globdb'
+        this.populateGlobalData(globdbResult.data)
+        return true
+      }
+
+      this.error_message = globdbResult.error || gtdbResult.error || 'No results found.'
+      return false
+    },
+    async checkOtherTaxonomyAvailability () {
+      if (!this.other_taxonomy_type) {
+        this.other_taxon_available = null
+        return
+      }
+      try {
+        const response = await fetchGlobalDataByTaxonomy(this.taxonomy, this.other_taxonomy_type)
+        this.other_taxon_available = typeof response.data.total_num_results === 'number' && response.data.total_num_results > 0
+      } catch (error) {
+        this.other_taxon_available = false
+      }
     },
     fetchData () {
+      if (!this.taxonomy_type) {
+        return
+      }
       this.search_result = null
 
       fetchRunsByTaxonomy(this.taxonomy, this.taxonomy_type, this.page, this.sortField, this.sortDirection, this.pageSize)

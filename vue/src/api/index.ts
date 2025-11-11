@@ -46,8 +46,9 @@ export function fetchGlobalDataByTaxonomy (taxonomy: string, taxonomyType: strin
   return axios.get(`${API_URL}/taxonomy_search_global_data/${taxonomy}?taxonomy_type=${taxonomyType}`)
 }
 
-export function fetchTaxonomySearchHints (taxonomy: string, taxonomyType: string) {
-  return axios.get(`${API_URL}/taxonomy_search_hints/${taxonomy}?taxonomy_type=${taxonomyType}`)
+export function fetchTaxonomySearchHints (taxonomy: string, taxonomyType?: string) {
+  const taxonomyTypeParam = taxonomyType ? `?taxonomy_type=${taxonomyType}` : ''
+  return axios.get(`${API_URL}/taxonomy_search_hints/${taxonomy}${taxonomyTypeParam}`)
 }
 
 export function fetchRandomAccession(host: boolean, ecological: boolean, two_gbp: boolean) {
