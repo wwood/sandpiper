@@ -15,19 +15,19 @@
       </b-field>
       <div class="taxonomy-switcher">
         <b-field>
-          <b-radio-button v-model="taxonomy_db" native-value="gtdb" size="is-small" type="is-info">
+          <b-radio-button v-model="taxonomy_db" native-value="gtdb" type="is-info">
             GTDB
           </b-radio-button>
-          <b-radio-button v-model="taxonomy_db" native-value="globdb" size="is-small" type="is-info">
+          <b-radio-button v-model="taxonomy_db" native-value="globdb" type="is-info">
             GlobDB
           </b-radio-button>
         </b-field>
         <p class="help">
           <span v-if="taxonomy_db === 'gtdb'">
-            Search for <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version {{ gtdb_version }} taxonomy
+            Searching for <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version {{ gtdb_version }} taxonomy
           </span>
           <span v-else>
-            Search for <a href='http://globdb.org'>GlobDB</a> version {{ gtdb_version }} taxonomy
+            Searching for <a href='http://globdb.org'>GlobDB</a> version {{ gtdb_version }} taxonomy
           </span>
         </p>
       </div>
