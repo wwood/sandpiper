@@ -79,10 +79,10 @@
         <div class="container">
           <h3 class="title">Taxonomic profile</h3>
           <b-field>
-            <b-radio-button v-model="taxonomy_db" native-value="gtdb" @input="fetchCondensed">
+            <b-radio-button v-model="taxonomy_db" native-value="gtdb" @input="fetchCondensed" type="is-info">
               GTDB
             </b-radio-button>
-            <b-radio-button v-model="taxonomy_db" native-value="globdb" @input="fetchCondensed">
+            <b-radio-button v-model="taxonomy_db" native-value="globdb" @input="fetchCondensed" type="is-info">
               GlobDB
             </b-radio-button>
           </b-field>
