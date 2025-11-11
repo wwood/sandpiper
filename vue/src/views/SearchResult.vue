@@ -17,14 +17,14 @@
               v-model="taxonomy_type"
               native-value="gtdb"
               :disabled="disableGtdb"
-              @input="onTaxonomyTypeChange">
+              @input="onTaxonomyTypeChange('gtdb')">
               GTDB
             </b-radio-button>
             <b-radio-button
               v-model="taxonomy_type"
               native-value="globdb"
               :disabled="disableGlobdb"
-              @input="onTaxonomyTypeChange">
+              @input="onTaxonomyTypeChange('globdb')">
               GlobDB
             </b-radio-button>
           </b-field>

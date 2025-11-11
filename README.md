@@ -16,7 +16,8 @@ FLASK_ENV=development flask run --reload
 frontend:
 ```
 cd vue
-pixi run -e sandpiper API_URL=localhost:5000 npm run serve -- --host localhost
+pixi shell -e sandpiper
+SANDPIPER_TESTING=1 npm run dev -- --host 127.0.0.1
 ```
 
 # Testing for deplyment

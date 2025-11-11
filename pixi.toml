@@ -1,4 +1,4 @@
-[project]
+[workspace]
 authors = ["Ben Woodcroft <benjwoodcroft@gmail.com>"]
 channels = ["conda-forge", "bioconda"]
 name = "snakemake"

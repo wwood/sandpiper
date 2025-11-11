@@ -567,9 +567,9 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
                 hits_query = stmt.order_by(CondensedProfileCtas1.filled_coverage.asc())
         elif sort_field == 'release_year':
             if sort_direction == 'desc':
-                hits_query = stmt.order_by(NcbiMetadata.releasedate.desc())
+                hits_query = stmt.order_by(NcbiMetadata.published.desc())
             else:
-                hits_query = stmt.order_by(NcbiMetadata.releasedate.asc())
+                hits_query = stmt.order_by(NcbiMetadata.published.asc())
 
         if not no_limit:
             hits_query = hits_query.limit(page_size).offset((page-1)*page_size)
