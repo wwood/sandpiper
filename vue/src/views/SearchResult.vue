@@ -307,35 +307,7 @@ export default {
       this.num_lat_lon_runs = data.num_lat_lon_runs
       this.num_host_runs = data.num_host_runs
       this.num_ecological_runs = data.num_ecological_runs
-      this.defaultCenter = this.computeDefaultMapCenter()
       this.center = latLng(this.defaultCenter.lat, this.defaultCenter.lng)
-    },
-    computeDefaultMapCenter () {
-      if (!Array.isArray(this.lat_lons) || this.lat_lons.length === 0) {
-        return latLng(0, 0)
-      }
-
-      let totalLat = 0
-      let totalLon = 0
-      let count = 0
-
-      this.lat_lons.forEach(entry => {
-        const coords = entry && entry.lat_lon
-        if (Array.isArray(coords) && coords.length === 2) {
-          const [lat, lon] = coords
-          if (Number.isFinite(lat) && Number.isFinite(lon)) {
-            totalLat += lat
-            totalLon += lon
-            count += 1
-          }
-        }
-      })
-
-      if (count === 0) {
-        return latLng(0, 0)
-      }
-
-      return latLng(totalLat / count, totalLon / count)
     },
     async determineInitialTaxonomyType () {
       const gtdbResult = await this.fetchGlobalDataForType('gtdb')
