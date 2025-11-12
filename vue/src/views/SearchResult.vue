@@ -97,7 +97,7 @@
           </div>
           <br /><p>{{ (total_num_results - num_lat_lon_runs).toLocaleString("en-US") }} other runs are not shown on this map.</p><br />
           
-          <l-map style="height: 900px" :zoom.sync="zoom" :center="center">
+          <l-map style="height: 900px" :zoom.sync="zoom" :center.sync="center">
             <l-tile-layer :url="url" :attribution="attribution" />
             <l-marker v-for="markerLatLng in this.lat_lons" v-bind:key="markerLatLng[0]" :lat-lng="markerLatLng['lat_lon']">
               <l-popup :content="html_for_map_popup(markerLatLng)" :options="{ interactive: true }">
@@ -235,6 +235,7 @@ export default {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       attribution:
         '&copy; <a target="_blank" href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+      defaultCenter: latLng(0, 0),
       center: latLng(0, 0),
       zoom: default_zoom
     }
@@ -254,6 +255,7 @@ export default {
   },
   methods: {
     reset_map: function () {
+      this.center = latLng(this.defaultCenter.lat, this.defaultCenter.lng)
       this.zoom = default_zoom
     },
     async fetchGlobalData () {
@@ -305,6 +307,35 @@ export default {
       this.num_lat_lon_runs = data.num_lat_lon_runs
       this.num_host_runs = data.num_host_runs
       this.num_ecological_runs = data.num_ecological_runs
+      this.defaultCenter = this.computeDefaultMapCenter()
+      this.center = latLng(this.defaultCenter.lat, this.defaultCenter.lng)
+    },
+    computeDefaultMapCenter () {
+      if (!Array.isArray(this.lat_lons) || this.lat_lons.length === 0) {
+        return latLng(0, 0)
+      }
+
+      let totalLat = 0
+      let totalLon = 0
+      let count = 0
+
+      this.lat_lons.forEach(entry => {
+        const coords = entry && entry.lat_lon
+        if (Array.isArray(coords) && coords.length === 2) {
+          const [lat, lon] = coords
+          if (Number.isFinite(lat) && Number.isFinite(lon)) {
+            totalLat += lat
+            totalLon += lon
+            count += 1
+          }
+        }
+      })
+
+      if (count === 0) {
+        return latLng(0, 0)
+      }
+
+      return latLng(totalLat / count, totalLon / count)
     },
     async determineInitialTaxonomyType () {
       const gtdbResult = await this.fetchGlobalDataForType('gtdb')
