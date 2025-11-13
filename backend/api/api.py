@@ -194,24 +194,39 @@ def fetch_condensed(sample_name):
 def fetch_condensed_csv(sample_name):
     taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
     condensed = db.session.execute(
-        select(CondensedProfile.coverage, Taxonomy.full_name)
+        select(CondensedProfile.coverage, Taxonomy.full_name, Taxonomy.taxonomy_level)
             .join(CondensedProfile.ncbi_metadata)
             .filter(NcbiMetadata.acc == sample_name)
             .filter(CondensedProfile.taxonomy_id == Taxonomy.id)
             .filter(Taxonomy.taxonomy_type == taxonomy_type)
+            .filter(CondensedProfile.coverage > 0)
         ).fetchall()
     if len(condensed) is None:
         return jsonify({ sample_name: 'no condensed data found' })
     
-    df = pd.DataFrame(
+    # Sort df by taxonomy level. Since they are strings, we convert to int first
+    level_to_int = {
+        'domain': 1,
+        'phylum': 2,
+        'class': 3,
+        'order': 4,
+        'family': 5,
+        'genus': 6,
+        'species': 7,
+    }
+    df = pl.DataFrame(
         [[
             sample_name,
             d.coverage,
-            'Root; '+d.full_name if d.full_name != 'Root' else d.full_name
+            'Root; '+d.full_name if d.full_name != 'Root' else d.full_name,
+            level_to_int[d.taxonomy_level]
         ] for d in condensed],
-        columns=['sample', 'coverage', 'taxonomy']
-    )
-    response = make_response(df.to_csv(index=False, header=True, sep='\t'))
+        orient="row",
+        schema=['sample', 'coverage', 'taxonomy', 'taxonomy_level_int']
+    ).sort( # sort by taxonomy level_int first, then coverage descending
+        ['taxonomy_level_int', 'coverage'], descending=[False, True]).select(['sample', 'coverage', 'taxonomy'])
+    
+    response = make_response(df.write_csv(separator='\t'))
     cd = 'attachment; filename=sandpiper_v{}_{}_{}_condensed.csv'.format(__version__, sample_name, taxonomy_type)
     response.headers['Content-Disposition'] = cd
     response.mimetype = 'text/csv'

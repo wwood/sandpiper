@@ -14,8 +14,7 @@
         </b-autocomplete>
       </b-field>
       <p class="help">
-        Suggestions include <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a>
-        <span v-if="gtdb_version">version {{ gtdb_version }}</span>
+        Suggestions include <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a><span v-if="gtdb_version"> version {{ gtdb_version }}</span>
         and <a href='http://globdb.org'>GlobDB</a> taxonomies.
       </p>
       <br /><b-button type="is-primary" @click="search_by_taxonomy">Search</b-button>
