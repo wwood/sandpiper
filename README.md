@@ -27,6 +27,11 @@ pixi run -e sandpiper snakemake --configfile test_config.yml
 ```
 The Dropbox/sandpiper_dbs folder should contain the resulting duckdb database, so CI can download it from there.
 
+Running unit tests, which tests both frontend and backend:
+```
+pixi run -e sandpiper pytest tests
+```
+
 # Testing for deplyment
 
 To ensure that the build process works, before release test that the following works. So far this has only been tested on b2, because docker is unavailable on aqua, which means the DB is unavailable and full testing cannot be done. But at least the containers should build.

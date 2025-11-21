@@ -71,12 +71,13 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
 
     <section class="section is-small container has-text-justified">
       <h1 class="title">Changelog</h1>
-      <h2 class="title is-5">v2.0.0</h2>
+      <h2 class="title is-5">v1.1.0</h2>
         <div class="columns has-text-left"> 
           <div class="column content">  
             <ul> 
-              <li>Integration of <a href="https://globdb.org">GlobDB</a> community profiles</li>
+              <li>Integration of <a href="https://globdb.org">GlobDB</a> R226 community profiles.</li> 
               <li>Website infrastructure upgraded.</li>
+              <li>(No new public metagenomes were analysed since the previous release).</li>
             </ul>
           </div> 
         </div>
