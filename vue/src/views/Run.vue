@@ -14,7 +14,7 @@
             {{ metadata.metadata_parsed.host_or_not_mature }} |
             {{ metadata.metadata_parsed.mbases / 1000}} Gbp | 
             <span v-if="getNumReads==0">
-              <1 million reads
+                &lt;1 million reads
             </span>
             <span v-else>
               {{ getNumReads }} million reads
@@ -39,7 +39,7 @@
               </span>
       <!-- {{ related_runs_short }}  -->
             <br />
-            Microbial fraction <span style="smf_low">{{ metadata.metadata_parsed.smf }}%</span> | Known species fraction {{ metadata.metadata_parsed.known_species_fraction }}%
+            SingleM prokaryotic fraction (SPF) <span style="smf_low">{{ metadata.metadata_parsed.smf }}%</span> | Known species fraction {{ known_species_fraction }}%
             <br />
           </div>
 
@@ -78,6 +78,14 @@
       <section class="section">
         <div class="container">
           <h3 class="title">Taxonomic profile</h3>
+          <b-field>
+            <b-radio-button v-model="taxonomy_db" native-value="gtdb" @input="fetchCondensed" type="is-info">
+              GTDB
+            </b-radio-button>
+            <b-radio-button v-model="taxonomy_db" native-value="globdb" @input="fetchCondensed" type="is-warning">
+              GlobDB
+            </b-radio-button>
+          </b-field>
           <div class="sunburst">
             <template v-if="condensed_tree != null">
               <Sunburst3 :json_tree="sunburst_tree" :overall_coverage="10.3" :known_species_fraction="known_species_fraction" />
@@ -88,16 +96,22 @@
 
       <section class="section">
         <div class="container">
-          <h3 class="title">Microbial fraction</h3>
+          <h3 class="title">Prokaryotic fraction</h3>
           <div v-if="metadata.metadata_parsed.smf || metadata.metadata_parsed.smf==0">
             <br />
             <br />
             <b-progress :value="Math.max(0.5, metadata.metadata_parsed.smf)" :max="100" :type=get_smf_category size="is-medium"  />
-            <p><span v-if="metadata.metadata_parsed.smf_warning">Warning!</span> SingleM Microbial Fraction (<a href="https://wwood.github.io/singlem/tools/microbial_fraction">SMF</a>) estimated that {{ metadata.metadata_parsed.smf }}% of the reads in this metagenome are bacterial or archaeal.
+            <p><span v-if="metadata.metadata_parsed.smf_warning">Warning!</span> SingleM Prokaryotic Fraction (<a href="https://wwood.github.io/singlem/tools/prokaryotic_fraction">SPF</a>) estimated that {{ metadata.metadata_parsed.smf }}% of the reads in this metagenome are bacterial or archaeal.
             <span v-if="metadata.metadata_parsed.smf_warning">However, this community has dominating lineages which are not known to the species level, so the estimate is less reliable.</span></p>
             <br />
-            <p>If the non-microbial DNA is from a sequenced genome, <a :href="'https://trace.ncbi.nlm.nih.gov/Traces/?view=run_browser&acc='+accession+'&display=analysis'">NCBI STAT</a> may provide some insight into its source(s).</p>
+            <p>If the non-prokaryotic DNA is from a sequenced genome, <a :href="'https://trace.ncbi.nlm.nih.gov/Traces/?view=run_browser&acc='+accession+'&display=analysis'">NCBI STAT</a> may provide some insight into its source(s).</p>
           </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container is-large">
+          <RunMetadata :mdata="metadata.metadata" :mdata_parsed="metadata.metadata_parsed" />
         </div>
       </section>
 
@@ -105,19 +119,14 @@
         <div class="container is-large">
           <h3 class="title">Download</h3>
 
-          <p>The taxonomic profile of this sample can be downloaded in <a :href="profile_csv_link">tab-separated "SingleM condensed" format</a>. In this format the coverage of each lineage is the coverage assigned to that taxon and not more specifically e.g. the coverage of a species is not included in the coverage shown for its genus.</p>
+          <p>
+            The taxonomic profile of this sample can be downloaded in tab-separated "SingleM condensed with extras" format, generated with <a :href="profile_csv_with_extras_link_gtdb">GTDB</a> or <a :href="profile_csv_with_extras_link_globdb">GlobDB</a> taxonomy. This details the coverage assigned to each taxon at each taxonomic level, both <a href="https://wwood.github.io/singlem/Glossary">filled and unfilled</a>, plus the relative abundance of each taxon.</p>
           <br />
-          
-          <p>The <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> is a tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.</p>
-          <!-- <br /> -->
 
-          <!-- <p>See a <a :href="'/otus/' + accession">visualisation</a></p> -->
-        </div>
-      </section>
+          <p>Concise "SingleM condensed" format files with three columns sample name, coverage, and taxonomy are also available for download (<a :href="profile_csv_link_gtdb">GTDB</a> or <a :href="profile_csv_link_globdb">GlobDB</a>). In this format the coverage of each lineage is the coverage assigned to that taxon and not more specifically e.g. the coverage of a species is not included in the coverage shown for its genus. This taxonomic profiles can be converted to other forms (e.g. one that gives the relative abundance instead of the coverage) using the <a href="https://wwood.github.io/singlem/tools/summarise">SingleM summarise</a> tool.</p>
+          <br />
 
-      <section class="section">
-        <div class="container is-large">
-          <RunMetadata :mdata="metadata.metadata" :mdata_parsed="metadata.metadata_parsed" />
+          <p>The <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> is a (GTDB annotated) tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.</p>
         </div>
       </section>
     </div>
@@ -160,8 +169,10 @@ export default {
   data: function () {
     return {
       condensed_tree: null,
+      condensed_cache: {},
       metadata: null,
-      error_message: null
+      error_message: null,
+      taxonomy_db: 'gtdb'
     }
   },
   props: ['accession'],
@@ -184,7 +195,9 @@ export default {
       return this.condensed_tree.condensed
     },
     known_species_fraction: function () {
-      return this.metadata.metadata_parsed.known_species_fraction
+      return this.taxonomy_db === 'gtdb'
+        ? this.metadata.metadata_parsed.known_species_fraction
+        : this.metadata.metadata_parsed.globdb_known_species_fraction
     },
     sample_name_mature: function () {
       return this.metadata.metadata_parsed.sample_name
@@ -204,8 +217,17 @@ export default {
     full_profile_link: function () {
       return api_url() + '/otus/' + this.accession
     },
-    profile_csv_link: function () {
-      return api_url() + '/condensed_csv/' + this.accession
+    profile_csv_link_gtdb: function () {
+      return api_url() + '/condensed_csv/' + this.accession + '?taxonomy_type=gtdb'
+    },
+    profile_csv_link_globdb: function () {
+      return api_url() + '/condensed_csv/' + this.accession + '?taxonomy_type=globdb'
+    },
+    profile_csv_with_extras_link_gtdb: function () {
+      return api_url() + '/condensed_csv_with_extras/' + this.accession + '?taxonomy_type=gtdb'
+    },
+    profile_csv_with_extras_link_globdb: function () {
+      return api_url() + '/condensed_csv_with_extras/' + this.accession + '?taxonomy_type=globdb'
     },
     publications: function () {
       return this.metadata.metadata.study_links.filter(function (link) {
@@ -235,14 +257,29 @@ export default {
     this.fetchData()
   },
   methods: {
+    fetchCondensed () {
+      const accession = this.accession
+      const taxonomy = this.taxonomy_db
+
+      if (this.condensed_cache[taxonomy] !== undefined) {
+        this.condensed_tree = this.condensed_cache[taxonomy]
+        return
+      }
+
+      fetchRunCondensed(accession, taxonomy)
+        .then(response => {
+          this.condensed_tree = response.data
+          this.condensed_cache[taxonomy] = response.data
+        })
+    },
     fetchData () {
       // const accession = this.$route.params.accession
       const accession = this.accession
 
-      fetchRunCondensed(accession)
-        .then(response => {
-          this.condensed_tree = response.data
-        })
+      this.condensed_cache = {}
+      this.condensed_tree = null
+
+      this.fetchCondensed()
 
       fetchRunMetadata(accession)
         .then(response => {
@@ -263,7 +300,8 @@ export default {
   },
   watch: {
     // call again the method if the route changes
-    $route: 'fetchData'
+    $route: 'fetchData',
+    taxonomy_db: 'fetchCondensed'
   }
 }
 </script>

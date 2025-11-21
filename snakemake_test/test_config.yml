@@ -1,4 +1,4 @@
-SANDPIPER_VERSION: '19_test'
+SANDPIPER_VERSION: '21_test'
 
 KINGFISHER_METADATA_DATE: '20220627'
 
@@ -17,6 +17,7 @@ CONDENSED_OTU_TABLE: '../test/data/more_runs/condensed.csv.gz'
 OTU_TABLE: '../test/data/more_runs/otu_table.csv.gz'
 HOST_OR_NOT_PREDICTION: '../test/data/more_runs/host_or_not_preds.tsv.gz'
 SMF_FILE: '../test/data/more_runs/smf.csv'
+GLOBDB_CONDENSED_OTU_TABLE: '../test/data/more_runs/globdb_condensed.csv.gz'
 
 TEST_OR_PROD: 'test'
-SCRATCH_DIR: '/scratch/sandpiper'
+SCRATCH_DIR: '/scratch/microbiome/woodcrob/sandpiper_test'
