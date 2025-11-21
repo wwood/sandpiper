@@ -62,7 +62,7 @@
 // If you need to reference 'L', such as in 'L.icon', then be sure to
 // explicitly import 'leaflet' into your component
 // import L from 'leaflet'
-import { LMap, LTileLayer, LMarker } from '@vue-leaflet/vue-leaflet'
+import { LMap, LTileLayer, LMarker } from '@maxel01/vue-leaflet'
 
 
 import { Icon, latLng } from 'leaflet'

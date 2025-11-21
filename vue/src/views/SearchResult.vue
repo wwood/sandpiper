@@ -182,7 +182,7 @@ import { api_url, fetchGlobalDataByTaxonomy, fetchRunsByTaxonomy } from '@/api'
 // If you need to reference 'L', such as in 'L.icon', then be sure to
 // explicitly import 'leaflet' into your component
 // import L from 'leaflet'
-import { LMap, LTileLayer, LMarker, LPopup } from '@vue-leaflet/vue-leaflet'
+import { LMap, LTileLayer, LMarker, LPopup } from '@maxel01/vue-leaflet'
 
 import { Icon } from 'leaflet'
 
