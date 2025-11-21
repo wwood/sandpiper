@@ -184,7 +184,7 @@ import { api_url, fetchGlobalDataByTaxonomy, fetchRunsByTaxonomy } from '@/api'
 // import L from 'leaflet'
 import { LMap, LTileLayer, LMarker, LPopup } from '@vue-leaflet/vue-leaflet'
 
-import { Icon, latLng } from 'leaflet'
+import { Icon } from 'leaflet'
 
 // Import marker icon images as modules
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
@@ -200,6 +200,7 @@ Icon.Default.mergeOptions({
 })
 
 const default_zoom = 1.5
+const default_center = Object.freeze([0, 0])
 
 export default {
   name: 'SearchResults',
@@ -235,8 +236,8 @@ export default {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       attribution:
         '&copy; <a target="_blank" href="http://osm.org/copyright">OpenStreetMap</a> contributors',
-      defaultCenter: latLng(0, 0),
-      center: latLng(0, 0),
+      defaultCenter: default_center,
+      center: [...default_center],
       zoom: default_zoom
     }
   },
@@ -255,7 +256,7 @@ export default {
   },
   methods: {
     reset_map: function () {
-      this.center = latLng(this.defaultCenter.lat, this.defaultCenter.lng)
+      this.center = [...this.defaultCenter]
       this.zoom = default_zoom
     },
     async fetchGlobalData () {
@@ -307,7 +308,7 @@ export default {
       this.num_lat_lon_runs = data.num_lat_lon_runs
       this.num_host_runs = data.num_host_runs
       this.num_ecological_runs = data.num_ecological_runs
-      this.center = latLng(this.defaultCenter.lat, this.defaultCenter.lng)
+      this.center = [...this.defaultCenter]
     },
     async determineInitialTaxonomyType () {
       const gtdbResult = await this.fetchGlobalDataForType('gtdb')
