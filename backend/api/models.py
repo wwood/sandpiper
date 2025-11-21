@@ -4,14 +4,13 @@ models.py
 """
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
 
 db = SQLAlchemy()
 
 class Otu(db.Model):
     ''' This table is actually dropped during DB generation '''
     __tablename__ = 'otus'
-    id = db.Column(db.Integer, server_default=text("nextval('otus_id_seq')"), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     # sample_name|num_hits|coverage|taxonomy|marker_id|sequence_id
     sample_name = db.Column(db.String, nullable=False)
     num_hits = db.Column(db.Integer, nullable=False)
@@ -32,11 +31,11 @@ class Otu(db.Model):
 
 class OtuIndexed(db.Model):
     '''This table is intended to be quickly queried based on run_id only, with
-      taxonomy and marker names cached. DuckDB seems to be slow at this query when
-      running it on the original Otu table object.'''
+    taxonomy and marker names cached. SQLite seems to be slow at this query when
+    running it on the original Otu table object.'''
     
     __tablename__ = 'otus_indexed'
-    id = db.Column(db.BigInteger, server_default=text("nextval('otus_indexed_id_seq')"), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     # sample_name|num_hits|coverage|taxonomy|marker_id|sequence_id
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     num_hits = db.Column(db.Integer, nullable=False)
@@ -60,7 +59,7 @@ class OtuIndexed(db.Model):
 
 class Marker(db.Model):
     __tablename__ = 'markers'
-    id = db.Column(db.Integer, server_default=text("nextval('markers_id_seq')"), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     marker = db.Column(db.String, nullable=False)
     otus = db.relationship('Otu', backref='marker')
 
@@ -70,7 +69,7 @@ class Marker(db.Model):
 
 class Nucleotide(db.Model):
     __tablename__ = 'nucleotides'
-    id = db.Column(db.Integer, server_default=text("nextval('nucleotides_id_seq')"), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     marker_id = db.Column(db.Integer, db.ForeignKey('markers.id'), nullable=False)
     sequence = db.Column(db.String, nullable=False)
     marker_wise_id = db.Column(db.Integer, nullable=False)
@@ -86,14 +85,13 @@ class CondensedProfile(db.Model):
     __tablename__ = 'condensed_profiles'
     #     "CREATE TABLE condensed_profiles (id INTEGER PRIMARY KEY,"
     #     " sample_name text, coverage float, taxonomy_id INTEGER);\n")
-    id = db.Column(db.Integer, server_default=text("nextval('condensed_profiles_id_seq')"), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     coverage = db.Column(db.Float, nullable=False, index=True)
     filled_coverage = db.Column(db.Float, nullable=False, index=True)
     # relative_abundance is a filled coverage
     relative_abundance = db.Column(db.Float, nullable=False, index=True)
     taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False, index=True)
-    taxonomy_type = db.Column(db.String, nullable=False, index=True)
 
     # domain_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
     # phylum_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), index=True)
@@ -107,27 +105,17 @@ class CondensedProfile(db.Model):
     taxonomy = db.relationship("Taxonomy", back_populates="condensed_profiles", foreign_keys=[taxonomy_id])
 
 
-class CondensedProfileCtas1(db.Model):
-    '''Materialized subset of CondensedProfile for taxonomy search performance.'''
-    __tablename__ = 'condensed_profiles_ctas1'
-    taxonomy_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), primary_key=True, index=True)
-    run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), primary_key=True, index=True)
-    relative_abundance = db.Column(db.Float, nullable=False, index=True)
-    filled_coverage = db.Column(db.Float, nullable=False, index=True)
-
-
 class Taxonomy(db.Model):
     # Not used here but this is the logical place to put it since it is used in the condensed profile, plus maybe otus in the future
     # taxonomy_level_columns = ['domain_id','phylum_id','class_id','order_id','family_id','genus_id','species_id']
 
     #     "CREATE TABLE taxonomies (id INTEGER PRIMARY KEY, taxonomy_level TEXT, parent_id INTEGER, name TEXT); \n"
     __tablename__ = 'taxonomies'
-    id = db.Column(db.Integer, server_default=text("nextval('taxonomies_id_seq')"), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     taxonomy_level = db.Column(db.String, nullable=False)
-    parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
     name = db.Column(db.String, nullable=False, index=True)
     full_name = db.Column(db.String, nullable=False)
-    taxonomy_type = db.Column(db.String, nullable=False, index=True)
     host_sample_count = db.Column(db.Integer)
     ecological_sample_count = db.Column(db.Integer)
 
@@ -153,7 +141,7 @@ class Taxonomy(db.Model):
 
 class BiosampleAttribute(db.Model):
     __tablename__ = 'biosample_attributes'
-    id = db.Column(db.Integer, server_default=text("nextval('biosample_attributes_id_seq')"), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     k = db.Column(db.String, nullable=False, index=True)
     v = db.Column(db.String, nullable=False)
@@ -166,7 +154,7 @@ class BiosampleAttribute(db.Model):
 
 class ParsedSampleAttribute(db.Model):
     __tablename__ = 'parsed_sample_attributes'
-    id = db.Column(db.Integer, server_default=text("nextval('parsed_sample_attributes_id_seq')"), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     collection_year = db.Column(db.Integer)
     collection_month = db.Column(db.Integer)
@@ -183,7 +171,6 @@ class ParsedSampleAttribute(db.Model):
     smf = db.Column(db.Float)
     smf_warning = db.Column(db.Boolean)
     known_species_fraction = db.Column(db.Float)
-    globdb_known_species_fraction = db.Column(db.Float)
 
     def to_displayable_dict(self):
         return dict(
@@ -199,13 +186,12 @@ class ParsedSampleAttribute(db.Model):
             bacterial_archaeal_bases=self.bacterial_archaeal_bases,
             smf=self.smf,
             smf_warning=self.smf_warning,
-            known_species_fraction=self.known_species_fraction,
-            globdb_known_species_fraction=self.globdb_known_species_fraction)
+            known_species_fraction=self.known_species_fraction)
 
 
 class StudyLink(db.Model):
     __tablename__ = 'study_links'
-    id = db.Column(db.Integer, server_default=text("nextval('study_links_id_seq')"), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False, index=True)
     study_id = db.Column(db.String)
     database = db.Column(db.String)
@@ -225,7 +211,7 @@ class StudyLink(db.Model):
 
 class NcbiMetadata(db.Model):
     __tablename__ = 'ncbi_metadata'
-    id = db.Column(db.Integer, server_default=text("nextval('ncbi_metadata_id_seq')"), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     # acc,
     # assay_type,
     # center_name,
@@ -270,8 +256,8 @@ class NcbiMetadata(db.Model):
     bioproject = db.Column(db.String, index=True)
     # mbytes = db.Column(db.Integer)
     # avgspotlen = db.Column(db.Integer)
-    bases = db.Column(db.BigInteger)
-    spots = db.Column(db.BigInteger)
+    bases = db.Column(db.Integer)
+    spots = db.Column(db.Integer)
     insertsize = db.Column(db.Integer)
     library_name = db.Column(db.String)
     collection_date_parsed = db.Column(db.DateTime)
@@ -381,7 +367,7 @@ class NcbiMetadata(db.Model):
 
 class Tag(db.Model):
     __tablename__ = 'tags'
-    id = db.Column(db.Integer, server_default=text("nextval('tags_id_seq')"), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, unique=True, nullable=False)
     description = db.Column(db.String, nullable=False)
 
@@ -392,7 +378,7 @@ class Tag(db.Model):
 
 class RunTag(db.Model):
     __tablename__ = 'run_tags'
-    id = db.Column(db.Integer, server_default=text("nextval('run_tags_id_seq')"), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     run_id = db.Column(db.Integer, db.ForeignKey('ncbi_metadata.id'), nullable=False)
     tag_id = db.Column(db.Integer, db.ForeignKey('tags.id'), nullable=False)
 
@@ -400,9 +386,3 @@ class RunTag(db.Model):
         return dict(
             run_id=self.run_id,
             tag_id=self.tag_id)
-
-
-class SandpiperCache(db.Model):
-    __tablename__ = 'sandpiper_cache'
-    key = db.Column(db.String, primary_key=True)
-    value = db.Column(db.Text, nullable=False)

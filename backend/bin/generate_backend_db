@@ -41,12 +41,13 @@ import extern
 import pandas as pd
 import polars as pl
 from tqdm import tqdm
-import duckdb
+import sqlite3
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')] + sys.path
 from api.application import generate_app
 
 # from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import update, bindparam, select, insert, func
 
 from api.models import *
@@ -57,18 +58,12 @@ from sandpiper.parse_biosample_extras import *
 
 from singlem.condense import WordNode
 from singlem.otu_table_collection import StreamingOtuTableCollection
-import glob
 
 
-def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, blacklist, run_accession_to_id,
-                                       taxonomy_type, taxonomy_name_to_id=None, next_taxonomy_id=None):
-    if taxonomy_name_to_id is None:
-        taxonomy_name_to_id = {}
-    if taxonomy_type not in taxonomy_name_to_id:
-        taxonomy_name_to_id[taxonomy_type] = {}
-    if next_taxonomy_id is None:
-        next_taxonomy_id = (db.session.query(func.max(Taxonomy.id)).scalar() or 0) + 1
-    count = db.session.query(CondensedProfile).count()
+def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, blacklist, run_accession_to_id):
+    taxonomy_name_to_id = {}
+    next_taxonomy_id = 0
+    count = 0
     sample_count = 0
 
     current_sample = None
@@ -77,12 +72,6 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
 
     skipped_runs = set()
 
-    compute_known_species = taxonomy_type in ('gtdb', 'globdb')
-    known_species_field = (
-        'known_species_fraction'
-        if taxonomy_type == 'gtdb'
-        else 'globdb_known_species_fraction'
-    )
     current_sample_species_coverage = 0.0
     current_sample_non_species_coverage = 0.0
     known_species_fractions = []
@@ -98,13 +87,11 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
                 if current_sample is not None:
                     (taxonomy_name_to_id, next_taxonomy_id,
                      count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries,
-                                                              taxonomy_name_to_id, next_taxonomy_id, count, tf,
-                                                              taxonomy_type)
-                    if compute_known_species:
-                        known_species_fractions.append({
-                            'id': run_accession_to_id[current_sample],
-                            known_species_field: current_sample_species_coverage / (
-                                current_sample_species_coverage + current_sample_non_species_coverage)})
+                                                              taxonomy_name_to_id, next_taxonomy_id, count, tf)
+                    known_species_fractions.append({
+                        'id': run_accession_to_id[current_sample],
+                        'known_species_fraction': current_sample_species_coverage / (
+                            current_sample_species_coverage + current_sample_non_species_coverage)})
                 current_sample = row[0]
                 current_sample_entries = []
                 sample_count += 1
@@ -114,22 +101,19 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
                     logging.info("Processed condensed profiles for {} samples".format(sample_count))
 
             current_sample_entries.append(row)
-            if compute_known_species:
-                if '; s__' in row[2]:
-                    current_sample_species_coverage += float(row[1])
-                else:
-                    current_sample_non_species_coverage += float(row[1])
+            if '; s__' in row[2]:
+                current_sample_species_coverage += float(row[1])
+            else:
+                current_sample_non_species_coverage += float(row[1])
 
         if current_sample is not None:
             (taxonomy_name_to_id, next_taxonomy_id,
              count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries,
-                                                      taxonomy_name_to_id, next_taxonomy_id, count, tf,
-                                                      taxonomy_type)
-            if compute_known_species:
-                known_species_fractions.append({
-                    'id': run_accession_to_id[current_sample],  # We test that id == run_id in the add_smf function
-                    known_species_field: current_sample_species_coverage / (
-                        current_sample_species_coverage + current_sample_non_species_coverage)})
+                                                      taxonomy_name_to_id, next_taxonomy_id, count, tf)
+            known_species_fractions.append({
+                'id': run_accession_to_id[current_sample],  # We test that id == run_id in the add_smf function
+                'known_species_fraction': current_sample_species_coverage / (
+                    current_sample_species_coverage + current_sample_non_species_coverage)})
 
         # Commit taxonomy entries
         logging.info("Committing taxonomy entries from condensed profiles ..")
@@ -137,26 +121,23 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
 
         logging.info("Committing condensed profiles ..")
         tf.flush()
-        conn = db.session.connection().connection
-        conn.execute(
-            f"COPY condensed_profiles FROM '{tf.name}' (DELIMITER '\t');"
-        )
-        conn.commit()
+        extern.run("sqlite3 {}".format(db_path), stdin= \
+            '.separator "\\t"\n' \
+            ".import {} condensed_profiles".format(tf.name))
         logging.info("Wrote {} condensed profile rows to DB, skipping {} that were not in metadata".format(
             count, len(skipped_runs)))
 
         # Commit known species fractions
-        if compute_known_species:
-            logging.info("Committing known species fractions ..")
-            db.session.bulk_update_mappings(ParsedSampleAttribute, known_species_fractions)
-            db.session.commit()
-            logging.info(
-                "Wrote {} known species fractions to DB".format(
-                    len(known_species_fractions)
-                )
-            )
+        logging.info("Committing known species fractions ..")
+        # update_stmt = update(ParsedSampleAttribute).values(
+        #     id=bindparam('id'),
+        #     known_species_fraction=bindparam('known_species_fraction'))
+        # db.session.execute(update_stmt, known_species_fractions)
+        db.session.bulk_update_mappings(ParsedSampleAttribute, known_species_fractions)
+        db.session.commit()
+        logging.info("Wrote {} known species fractions to DB".format(len(known_species_fractions)))
 
-    return taxonomy_name_to_id, next_taxonomy_id
+    return taxonomy_name_to_id
 
 
 def iterate_condensed_profiles(condensed_otu_table_path, blacklist):
@@ -183,8 +164,7 @@ def iterate_condensed_profile_reader_gzip_or_not(condensed_otu_table_path):
             yield from reader
 
 
-def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_name_to_id, next_taxonomy_id, count, tf,
-                                   taxonomy_type):
+def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_name_to_id, next_taxonomy_id, count, tf):
     total_coverage = sum([float(x[1]) for x in entries])
 
     # Generate WordNode tree so we can calculate relative abundance later
@@ -218,10 +198,10 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
         # Get the taxonomy id, creating a new entry if necessary
         taxonomy_ids_here = []
         for (i, species_aware_taxonomy) in enumerate(taxons):
-            if species_aware_taxonomy not in taxonomy_name_to_id[taxonomy_type]:
+            if species_aware_taxonomy not in taxonomy_name_to_id:
                 if species_aware_taxonomy == 'Root':
                     level = 'root'
-                    parent_id = None
+                    parent_id = 'NULL'
                     full_taxonomy = 'Root'
                 else:
                     if i == 7:
@@ -232,7 +212,7 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
                         level = ['domain', 'phylum', 'class', 'order', 'family', 'genus', 'species'][level_id]
                         # Will throw KeyError if something is amiss
 
-                    parent_id = taxonomy_name_to_id[taxonomy_type][taxons[i - 1]]
+                    parent_id = taxonomy_name_to_id[taxons[i - 1]]
                     full_taxonomy = '; '.join(taxons[1:(i + 1)])
 
                 db.session.add(
@@ -240,14 +220,12 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
                              taxonomy_level=level,
                              parent_id=parent_id,
                              name=species_aware_taxonomy,
-                             full_name=full_taxonomy,
-                             taxonomy_type=taxonomy_type))
-                db.session.flush()
+                             full_name=full_taxonomy))
 
-                taxonomy_name_to_id[taxonomy_type][species_aware_taxonomy] = next_taxonomy_id
+                taxonomy_name_to_id[species_aware_taxonomy] = next_taxonomy_id
                 next_taxonomy_id += 1
 
-            taxonomy_ids_here.append(taxonomy_name_to_id[taxonomy_type][species_aware_taxonomy])
+            taxonomy_ids_here.append(taxonomy_name_to_id[species_aware_taxonomy])
 
         def add_a_condensed_profile_taxon(
                 count, taxon_name, taxon_level_index,
@@ -283,8 +261,7 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
                 taxons_to_wordnode[taxon_name].coverage,
                 taxons_to_wordnode[taxon_name].get_full_coverage(),
                 taxons_to_wordnode[taxon_name].get_full_coverage() / total_coverage,
-                taxonomy_name_to_id[taxonomy_type][taxon_name],
-                taxonomy_type,
+                taxonomy_name_to_id[taxon_name],
             ]
             # for (idx, column_name) in zip(taxonomy_ids_here[:(taxon_level_index+1)], Taxonomy.taxonomy_level_columns):
             #     to_print.append(idx)
@@ -298,9 +275,9 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
         # profile. So that searching condensed profiles for taxonomy returns
         # results for c__Coriobacteriia, we need to add an inferred entry.
         for (i, taxon) in enumerate(taxons):
-            if taxonomy_name_to_id[taxonomy_type][taxon] not in inserted_taxonomy_ids:
+            if taxonomy_name_to_id[taxon] not in inserted_taxonomy_ids:
                 count = add_a_condensed_profile_taxon(count, taxon, i, tf)
-                inserted_taxonomy_ids.add(taxonomy_name_to_id[taxonomy_type][taxon])
+                inserted_taxonomy_ids.add(taxonomy_name_to_id[taxon])
 
     return (taxonomy_name_to_id, next_taxonomy_id, count)
 
@@ -672,19 +649,18 @@ def read_run_accession_to_id(db):
     return run_accession_to_id
 
 
-def read_taxonomy_name_to_id(db, taxonomy_type='gtdb'):
+def read_taxonomy_name_to_id(db):
     # select Taxonomy.id, Taxonomy.name
     # from Taxonomy -> return dict
-    taxonomy_name_to_id = {x[1]: x[0] for x in db.session.query(Taxonomy.id, Taxonomy.name)
-                           .filter_by(taxonomy_type=taxonomy_type).all()}
+    taxonomy_name_to_id = {x[1]: x[0] for x in db.session.query(Taxonomy.id, Taxonomy.name).all()}
     logging.info("Loaded {} taxonomies".format(len(taxonomy_name_to_id)))
     return taxonomy_name_to_id
 
 
-def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id, db_path,
-                    parquet_dir=None, load=True):
-    """Create OTU parquet chunks and optionally load them into the DB."""
-
+def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id, db_path):
+    # For each OTU in the input, create a new line in the otus_indexed table,
+    # which is supposed to have better query performance when searhcing for
+    # specific samples.
     logging.info("Creating and indexing OTU table")
 
     count = 0
@@ -698,7 +674,7 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
         marker_name_to_id[marker.marker] = marker.id
     logging.info("Loaded {} markers".format(len(marker_name_to_id)))
 
-    next_taxonomy_id = (db.session.query(func.max(Taxonomy.id)).scalar() or 0) + 1
+    next_taxonomy_id = db.session.query(Taxonomy).count() + 1
     logging.info("Next taxonomy ID is {}".format(next_taxonomy_id))
 
     # Put Eukaryotes in as a special case, as these are never in the condensed
@@ -713,153 +689,102 @@ def index_otu_table(db, otu_table_file, run_accession_to_id, taxonomy_name_to_id
         db.session.add(
             Taxonomy(id=next_taxonomy_id,
                      taxonomy_level=level,
-                     parent_id=db.session.query(Taxonomy).filter_by(taxonomy_level='root', taxonomy_type='gtdb').first().id,
+                     parent_id=db.session.query(Taxonomy).filter_by(taxonomy_level='root').first().id,
                      name=taxon,
-                     full_name=taxon,
-                     taxonomy_type='gtdb'))
+                     full_name=taxon))
 
         taxonomy_name_to_id[taxon] = next_taxonomy_id
         next_taxonomy_id += 1
     db.session.commit()
 
-    if parquet_dir:
-        os.makedirs(parquet_dir, exist_ok=True)
-        my_tempdir = parquet_dir
-    else:
-        tmpdir = tempfile.TemporaryDirectory()
-        my_tempdir = tmpdir.name
+    with tempfile.TemporaryDirectory() as my_tempdir:
+        # my_tempdir = '/tmp/'
+        with open(os.path.join(my_tempdir, 'otus_indexed.tsv'), 'w') as f:
+            for otu in tqdm(otus):
+                # Do not add samples where the sample is not in the rest of the DB
+                if otu.sample_name in run_accession_to_id:
+                    split_taxonomy = [t for t in otu.taxonomy.split('; ') if t != '']
+                    try:
+                        taxonomy_name_to_id[split_taxonomy[-1]]
+                    except KeyError:
+                        # Taxonomy didn't make it into any condensed profile, so hasn't been established.
+                        i = len(split_taxonomy) - 1
+                        taxons_to_add = []
+                        while i >= 0:
+                            if split_taxonomy[i] in taxonomy_name_to_id:
+                                parent_id = taxonomy_name_to_id[split_taxonomy[i]]
+                                break
+                            taxons_to_add.append(split_taxonomy[i])
+                            i -= 1
+                        if i == 0:
+                            raise Exception("Strangely didn't find any taxonomy in the table for {}".format(
+                                otu.taxonomy))
+                        taxons_to_add = reversed(taxons_to_add)
 
-    conn = db.session.connection().connection
-    # no preserve insertion order when using multiple threads
-    conn.execute("PRAGMA preserve_insertion_order=false;")
-    conn.execute("PRAGMA threads=8;")
-    chunk_size = int(os.environ.get('OTU_CHUNK_SIZE', 10_000_000))
-    rows = []
-    chunk_index = 0
-    for otu in tqdm(otus):
-        if otu.sample_name in run_accession_to_id:
-            split_taxonomy = [t for t in otu.taxonomy.split('; ') if t != '']
-            try:
-                taxonomy_name_to_id[split_taxonomy[-1]]
-            except KeyError:
-                i = len(split_taxonomy) - 1
-                taxons_to_add = []
-                while i >= 0:
-                    if split_taxonomy[i] in taxonomy_name_to_id:
-                        parent_id = taxonomy_name_to_id[split_taxonomy[i]]
-                        break
-                    taxons_to_add.append(split_taxonomy[i])
-                    i -= 1
-                if i == 0:
-                    raise Exception(f"Strangely didn't find any taxonomy in the table for {otu.taxonomy}")
-                taxons_to_add = reversed(taxons_to_add)
-                full_taxonomy = split_taxonomy[1:(i + 1)]
-                for taxon in taxons_to_add:
-                    if split_taxonomy[1] == 'd__Eukaryota':
-                        level_id = 0
-                        level = 'phylum'
-                    else:
-                        prefix = taxon.split('__')[0]
-                        level_id = ['d', 'p', 'c', 'o', 'f', 'g', 's'].index(prefix)
-                        level = ['domain', 'phylum', 'class', 'order', 'family', 'genus', 'species'][level_id]
-                    full_taxonomy.append(taxon)
-                    logging.debug(f"Adding full name {full_taxonomy}")
-                    db.session.add(
-                        Taxonomy(id=next_taxonomy_id,
-                                 taxonomy_level=level,
-                                 parent_id=parent_id,
-                                 name=taxon,
-                                 full_name='; '.join(full_taxonomy),
-                                 taxonomy_type='gtdb'))
-                    db.session.flush()
-                    taxonomy_name_to_id[taxon] = next_taxonomy_id
-                    parent_id = next_taxonomy_id
-                    next_taxonomy_id += 1
-            rows.append([
-                count + 1,
-                run_accession_to_id[otu.sample_name],
-                otu.count,
-                otu.coverage,
-                taxonomy_name_to_id[split_taxonomy[-1]],
-                marker_name_to_id[otu.marker],
-                otu.sequence,
-            ])
-            count += 1
-            if len(rows) >= chunk_size:
-                df = pl.DataFrame(rows, orient="row", schema=["id", "run_id", "num_hits", "coverage", "taxonomy_id", "marker_id", "sequence"])
-                chunk_path = os.path.join(my_tempdir, f"chunk_{chunk_index}.parquet")
-                df.write_parquet(chunk_path)
-                rows = []
-                chunk_index += 1
-    if rows:
-        df = pl.DataFrame(rows, orient="row", schema=["id", "run_id", "num_hits", "coverage", "taxonomy_id", "marker_id", "sequence"])
-        chunk_path = os.path.join(my_tempdir, f"chunk_{chunk_index}.parquet")
-        df.write_parquet(chunk_path)
-    logging.info('Committing taxonomy entries seen only in OTU table ..')
-    db.session.commit()
+                        full_taxonomy = split_taxonomy[1:(i + 1)]  # skip first element as that is Root
+                        for taxon in taxons_to_add:
+                            if split_taxonomy[1] == 'd__Eukaryota':
+                                level_id = 0
+                                level = 'phylum'  # Not quite true but doesn't matter
+                            else:
+                                prefix = taxon.split('__')[0]
+                                level_id = ['d', 'p', 'c', 'o', 'f', 'g', 's'].index(prefix)
+                                level = ['domain', 'phylum', 'class', 'order', 'family', 'genus', 'species'][level_id]
 
-    if not load:
-        logging.info(f"Wrote OTU parquet chunks to {my_tempdir}")
-        if not parquet_dir:
-            tmpdir.cleanup()
-        return
+                            # Insert the new taxonomy into the DB
+                            full_taxonomy.append(taxon)
+                            logging.debug("Adding full name {}".format(full_taxonomy))
+                            db.session.add(
+                                Taxonomy(id=next_taxonomy_id,
+                                         taxonomy_level=level,
+                                         parent_id=parent_id,
+                                         name=taxon,
+                                         full_name='; '.join(full_taxonomy)))
 
-    raise Exception("Bad code path, load should be false")
+                            taxonomy_name_to_id[taxon] = next_taxonomy_id
+                            parent_id = next_taxonomy_id
+                            next_taxonomy_id += 1
 
+                    f.write("\t".join([
+                        str(x) for x in [
+                            count + 1, run_accession_to_id[otu.sample_name], otu.count, otu.coverage,
+                            taxonomy_name_to_id[split_taxonomy[-1]], marker_name_to_id[otu.marker], otu.sequence
+                        ]
+                    ]) + "\n")
+                    count += 1
 
-def load_otu_table_from_parquet(db, parquet_dir, db_path):
-    """Load OTU parquet chunks into the database."""
+        logging.info("Committing taxonomy entries seen only in OTU table ..")
+        db.session.commit()
 
-    logging.info(f"Loading OTU parquet files from {parquet_dir} into DB")
-    conn = db.session.connection().connection
-    conn.execute("PRAGMA preserve_insertion_order=false;")
-    conn.execute("PRAGMA threads=32;")
-    
-    parquet_files = glob.glob(os.path.join(parquet_dir, '*.parquet'))
-    # Sort parquet files numerically by chunk number to maintain insertion order at least partially.
-    parquet_files.sort(key=lambda x: int(os.path.basename(x).split('_')[1].split('.')[0]))
+        logging.warning("Last time I tried this is took ages (>1 days, likely months if I hadn't killed it) to import, so imported manually")
+        logging.info("Importing {} OTU lines into DB".format(count))
+        # This could be made faster by turning off journaling etc.
+        # sqlite3 your_database.db
+        # sqlite> BEGIN;
+        # sqlite> PRAGMA journal_mode = OFF;
+        # sqlite> PRAGMA synchronous = OFF;
+        # sqlite> .mode csv
+        # sqlite> .import your_file.csv your_table
+        # sqlite> COMMIT;
+        extern.run("sqlite3 {}".format(db_path), stdin=
+            'PRAGMA journal_mode = OFF;\n' \
+            'PRAGMA synchronous = OFF;\n' \
+            # 'PRAGMA temp_store = MEMORY;\n' \ # might make it faster? Untested and eh for now
+            'BEGIN;\n' \
+            '.separator "\\t"\n' \
+            '.import {} otus_indexed\n' \
+            'COMMIT;'.format(f.name))
+        logging.info("Imported {} OTU lines into DB".format(db.session.query(OtuIndexed).count()))
 
-    # Drop indexes to speed up loading
-    logging.info("Dropping indexes on otus_indexed ..")
-    conn.execute("DROP INDEX IF EXISTS idx_otus_indexed_run_id;")
-    conn.execute("DROP INDEX IF EXISTS idx_otus_indexed_taxonomy_id;")
-    conn.execute("DROP INDEX IF EXISTS idx_otus_indexed_marker_id;")
-    # Drop foreign keys constraints to speed up loading (apparently impossible at runtime)
-    
-    for i, parquet_file in enumerate(parquet_files):
-        logging.info(f"Loading parquet file {i+1}/{len(parquet_files)}: {os.path.basename(parquet_file)}")
-        conn.execute(f"COPY otus_indexed FROM '{parquet_file}' (FORMAT PARQUET);")
-
-        ## If we commit here, it saves RAM. But the CPU cost is just too high, so just commit at the end.
-        # if (i + 1) % 1000 == 0:
-        #     logging.info(f"Committing ..")
-        #     conn.commit()
-    conn.commit()
-    logging.info(f"Imported {db.session.query(OtuIndexed).count()} OTU lines into DB")
-
-    logging.info("Recreating indexes on otus_indexed ..")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_otus_indexed_run_id ON otus_indexed (run_id);")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_otus_indexed_taxonomy_id ON otus_indexed (taxonomy_id);")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_otus_indexed_marker_id ON otus_indexed (marker_id);")
-    conn.commit()
-
+    # drop the otus table since we don't need it anymore
     logging.info("Dropping old otus table ..")
     Otu.__table__.drop(db.session.connection())
 
 
 def read_corrections():
-    try:
-        with open(
-            os.path.join(
-                os.path.dirname(__file__),
-                '../../public_sequencing_metadata_corrections/corrections.json',
-            )
-        ) as f:
-            corrections = json.load(f)
-    except FileNotFoundError:
-        logging.warning('Corrections file not found; proceeding without overrides')
-        return {}
-
+    with open(os.path.join(os.path.dirname(__file__),
+                           '../../public_sequencing_metadata_corrections/corrections.json')) as f:
+        corrections = json.load(f)
     # Convert corrections to a dict with key of bioproject
     corrections_by_key = {}
     for correction in corrections:
@@ -882,54 +807,38 @@ def read_corrections():
 
 
 def add_host_prediction_counts_to_taxonomy(db, db_path):
-    tax_count = db.session.query(Taxonomy).count()
-    logging.info("Caching {} host sample counts in taxonomy ..".format(tax_count))
+    with tempfile.NamedTemporaryFile(prefix='sandpiper_generate_taxonomy') as f:
+        tax_count = db.session.query(Taxonomy).count()
+        logging.info("Caching {} host sample counts in taxonomy ..".format(tax_count))
+        for taxonomy in tqdm(db.session.query(Taxonomy).all(), total=tax_count):
+            num_host_runs = db.session.query(NcbiMetadata). \
+                join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
+                join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='host'). \
+                count()
+            num_ecological_runs = db.session.query(NcbiMetadata). \
+                join(NcbiMetadata.condensed_profiles).filter_by(taxonomy_id=taxonomy.id). \
+                join(NcbiMetadata.parsed_sample_attributes).filter_by(host_or_not_mature='ecological'). \
+                count()
 
-    # Fetch host/ecological run counts for all taxonomies in a single query
-    results = (
-        db.session.query(
-            CondensedProfile.taxonomy_id,
-            ParsedSampleAttribute.host_or_not_mature,
-            func.count(func.distinct(CondensedProfile.run_id)),
-        )
-        .join(
-            ParsedSampleAttribute,
-            CondensedProfile.run_id == ParsedSampleAttribute.run_id,
-        )
-        .filter(
-            ParsedSampleAttribute.host_or_not_mature.in_(("host", "ecological"))
-        )
-        .group_by(
-            CondensedProfile.taxonomy_id,
-            ParsedSampleAttribute.host_or_not_mature,
-        )
-        .all()
-    )
-
-    host_counts = {}
-    ecological_counts = {}
-    for tax_id, host_type, count in results:
-        if host_type == "host":
-            host_counts[tax_id] = count
-        else:
-            ecological_counts[tax_id] = count
-
-    updates = []
-    for tax_id in set(host_counts) | set(ecological_counts):
-        updates.append(
-            {
-                "id": tax_id,
-                "host_sample_count": host_counts.get(tax_id, 0),
-                "ecological_sample_count": ecological_counts.get(tax_id, 0),
-            }
-        )
-
-    if updates:
-        db.session.bulk_update_mappings(Taxonomy, updates)
-    db.session.commit()
-    logging.info(
-        "Imported {} taxonomies with host prediction counts".format(len(updates))
-    )
+            # id = db.Column(db.Integer, primary_key=True)
+            # taxonomy_level = db.Column(db.String, nullable=False)
+            # parent_id = db.Column(db.Integer, db.ForeignKey('taxonomies.id'), nullable=False)
+            # name = db.Column(db.String, nullable=False, index=True)
+            # full_name = db.Column(db.String, nullable=False)
+            # host_sample_count = db.Column(db.Integer)
+            # ecological_sample_count = db.Column(db.Integer)
+            f.write(("\t".join([
+                str(x) for x in [
+                    taxonomy.id, taxonomy.taxonomy_level, taxonomy.parent_id, taxonomy.name, taxonomy.full_name,
+                    num_host_runs, num_ecological_runs
+                ]
+            ]) + "\n").encode())
+        f.flush()
+        extern.run("sqlite3 {}".format(db_path), stdin= \
+            'delete from taxonomies;\n' \
+            '.separator "\\t"\n' \
+            ".import {} taxonomies".format(f.name))
+        logging.info("Imported {} taxonomies with host prediction counts".format(db.session.query(Taxonomy).count()))
 
 
 def add_bioproject_associated_publications(db, db_path, tsv_path):
@@ -990,13 +899,11 @@ def add_bioproject_associated_publications(db, db_path, tsv_path):
         f.flush()
         logging.info("Importing {} new bioproject associated publications to DB".format(count_added))
         # Import and set empty values as NULL
-        conn = db.session.connection().connection
-        conn.execute(
-            f"COPY study_links FROM '{f.name}' (DELIMITER '\t');"
-        )
-        conn.execute("UPDATE study_links SET label=NULL WHERE label='';")
-        conn.execute("UPDATE study_links SET url=NULL WHERE url='';")
-        conn.commit()
+        extern.run("sqlite3 {}".format(db_path), stdin= \
+            '.separator "\\t"\n' \
+            ".import {} study_links \n ".format(f.name)) + \
+            "UPDATE study_links SET label=NULL WHERE label='';\n " \
+            "UPDATE study_links SET url=NULL WHERE url='';\n "
         logging.info("Imported {} bioproject associated publications".format(count_added))
 
     logging.info("Added {} bioproject associated publications to DB".format(count_added))
@@ -1005,12 +912,8 @@ def add_bioproject_associated_publications(db, db_path, tsv_path):
 def index_condensed_profiles_multi_column(db, db_path):
     # This vastly speeds up search by taxonomy
     logging.info("Indexing condensed profiles tax+relabund ..")
-    conn = db.session.connection().connection
-    conn.execute(
-        'create index condensed_profiles_taxonomy_id_relative_abundance on '
-        'condensed_profiles (taxonomy_id, relative_abundance);'
-    )
-    conn.commit()
+    extern.run("sqlite3 {}".format(db_path), stdin= \
+        'create index condensed_profiles_taxonomy_id_relative_abundance on condensed_profiles (taxonomy_id, relative_abundance);')
     logging.info("Indexed condensed profiles tax+relabund")
 
 
@@ -1096,9 +999,7 @@ if __name__ == '__main__':
     parent_parser.add_argument(
         '--otu-table', help='OTU table of the singlem db')  # Commented out for now since unsure it will be used.
     parent_parser.add_argument('--condensed-otu-table', help='condensed OTU table input')
-    parent_parser.add_argument('--globdb-condensed-otu-table',
-                               help='condensed OTU table input built on globdb taxonomy')
-    parent_parser.add_argument('-o', help='duckdb file to generate', required=True)
+    parent_parser.add_argument('-o', help='sqlite3 file to generate', required=True)
     parent_parser.add_argument('--metapackage-describe', help='metapackage describe CSV file')
     parent_parser.add_argument('--metadata-json-files', nargs='+', help='metadata json files')
     parent_parser.add_argument('--run-blacklist', help='Ignore runs listed in this file')
@@ -1109,9 +1010,8 @@ if __name__ == '__main__':
     parent_parser.add_argument('--bioproject-associated-publications', help='tsv from bioprjoect_metadata.py')
     parent_parser.add_argument('--smf-file', help='SMF file to read')
     parent_parser.add_argument('--parsed-metadata-table', help='parsed metadata table to read')
-    parent_parser.add_argument('--otu-parquet-dir', help='directory for OTU parquet chunks')
 
-    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'stage2', 'tags', 'otus_parquet', 'otus_load', 'parsed_metadata'], required=True)
+    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'stage2', 'tags', 'otus', 'parsed_metadata'], required=True)
 
     args = parent_parser.parse_args()
 
@@ -1128,11 +1028,11 @@ if __name__ == '__main__':
     logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
     # Create the app and create the tables
-    db_path = args.o
+    sqlite_db_path = args.o
     app = generate_app()
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'duckdb:///' + db_path
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + sqlite_db_path
     app.config['SQLALCHEMY_ECHO'] = args.debug is True
-    db.init_app(app)
+    db = SQLAlchemy(app)
     with app.app_context():
         if args.stage == 'start' or args.stage == 'stage2':
             blacklist = set()
@@ -1159,31 +1059,16 @@ if __name__ == '__main__':
 
             # Create new DB
             logging.info("Removing old DB if it exists ..")
-            if os.path.exists(db_path):
-                os.remove(db_path)
+            if os.path.exists(sqlite_db_path):
+                os.remove(sqlite_db_path)
             logging.info("Making new DB ..")
-            conn = duckdb.connect(db_path)
-            # Create sequences for autoincrementing IDs
-            seqs = [
-                'otus_id_seq',
-                'otus_indexed_id_seq',
-                'markers_id_seq',
-                'nucleotides_id_seq',
-                'condensed_profiles_id_seq',
-                'taxonomies_id_seq',
-                'biosample_attributes_id_seq',
-                'parsed_sample_attributes_id_seq',
-                'study_links_id_seq',
-                'ncbi_metadata_id_seq',
-                'tags_id_seq',
-                'run_tags_id_seq',
-            ]
-            for seq in seqs:
-                conn.execute(f"CREATE SEQUENCE {seq}")
+            conn = sqlite3.connect(sqlite_db_path)
             conn.close()
 
-            # Create all the tables
             db.create_all()
+
+            # Create all the tables
+            Taxonomy.metadata.create_all(db.engine)
 
             # Create markers
             create_markers_table(db, args.metapackage_describe)
@@ -1214,40 +1099,27 @@ if __name__ == '__main__':
 
             add_smf(db, run_accession_to_id, args.smf_file)
 
-            taxonomy_name_to_id, next_taxonomy_id = fill_condensed_and_taxonomy_tables(
-                db, db_path, args.condensed_otu_table,
-                blacklist, run_accession_to_id, 'gtdb')
+            taxonomy_name_to_id = fill_condensed_and_taxonomy_tables(db, sqlite_db_path, args.condensed_otu_table,
+                                                                     blacklist, run_accession_to_id)
 
-            if args.globdb_condensed_otu_table:
-                taxonomy_name_to_id, next_taxonomy_id = fill_condensed_and_taxonomy_tables(
-                    db, db_path, args.globdb_condensed_otu_table,
-                    blacklist, run_accession_to_id, 'globdb', taxonomy_name_to_id, next_taxonomy_id)
-
-            add_bioproject_associated_publications(db, db_path, args.bioproject_associated_publications)
+            add_bioproject_associated_publications(db, sqlite_db_path, args.bioproject_associated_publications)
 
             add_host_predictions(db, run_accession_to_id, args.host_predictions_tsv)
         
-            add_host_prediction_counts_to_taxonomy(db, db_path)
+            add_host_prediction_counts_to_taxonomy(db, sqlite_db_path)
 
-            index_condensed_profiles_multi_column(db, db_path)
+            index_condensed_profiles_multi_column(db, sqlite_db_path)
 
         elif args.stage == 'tags':
-            add_enriched_community_tags(db, db_path)
+            add_enriched_community_tags(db, sqlite_db_path)
 
-        elif args.stage == 'otus_parquet':
-            if not args.otu_table or not args.otu_parquet_dir:
-                raise Exception("otu-table and otu-parquet-dir must be specified for stage {}".format(args.stage))
+        elif args.stage == 'otus':
+            if not args.otu_table:
+                raise Exception("otu-table must be specified for stage {}".format(args.stage))
 
             run_accession_to_id = read_run_accession_to_id(db)
             taxonomy_name_to_id = read_taxonomy_name_to_id(db)
-            index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, db_path,
-                            parquet_dir=args.otu_parquet_dir, load=False)
-
-        elif args.stage == 'otus_load':
-            if not args.otu_parquet_dir:
-                raise Exception("otu-parquet-dir must be specified for stage {}".format(args.stage))
-
-            load_otu_table_from_parquet(db, args.otu_parquet_dir, db_path)
+            index_otu_table(db, args.otu_table, run_accession_to_id, taxonomy_name_to_id, sqlite_db_path)
 
         elif args.stage == 'parsed_metadata':
             # --parsed-metadata-table

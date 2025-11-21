@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import Vue from 'vue'
 import App from './App.vue'
 import router from './router'
 // import store from './store'
@@ -9,17 +9,25 @@ import 'leaflet/dist/leaflet.css'
 import Buefy from 'buefy'
 import 'buefy/dist/buefy.css'
 
-import VueGtag from 'vue-gtag-next'
+import VueGtag from "vue-gtag";
 
 import titleMixin from './mixins/titleMixin'
+Vue.mixin(titleMixin)
 
-const app = createApp(App)
-app.mixin(titleMixin)
-app.use(VueGtag, {
-  property: { id: 'G-X1CBD2T8XH' }
+Vue.use(VueGtag, {
+  config: { id: "G-X1CBD2T8XH" }
+});
+
+Vue.use(Buefy)
+
+Vue.config.productionTip = process.env.NODE_ENV === 'production'
+
+/* eslint-disable no-new */
+new Vue({
+  el: '#app',
+  router,
+  // store,
+  components: { App },
+  template: '<App/>',
+  render: h => h(App)
 })
-app.use(Buefy)
-app.use(router)
-// app.use(store)
-
-app.mount('#app')

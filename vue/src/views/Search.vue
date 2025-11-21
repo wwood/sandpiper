@@ -2,8 +2,7 @@
   <section class="section container">
 
     <section class="section" @keyup.enter="search_by_taxonomy">
-      <p class="title is-4">Search for public metagenomes by taxonomy</p>
-      <b-field>
+      <b-field label="Search for public metagenomes by taxonomy">
         <b-autocomplete v-model="taxonomy" rounded
           max-height="600px"
           icon="magnify"
@@ -13,30 +12,25 @@
           <template #empty>No results found</template>
         </b-autocomplete>
       </b-field>
-      <p class="help">
-        Suggestions include <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a><span v-if="gtdb_version"> version {{ gtdb_version }}</span>
-        and <a href='http://globdb.org'>GlobDB</a> taxonomies.
-      </p>
+      <p>Taxonomy annotations are derived from <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> version {{ gtdb_version }}.</p>
       <br /><b-button type="is-primary" @click="search_by_taxonomy">Search</b-button>
     </section>
 
     <section class="section"  @keyup.enter="search_by_accession">
-      <p class="title is-4">Search for run/sample/project accession</p>
-      <b-field>
+      <b-field label="Search for run/sample/project accession">
         <b-input v-model="accession"></b-input>
       </b-field>
-      <br /><b-button type="is-primary" @click="search_by_accession">Search</b-button>
+      <b-button type="is-primary" @click="search_by_accession">Search</b-button>
     </section>
 
 
     <section class="section"  @keyup.enter="search_by_random">
-      <p class="title is-4">Find a random run</p>
-      <b-field>
+      <b-field label="Inspect a randomly chosen run">
         <b-switch v-model="random_choice_host">Eukaryote host-associated</b-switch>
         <b-switch v-model="random_choice_ecological">Ecological</b-switch>
         <b-switch v-model="random_choice_two_gbp">2+ Gbp</b-switch>
       </b-field>
-      <br /><b-button type="is-primary" @click="search_by_random">Search</b-button>
+      <b-button type="is-primary" @click="search_by_random">Search</b-button>
     </section>
 
   </section>
@@ -125,7 +119,7 @@ export default {
     },
 
     search_by_random () {
-      this.$router.push({ name: 'RunRandom', query: { 
+      this.$router.push({ name: 'RunRandom', params: { 
         host: this.random_choice_host,
         ecological: this.random_choice_ecological,
         two_gbp: this.random_choice_two_gbp

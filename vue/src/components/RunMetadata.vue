@@ -62,23 +62,18 @@
 // If you need to reference 'L', such as in 'L.icon', then be sure to
 // explicitly import 'leaflet' into your component
 // import L from 'leaflet'
-import { LMap, LTileLayer, LMarker } from '@vue-leaflet/vue-leaflet'
+import { LMap, LTileLayer, LMarker } from 'vue2-leaflet'
 
-
+// Make the marker appear https://vue2-leaflet.netlify.app/quickstart/#marker-icons-are-missing
 import { Icon, latLng } from 'leaflet'
+
 import RunMetadataTable from '@/components/RunMetadataTable.vue'
 
-// Import marker icon images as modules
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
-import markerIcon from 'leaflet/dist/images/marker-icon.png'
-import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-
-// Make the marker appear https://vue-leaflet.github.io/vue-leaflet/#/quick-start#marker-icons-are-missing
 delete Icon.Default.prototype._getIconUrl
 Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow
+  iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
+  iconUrl: require('leaflet/dist/images/marker-icon.png'),
+  shadowUrl: require('leaflet/dist/images/marker-shadow.png')
 })
 
 const default_zoom = 0.5
@@ -108,11 +103,12 @@ export default {
   },
   computed: {
     map_style: function () {
+      const style = 'height: 300px; width: '
       // Make the width fit for smaller screens, but max out the width.
       if (window.innerWidth < 600) {
-        return { height: '300px', width: '100%' }
+        return style+'100%'
       } else {
-        return { height: '300px', width: '550px' }
+        return style+'550px'
       }
     },
   },

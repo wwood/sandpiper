@@ -1,4 +1,4 @@
-# sandpiper (Vue 3)
+# sandpiper
 
 ## Project setup
 ```
@@ -7,7 +7,7 @@ npm install
 
 ### Compiles and hot-reloads for development
 ```
-npm run dev
+npm run serve
 ```
 
 ### Compiles and minifies for production
@@ -15,10 +15,10 @@ npm run dev
 npm run build
 ```
 
-### Preview the production build
+### Lints and fixes files
 ```
-npm run preview
+npm run lint
 ```
 
 ### Customize configuration
-See [Vite Configuration Reference](https://vitejs.dev/config/).
+See [Configuration Reference](https://cli.vuejs.org/config/).

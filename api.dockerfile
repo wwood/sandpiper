@@ -1,5 +1,4 @@
-
-FROM python:3.12
+FROM python:3.10
 
 RUN useradd sandpiper -d /sandpiper \
  && mkdir /sandpiper \
@@ -19,22 +18,18 @@ ENV PATH="/sandpiper/.local/bin:${PATH}"
 # flask-sqlalchemy          3.0.3              pyhd8ed1ab_0    conda-forge
 
 RUN pip install --user --no-cache-dir \
-    'Flask-CORS~=5.0.1' \
-    'Flask-Migrate~=4.1.0' \
+    'Flask-CORS~=4.0.0' \
+    'Flask-Migrate~=4.0.4' \
     'Flask-Script~=2.0.6' \
-    'Flask-SQLAlchemy~=3.1.1' \
-    'Flask~=3.1.0' \
-    'uWSGI~=2.0.31' \
-    'iso8601~=2.1.0' \
-    'zenodo-backpack~=0.3.1' \
-    'sqlalchemy~=2.0.40' \
-    'polars~=1.26.0' \
-    # Are dependencies of singlem actually needed? eh.
-    'singlem~=0.18.1'
-RUN pip install --user --no-cache-dir \
-    'duckdb-engine~=0.15.0' \
-    'duckdb~=1.3.2'
-
+    'Flask-SQLAlchemy~=3.0.3' \
+    'Flask~=2.3.2' \
+    'uWSGI~=2.0.20' \
+    'iso8601~=1.1.0' \
+    'zenodo-backpack~=0.2.0' \
+    'sqlalchemy~=1.4.49' \
+    'polars~=1.5.0' \
+    # Up to date singlem requires sqlalchemy 2.0, but haven't migrated sandpiper yet
+    git+https://github.com/wwood/singlem.git@v1.0.0beta2
 
 COPY backend /sandpiper
 

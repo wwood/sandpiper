@@ -4,7 +4,7 @@ It is probably not useful on its own. Instead you might like to visit the websit
 
 A separate repository https://github.com/wwood/public_sequencing_metadata_corrections contains manually collected corrections to metadata. These corrections are applied here for the sandpiper website.
 
-# Dev on aqua
+# Dev on lyra
 
 backend:
 ```
@@ -16,25 +16,12 @@ FLASK_ENV=development flask run --reload
 frontend:
 ```
 cd vue
-pixi shell -e sandpiper
-SANDPIPER_TESTING=1 npm run dev -- --host 127.0.0.1
-```
-
-generating the test database:
-```
-cd snakemake_test
-pixi run -e sandpiper snakemake --configfile test_config.yml
-```
-The Dropbox/sandpiper_dbs folder should contain the resulting duckdb database, so CI can download it from there.
-
-Running unit tests, which tests both frontend and backend:
-```
-pixi run -e sandpiper pytest tests
+pixi run -e sandpiper API_URL=localhost:5000 npm run serve -- --host localhost
 ```
 
 # Testing for deplyment
 
-To ensure that the build process works, before release test that the following works. So far this has only been tested on b2, because docker is unavailable on aqua, which means the DB is unavailable and full testing cannot be done. But at least the containers should build.
+To ensure that the build process works, before release test that the following works. So far this has only been tested on b2, because docker is available on aqua, which means the DB is unavailable and full testing cannot be done. But at least the containers should build.
 
 ```
 docker-compose up
