@@ -1,10 +1,10 @@
-FROM node:16 as build
+FROM node:24 as build
 
 WORKDIR /app
 
 COPY vue/package*.json ./
 RUN npm install \
- && npm install -g @vue/cli-service \
+# && npm install -g @vue/cli-service \
  && rm package*.json
 
 ARG VUE_APP_API_URL="localhost:5000"
