@@ -20,4 +20,4 @@ SMF_FILE: '../test/data/more_runs/smf.csv'
 GLOBDB_CONDENSED_OTU_TABLE: '../test/data/more_runs/globdb_condensed.csv.gz'
 
 TEST_OR_PROD: 'test'
-SCRATCH_DIR: '/scratch/microbiome/woodcrob/sandpiper'
+SCRATCH_DIR: '/scratch/microbiome/woodcrob/sandpiper_test'
