@@ -85,6 +85,7 @@ export default {
 
       // clear SVG contents first
       d3.select('#dataviz_area > *').remove()
+      d3.select('#annotation_area > *').remove()
       const svg = d3.select('#dataviz_area')
         .attr('viewBox', [0, 0, width, width])
         // .style('font', '10px')

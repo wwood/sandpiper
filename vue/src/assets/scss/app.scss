@@ -1,5 +1,5 @@
-@import "~bulma/sass/utilities/initial-variables";
-@import "~bulma/sass/utilities/functions";
+@import "bulma/sass/utilities/initial-variables";
+@import "bulma/sass/utilities/functions";
 // 1. Set your own initial variables and derived 
 //    variables in _variables.scss
 @import "variables";
@@ -12,7 +12,7 @@ $twitter-invert: findColorInvert($twitter);
 $github: #333;
 $github-invert: findColorInvert($github);
 
-@import "~bulma/sass/utilities/derived-variables";
+@import "bulma/sass/utilities/derived-variables";
 
 // 3. Add new color variables to the color map.
 $addColors: (
@@ -22,8 +22,8 @@ $addColors: (
 );
 $colors: map-merge($colors, $addColors);
 
-@import "~bulma";
-@import "~buefy/src/scss/buefy";
+@import "bulma/bulma.sass";
+@import "buefy/src/scss/buefy";
 
 // 4. Provide custom buefy overrides and site styles here
 

@@ -3,7 +3,6 @@ api.py
 - provides the API endpoints for consuming and producing
   REST requests and responses
 """
-from email import header
 import re
 import requests
 
@@ -12,16 +11,27 @@ from flask import Blueprint, jsonify, request, make_response, current_app
 from sqlalchemy import select, distinct, or_
 from sqlalchemy.sql import func, text
 from sqlalchemy.orm import joinedload, lazyload
-from sqlalchemy.sql.expression import func
 
-from .models import NcbiMetadata, ParsedSampleAttribute, db, Marker, OtuIndexed, CondensedProfile, Taxonomy
+from .models import (
+    NcbiMetadata,
+    ParsedSampleAttribute,
+    db,
+    Marker,
+    OtuIndexed,
+    CondensedProfile,
+    CondensedProfileCtas1,
+    Taxonomy,
+    SandpiperCache,
+)
 import pandas as pd
+import polars as pl
 # from api.models import #for flask shell
 from .version import __version__, __gtdb_version__, __scrape_date__
 
-import os, sys
+import os, sys, json
 sys.path = [os.environ['HOME']+'/git/singlem-local'] + [os.environ['HOME']+'/git/singlem'] + sys.path
 from singlem.condense import WordNode
+from singlem.summariser import Summariser
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 from sandpiper.biosample_attributes import *
@@ -42,19 +52,52 @@ def generate_cache():
     global biosample_attribute_definitions
     global ncbi_metadata_infos
 
+    if (
+        sandpiper_stats_cache is None
+        or sandpiper_taxonomy_id_to_full_name is None
+        or sandpiper_marker_id_to_name is None
+        or biosample_attribute_definitions is None
+        or ncbi_metadata_infos is None
+    ):
+        try:
+            cache_rows = SandpiperCache.query.all()
+            cache = {row.key: json.loads(row.value) for row in cache_rows}
+            if 'stats' in cache and sandpiper_stats_cache is None:
+                sandpiper_stats_cache = cache['stats']
+            if 'taxonomy_id_to_full_name' in cache and sandpiper_taxonomy_id_to_full_name is None:
+                sandpiper_taxonomy_id_to_full_name = {
+                    int(k): v for k, v in cache['taxonomy_id_to_full_name'].items()
+                }
+            if 'marker_id_to_name' in cache and sandpiper_marker_id_to_name is None:
+                sandpiper_marker_id_to_name = {
+                    int(k): v for k, v in cache['marker_id_to_name'].items()
+                }
+            if 'biosample_attribute_definitions' in cache and biosample_attribute_definitions is None:
+                biosample_attribute_definitions = {
+                    k: BioSampleAttribute(**v)
+                    for k, v in cache['biosample_attribute_definitions'].items()
+                }
+            if 'ncbi_metadata_infos' in cache and ncbi_metadata_infos is None:
+                ncbi_metadata_infos = {
+                    k: NcbiMetadataExtraInfo(**v)
+                    for k, v in cache['ncbi_metadata_infos'].items()
+                }
+        except Exception as e:
+            current_app.logger.warning(
+                'Failed to load cache table, regenerating dynamically: %s', e
+            )
+
     if sandpiper_stats_cache is None or len(sandpiper_stats_cache) != 3:
         sandpiper_stats_cache = {}
         sandpiper_stats_cache['sandpiper_total_terrabases'] = db.session.query(func.sum(NcbiMetadata.bases)).scalar()/10**12
-        sandpiper_stats_cache['sandpiper_num_runs'] = db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar() #NcbiMetadata.query.distinct(NcbiMetadata.acc).count()
+        sandpiper_stats_cache['sandpiper_num_runs'] = db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar()
         sandpiper_stats_cache['sandpiper_num_bioprojects'] = db.session.query(func.count(distinct(NcbiMetadata.bioproject))).scalar()
     if sandpiper_taxonomy_id_to_full_name is None:
-        print('Caching taxonomy names')
         cache = {}
         for taxon in Taxonomy.query.all():
             cache[taxon.id] = taxon.full_name
-        sandpiper_taxonomy_id_to_full_name = cache # Roughly atomic
+        sandpiper_taxonomy_id_to_full_name = cache
     if sandpiper_marker_id_to_name is None:
-        print('Caching marker names')
         cache = {}
         for marker in Marker.query.all():
             cache[marker.id] = marker.marker
@@ -63,6 +106,36 @@ def generate_cache():
         biosample_attribute_definitions = BioSampleAttributes(current_app.logger).attributes
     if ncbi_metadata_infos is None:
         ncbi_metadata_infos = NcbiMetadataExtraInfos().extra_info
+
+
+
+######## DEBUG to find slow SQL queries ########
+# Set up SQL logging for debugging
+from sqlalchemy import event
+import time
+def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    context._query_start_time = time.perf_counter()
+def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    total = time.perf_counter() - getattr(context, "_query_start_time", 0)
+    print(f"[SQL] {statement} - {total:.6f} sec")
+# Attach listeners when the application context is available (on first request).
+# Attaching at import time caused "Working outside of application context" because
+# db.engine requires the current_app to be set up.
+@api.before_app_request
+def setup_sql_logging():
+    # Only enable SQL timing when in debug mode (or if explicitly enabled via config)
+    try:
+        event.listen(db.engine, "before_cursor_execute", before_cursor_execute)
+        event.listen(db.engine, "after_cursor_execute", after_cursor_execute)
+    except RuntimeError:
+        # If for some reason the app context is still not available, log a warning.
+        try:
+            current_app.logger.warning("Could not attach SQL event listeners at setup_sql_logging()")
+        except Exception:
+            # Fallback to printing if logger isn't available
+            print("Warning: Could not attach SQL event listeners at setup_sql_logging()")
+######## END DEBUG to find slow SQL queries ########
+
 
 
 @api.route('/sandpiper_stats', methods=['GET'])
@@ -88,12 +161,16 @@ def fetch_markers():
 
 @api.route('/condensed/<string:sample_name>', methods=('GET',))
 def fetch_condensed(sample_name):
+    taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
     root = WordNode(None, 'Root')
     taxons_to_wordnode = {root.word: root}
 
     condensed = db.session.execute(
-        select(CondensedProfile.coverage, Taxonomy.full_name).join(CondensedProfile.ncbi_metadata).
-            filter(NcbiMetadata.acc == sample_name).filter(CondensedProfile.taxonomy_id==Taxonomy.id)
+        select(CondensedProfile.coverage, Taxonomy.full_name)
+            .join(CondensedProfile.ncbi_metadata)
+            .filter(NcbiMetadata.acc == sample_name)
+            .filter(CondensedProfile.taxonomy_id == Taxonomy.id)
+            .filter(Taxonomy.taxonomy_type == taxonomy_type)
         ).fetchall()
     if len(condensed) is None:
         return jsonify({ sample_name: 'no condensed data found' })
@@ -116,26 +193,89 @@ def fetch_condensed(sample_name):
 
 @api.route('/condensed_csv/<string:sample_name>', methods=('GET',))
 def fetch_condensed_csv(sample_name):
+    taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
     condensed = db.session.execute(
-        select(CondensedProfile.coverage, Taxonomy.full_name).join(CondensedProfile.ncbi_metadata).
-            filter(NcbiMetadata.acc == sample_name).filter(CondensedProfile.taxonomy_id==Taxonomy.id)
+        select(CondensedProfile.coverage, Taxonomy.full_name, Taxonomy.taxonomy_level)
+            .join(CondensedProfile.ncbi_metadata)
+            .filter(NcbiMetadata.acc == sample_name)
+            .filter(CondensedProfile.taxonomy_id == Taxonomy.id)
+            .filter(Taxonomy.taxonomy_type == taxonomy_type)
+            .filter(CondensedProfile.coverage > 0)
         ).fetchall()
     if len(condensed) is None:
         return jsonify({ sample_name: 'no condensed data found' })
     
-    df = pd.DataFrame(
+    # Sort df by taxonomy level. Since they are strings, we convert to int first
+    level_to_int = {
+        'domain': 1,
+        'phylum': 2,
+        'class': 3,
+        'order': 4,
+        'family': 5,
+        'genus': 6,
+        'species': 7,
+    }
+    df = pl.DataFrame(
         [[
             sample_name,
             d.coverage,
-            'Root; '+d.full_name if d.full_name != 'Root' else d.full_name
+            'Root; '+d.full_name if d.full_name != 'Root' else d.full_name,
+            level_to_int[d.taxonomy_level]
         ] for d in condensed],
-        columns=['sample', 'coverage', 'taxonomy']
-    )
-    response = make_response(df.to_csv(index=False, header=True, sep='\t'))
-    cd = 'attachment; filename=sandpiper_v{}_{}_condensed.csv'.format(__version__, sample_name)
+        orient="row",
+        schema=['sample', 'coverage', 'taxonomy', 'taxonomy_level_int']
+    ).sort( # sort by taxonomy level_int first, then coverage descending
+        ['taxonomy_level_int', 'coverage'], descending=[False, True]).select(['sample', 'coverage', 'taxonomy'])
+    
+    response = make_response(df.write_csv(separator='\t'))
+    cd = 'attachment; filename=sandpiper_v{}_{}_{}_condensed.csv'.format(__version__, sample_name, taxonomy_type)
     response.headers['Content-Disposition'] = cd
     response.mimetype = 'text/csv'
     return response
+
+@api.route('/condensed_csv_with_extras/<string:sample_name>', methods=('GET',))
+def fetch_condensed_csv_with_extras(sample_name):
+    # TODO: remove duplication with above?
+    taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
+    condensed = db.session.execute(
+        select(CondensedProfile.coverage, Taxonomy.full_name, Taxonomy.taxonomy_level)
+            .join(CondensedProfile.ncbi_metadata)
+            .filter(NcbiMetadata.acc == sample_name)
+            .filter(CondensedProfile.taxonomy_id == Taxonomy.id)
+            .filter(Taxonomy.taxonomy_type == taxonomy_type)
+            .filter(CondensedProfile.coverage > 0) # zeroes are introduced later, so this filter makes no difference
+        ).fetchall()
+    if len(condensed) is None:
+        return jsonify({ sample_name: 'no condensed data found' })
+
+    # Use the Summarise.write_taxonomic_profile_with_extras function logic to implement
+    df = pl.DataFrame(
+        [[
+            sample_name,
+            d.coverage,
+            'Root; '+d.full_name if d.full_name != 'Root' else d.full_name,
+        ] for d in condensed],
+        orient="row",
+        schema=['sample', 'coverage', 'taxonomy']
+    )
+    # write_taxonomic_profile_with_extras takes a list of input files, so we
+    # need to simulate that by writing our df to a temp file first. The output
+    # will be also be a file, so create a temp file for that too.
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w+', delete=True) as input_tempfile, tempfile.NamedTemporaryFile(mode='r+', delete=True) as output_tempfile:
+        df.write_csv(input_tempfile.name, separator='\t')
+        input_taxonomic_profile_files = [input_tempfile.name]
+        Summariser.write_taxonomic_profile_with_extras(
+            input_taxonomic_profile_files=input_taxonomic_profile_files,
+            output_taxonomic_profile_extras_io=output_tempfile,
+            num_decimal_places=2, # As of 0.20.2, defaulting to 2 fails
+        )
+        output_tempfile.seek(0)
+        response = make_response(output_tempfile.read())
+        cd = 'attachment; filename=sandpiper_v{}_{}_{}_condensed_with_extras.csv'.format(__version__, sample_name, taxonomy_type)
+        response.headers['Content-Disposition'] = cd
+        response.mimetype = 'text/csv'
+        return response
 
 
 def wordnode_json(wordnode, order, depth):
@@ -221,6 +361,11 @@ def fetch_metadata(sample_name):
         'smf': round(metadata_dict['parsed_sample_attributes']['smf']),
         'smf_warning': metadata_dict['parsed_sample_attributes']['smf_warning'],
         'known_species_fraction': round(metadata_dict['parsed_sample_attributes']['known_species_fraction']*100),
+        'globdb_known_species_fraction': (
+            round(metadata_dict['parsed_sample_attributes']['globdb_known_species_fraction'] * 100)
+            if metadata_dict['parsed_sample_attributes']['globdb_known_species_fraction'] is not None
+            else None
+        ),
         'sample_name': metadata_dict['sample_name'],
         'study_title': metadata_dict['study_title'],
         'bioproject': metadata_dict['bioproject'],
@@ -340,10 +485,11 @@ def taxonomy_search_fail_json(reason):
 
 @api.route('/taxonomy_search_global_data/<string:taxon>', methods=('GET',))
 def taxonomy_search_global_data(taxon):
-    taxonomy = Taxonomy.query.filter_by(name=taxon).first()
+    taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
+    taxonomy = Taxonomy.query.filter_by(name=taxon, taxonomy_type=taxonomy_type).first()
     if taxonomy is None:
-        return taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in GTDB '+__gtdb_version__+', or no records of this taxon are recorded in Sandpiper. We recommend using the auto-complete function when searching to avoid typographical errors. Alternately, if this an NCBI taxonomy name, you could try searching for it at the GTDB website.')
-    total_num_hits = CondensedProfile.query.filter_by(taxonomy_id=taxonomy.id).count()
+        return taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in either GTDB or GlobDB, or no records of this taxon are recorded in Sandpiper. We recommend using the auto-complete function when searching to avoid typographical errors. Alternately, if this an NCBI taxonomy name, you could try searching for it at the GTDB website.')
+    total_num_hits = CondensedProfileCtas1.query.filter_by(taxonomy_id=taxonomy.id).count()
     if total_num_hits == 0:
         # This happens when there's a taxonomy in the full table that didn't make it into any condensed table
         return taxonomy_search_fail_json('"'+taxon+'" is a known taxonomy, however no records of it are recorded in Sandpiper.')
@@ -373,13 +519,13 @@ def taxonomy_search_run_data(taxon):
     if worked:
         return jsonify({
             'results': {
-                'condensed_profiles': [{
-                    'sample_acc': c.acc,
-                    'relative_abundance': round(c.relative_abundance*100,2),
-                    'coverage': round(c.filled_coverage, 2),
-                    'organism': c.taxon_name.replace(' metagenome',''),
-                    'release_year': c.published.strftime('%Y'),}
-                    for c in condensed_profile_hits],                
+            'condensed_profiles': [{
+                'sample_acc': c.acc,
+                'relative_abundance': round(c.relative_abundance*100,2),
+                'coverage': round(c.filled_coverage, 2),
+                'organism': "unspecified" if c.taxon_name is None else c.taxon_name.replace(' metagenome',''),
+                'release_year': c.published.strftime('%Y'),}
+                for c in condensed_profile_hits],                
             }
         })
     else:
@@ -387,26 +533,34 @@ def taxonomy_search_run_data(taxon):
 
 @api.route('/taxonomy_search_csv/<string:taxon>', methods=('GET',))
 def taxonomy_search_csv(taxon):
+    taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
+    from datetime import datetime
+    print('=== {}: running core'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     worked, condensed_profile_hits = taxonomy_search_core(taxon, request.args, no_limit=True, include_extras=True)
+    print('=== {}: after core'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
     if worked:
-        df = pd.DataFrame(
+        print('=== {}: worked core'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        df = pl.DataFrame(
             [[
-                c.acc,
-                round(c.relative_abundance*100,2),
-                round(c.filled_coverage, 2),
-                c.taxon_name,
-                c.published.strftime('%Y'),
-                c.host_or_not_mature,
-                c.latitude,
-                c.longitude,]
-                for c in condensed_profile_hits],
-            columns=['sample', 'relative_abundance', 'coverage', 'taxon_name', 'release_year', 
+            c.acc,
+            round(c.relative_abundance*100,2),
+            round(c.filled_coverage, 2),
+            c.taxon_name,
+            c.published.strftime('%Y'),
+            c.host_or_not_mature,
+            c.latitude,
+            c.longitude,]
+            for c in condensed_profile_hits],
+            orient="row",
+            schema=['sample', 'relative_abundance', 'coverage', 'taxon_name', 'release_year', 
             'eukaryotic_host_association',
             'latitude', 'longitude']
         )
-        response = make_response(df.to_csv(index=False, header=True))
-        cd = 'attachment; filename=sandpiper_v{}_{}_sample_coverage.csv'.format(__version__, taxon)
+        print('=== {}: df made'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        response = make_response(df.write_csv())
+        print('=== {}: after csv'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        cd = 'attachment; filename=sandpiper_v{}_{}_{}_sample_coverage.csv'.format(__version__, taxon, taxonomy_type)
         response.headers['Content-Disposition'] = cd
         response.mimetype = 'text/csv'
         return response
@@ -422,6 +576,7 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
     sort_direction = args.get('sort_direction')
     page = args.get('page')
     page_size = args.get('page_size')
+    taxonomy_type = args.get('taxonomy_type', 'gtdb')
     sort_field = 'relative_abundance' if sort_field is None else sort_field
     sort_direction = 'desc' if sort_direction is None else sort_direction
     page = int(page) if page is not None else 0
@@ -432,56 +587,56 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
     if sort_direction not in ['asc', 'desc']:
         return False, jsonify({ 'error': 'invalid sort direction' })
 
-    taxonomy = Taxonomy.query.filter_by(name=taxon).first()
+    taxonomy = Taxonomy.query.filter_by(name=taxon, taxonomy_type=taxonomy_type).first()
     if taxonomy is None:
-        return False, taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy, or no records of this taxon are recorded in Sandpiper.')
+        return False, taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in '+taxonomy_type.upper()+', or no records of this taxon are recorded in Sandpiper.')
     else:
         # Query for samples that contain this taxon
         if include_extras:
             stmt = select(
                 NcbiMetadata.acc,
-                CondensedProfile.relative_abundance,
-                CondensedProfile.filled_coverage,
+                CondensedProfileCtas1.relative_abundance,
+                CondensedProfileCtas1.filled_coverage,
                 NcbiMetadata.taxon_name,
                 NcbiMetadata.published,
                 # TODO: Add experiment title here, not currently in DB
                 ParsedSampleAttribute.host_or_not_mature,
                 ParsedSampleAttribute.latitude, ParsedSampleAttribute.longitude,
-            ).where(CondensedProfile.run_id == NcbiMetadata.id
+            ).where(CondensedProfileCtas1.run_id == NcbiMetadata.id
             ).where(ParsedSampleAttribute.run_id == NcbiMetadata.id)
         else:
             stmt = select(
                 NcbiMetadata.acc,
-                CondensedProfile.relative_abundance,
-                CondensedProfile.filled_coverage,
+                CondensedProfileCtas1.relative_abundance,
+                CondensedProfileCtas1.filled_coverage,
                 NcbiMetadata.taxon_name,
                 NcbiMetadata.published,
                 # TODO: Add experiment title here, not currently in DB
-            ).where(CondensedProfile.run_id == NcbiMetadata.id)
+            ).where(CondensedProfileCtas1.run_id == NcbiMetadata.id)
 
         
         if sort_field == 'relative_abundance':
             if sort_direction == 'desc':
-                hits_query = stmt.order_by(CondensedProfile.relative_abundance.desc())
+                hits_query = stmt.order_by(CondensedProfileCtas1.relative_abundance.desc())
             else:
-                hits_query = stmt.order_by(CondensedProfile.relative_abundance.asc())
+                hits_query = stmt.order_by(CondensedProfileCtas1.relative_abundance.asc())
         elif sort_field == 'coverage':
             if sort_direction == 'desc':
-                hits_query = stmt.order_by(CondensedProfile.filled_coverage.desc())
+                hits_query = stmt.order_by(CondensedProfileCtas1.filled_coverage.desc())
             else:
-                hits_query = stmt.order_by(CondensedProfile.filled_coverage.asc())
+                hits_query = stmt.order_by(CondensedProfileCtas1.filled_coverage.asc())
         elif sort_field == 'release_year':
             if sort_direction == 'desc':
-                hits_query = stmt.order_by(NcbiMetadata.releasedate.desc())
+                hits_query = stmt.order_by(NcbiMetadata.published.desc())
             else:
-                hits_query = stmt.order_by(NcbiMetadata.releasedate.asc())
+                hits_query = stmt.order_by(NcbiMetadata.published.asc())
 
         if not no_limit:
             hits_query = hits_query.limit(page_size).offset((page-1)*page_size)
             
         condensed_profile_hits = db.session.execute(
             hits_query.where(
-                CondensedProfile.taxonomy_id == taxonomy.id))
+                CondensedProfileCtas1.taxonomy_id == taxonomy.id))
 
         return True, condensed_profile_hits
 
@@ -489,10 +644,23 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
 @api.route('/taxonomy_search_hints/<string:taxon>', methods=('GET',))
 def taxonomy_search_hints(taxon):
     if len(taxon) < 3: return jsonify(['3 or more characters are required'])
+    taxonomy_type = request.args.get('taxonomy_type', None)
 
     # Underscores are wildcards, but we don't want that since there are names like p__Actinobacteria
-    sql = "select name from taxonomies where name like :taxon escape \'\\\' order by name limit 30"
-    results = db.session.execute(text(sql), {'taxon': '%'+taxon.replace('_','\\_')+'%'})
+    search = '%'+taxon.lower().replace('_','\\_')+'%'
+    if taxonomy_type is None:
+        sql = (
+            "select name from taxonomies "
+            "where lower(name) like :taxon escape \'\\' "
+            "order by taxonomy_type, name limit 30"
+        )
+        results = db.session.execute(text(sql), {'taxon': search})
+    else:
+        sql = (
+            "select name from taxonomies where taxonomy_type = :taxonomy_type "
+            "and lower(name) like :taxon escape \'\\' order by name limit 30"
+        )
+        results = db.session.execute(text(sql), {'taxon': search, 'taxonomy_type': taxonomy_type})
     taxonomies = []
     for r in results:
         taxonomies.append(r)
@@ -503,12 +671,12 @@ def taxonomy_search_hints(taxon):
 
 def get_lat_lons(taxonomy_id, max_to_show):
     lat_lon_db_entries = db.session.execute(
-        select(NcbiMetadata.acc, ParsedSampleAttribute.latitude, ParsedSampleAttribute.longitude, NcbiMetadata.study_title, CondensedProfile.relative_abundance).where(
-            CondensedProfile.taxonomy_id == taxonomy_id).where(
+        select(NcbiMetadata.acc, ParsedSampleAttribute.latitude, ParsedSampleAttribute.longitude, NcbiMetadata.study_title, CondensedProfileCtas1.relative_abundance).where(
+            CondensedProfileCtas1.taxonomy_id == taxonomy_id).where(
             NcbiMetadata.id == ParsedSampleAttribute.run_id).where(
-            NcbiMetadata.id == CondensedProfile.run_id).where(
+            NcbiMetadata.id == CondensedProfileCtas1.run_id).where(
             ParsedSampleAttribute.latitude.is_not(None)
-            ).order_by(CondensedProfile.relative_abundance.desc(), CondensedProfile.id).limit(max_to_show).distinct()).fetchall()
+            ).order_by(CondensedProfileCtas1.relative_abundance.desc(), CondensedProfileCtas1.run_id).limit(max_to_show).distinct()).fetchall()
 
     lat_lons = {}
     lat_lons_count = 0
@@ -558,7 +726,8 @@ def otus(acc):
         columns=['gene','sample','sequence','num_hits','coverage','taxonomy']
     )
     response = make_response(df.to_csv(index=False, header=True, sep='\t'))
-    cd = 'attachment; filename=sandpiper_v{}_{}.otu_table.csv'.format(__version__, acc)
+    taxonomy_type = 'gtdb' #TODO: Add GlobDB
+    cd = 'attachment; filename=sandpiper_v{}_{}_{}.otu_table.csv'.format(__version__, acc, taxonomy_type)
     response.headers['Content-Disposition'] = cd
     response.mimetype = 'text/csv'
     return response

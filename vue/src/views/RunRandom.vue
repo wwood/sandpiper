@@ -17,11 +17,17 @@ export default {
     // already being observed
     this.fetchData()
   },
-  props: [
-        'host',
-        'ecological',
-        'two_gbp'
-  ],
+  computed: {
+    host() {
+      return this.$route.query.host
+    },
+    ecological() {
+      return this.$route.query.ecological
+    },
+    two_gbp() {
+      return this.$route.query.two_gbp
+    }
+  },
   methods: {
     fetchData () {
       fetchRandomAccession(this.host, this.ecological, this.two_gbp)

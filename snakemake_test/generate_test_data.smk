@@ -31,6 +31,7 @@ rule all:
     input:
         test_data_dir + '/metadata_each_line.json',
         test_data_dir + '/condensed.csv.gz',
+        test_data_dir + '/globdb_condensed.csv.gz',
         test_data_dir + '/otu_table.csv.gz',
         test_data_dir + '/host_or_not_preds.tsv.gz',
         test_data_dir + '/smf.csv'
@@ -62,6 +63,20 @@ rule condense:
     shell:
         """
         pigz -cd {config[CONDENSED_OTU_TABLE]} |grep -Ff {params.test_accessions_file} |cat <(pigz -cd {config[CONDENSED_OTU_TABLE]} |head -1) - |pigz >{output}
+        """
+
+rule globdb_condense:
+    input:
+        config['GLOBDB_CONDENSED_OTU_TABLE'],
+        test_accessions_file,
+    output:
+        test_data_dir + '/globdb_condensed.csv.gz',
+    params:
+        test_data_dir=test_data_dir,
+        test_accessions_file=test_accessions_file,
+    shell:
+        """
+        pigz -cd {config[GLOBDB_CONDENSED_OTU_TABLE]} |grep -Ff {params.test_accessions_file} |cat <(pigz -cd {config[GLOBDB_CONDENSED_OTU_TABLE]} |head -1) - |pigz >{output}
         """
 
 rule otu_table:
