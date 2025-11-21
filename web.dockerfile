@@ -7,7 +7,7 @@ RUN npm install \
 # && npm install -g @vue/cli-service \
  && rm package*.json
 
-ARG VUE_APP_API_URL="localhost:5000"
+ARG VITE_API_URL="localhost:5000"
 
 COPY vue ./
 RUN npm run build

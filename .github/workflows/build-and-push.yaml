@@ -43,5 +43,5 @@ jobs:
           ECR_REPOSITORY: 'sandpiper/web'
           IMAGE_TAG: ${{ steps.prep.outputs.VERSION }}
         run: |
-          docker build --build-arg VUE_APP_API_URL=$API_URL -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f web.dockerfile .
+          docker build --build-arg VITE_API_URL=$API_URL -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f web.dockerfile .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG

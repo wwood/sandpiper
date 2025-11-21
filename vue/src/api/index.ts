@@ -1,5 +1,6 @@
 import axios from 'axios'
 
+// Cannot set directly because different running locally (localhost:5000) and in production (sandpiper.qut.edu.au)
 let API_URL = 'unset'
 if (import.meta.env.PROD) {
   API_URL = `https://${import.meta.env.VITE_API_URL}/api`

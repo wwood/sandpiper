@@ -37,10 +37,15 @@ pixi run -e sandpiper pytest tests
 To ensure that the build process works, before release test that the following works. So far this has only been tested on b2, because docker is unavailable on aqua, which means the DB is unavailable and full testing cannot be done. But at least the containers should build.
 
 ```
-docker-compose up
+docker compose up
 ```
 
 The server is then available on localhost:8000.
+
+To mess around with it, you might do something like this to e.g. force rebuild of the web, and then deploy locally:
+```
+docker compose build web --no-cache && docker compose up
+```
 
 # Deployment
 ```

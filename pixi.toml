@@ -7,8 +7,6 @@ version = "0.1.0"
 
 [tasks]
 
-[dependencies]
-
 [feature.kingfisher.dependencies]
 kingfisher = ">=0.4.1"
 
@@ -38,6 +36,7 @@ singlem="*"
 duckdb = "*"
 duckdb-engine = "*"
 pigz = "*"
+uwsgi = ">=2.0.31,<3" # For deployment
 
 [environments]
 sandpiper = ["sandpiper"]
