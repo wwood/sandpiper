@@ -31,6 +31,7 @@ from .version import __version__, __gtdb_version__, __scrape_date__
 import os, sys, json
 sys.path = [os.environ['HOME']+'/git/singlem-local'] + [os.environ['HOME']+'/git/singlem'] + sys.path
 from singlem.condense import WordNode
+from singlem.summariser import Summariser
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 from sandpiper.biosample_attributes import *
@@ -231,6 +232,50 @@ def fetch_condensed_csv(sample_name):
     response.headers['Content-Disposition'] = cd
     response.mimetype = 'text/csv'
     return response
+
+@api.route('/condensed_csv_with_extras/<string:sample_name>', methods=('GET',))
+def fetch_condensed_csv_with_extras(sample_name):
+    # TODO: remove duplication with above?
+    taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
+    condensed = db.session.execute(
+        select(CondensedProfile.coverage, Taxonomy.full_name, Taxonomy.taxonomy_level)
+            .join(CondensedProfile.ncbi_metadata)
+            .filter(NcbiMetadata.acc == sample_name)
+            .filter(CondensedProfile.taxonomy_id == Taxonomy.id)
+            .filter(Taxonomy.taxonomy_type == taxonomy_type)
+            .filter(CondensedProfile.coverage > 0) # zeroes are introduced later, so this filter makes no difference
+        ).fetchall()
+    if len(condensed) is None:
+        return jsonify({ sample_name: 'no condensed data found' })
+
+    # Use the Summarise.write_taxonomic_profile_with_extras function logic to implement
+    df = pl.DataFrame(
+        [[
+            sample_name,
+            d.coverage,
+            'Root; '+d.full_name if d.full_name != 'Root' else d.full_name,
+        ] for d in condensed],
+        orient="row",
+        schema=['sample', 'coverage', 'taxonomy']
+    )
+    # write_taxonomic_profile_with_extras takes a list of input files, so we
+    # need to simulate that by writing our df to a temp file first. The output
+    # will be also be a file, so create a temp file for that too.
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w+', delete=True) as input_tempfile, tempfile.NamedTemporaryFile(mode='r+', delete=True) as output_tempfile:
+        df.write_csv(input_tempfile.name, separator='\t')
+        input_taxonomic_profile_files = [input_tempfile.name]
+        Summariser.write_taxonomic_profile_with_extras(
+            input_taxonomic_profile_files=input_taxonomic_profile_files,
+            output_taxonomic_profile_extras_io=output_tempfile,
+            num_decimal_places=2, # As of 0.20.2, defaulting to 2 fails
+        )
+        output_tempfile.seek(0)
+        response = make_response(output_tempfile.read())
+        cd = 'attachment; filename=sandpiper_v{}_{}_{}_condensed_with_extras.csv'.format(__version__, sample_name, taxonomy_type)
+        response.headers['Content-Disposition'] = cd
+        response.mimetype = 'text/csv'
+        return response
 
 
 def wordnode_json(wordnode, order, depth):
@@ -443,7 +488,7 @@ def taxonomy_search_global_data(taxon):
     taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
     taxonomy = Taxonomy.query.filter_by(name=taxon, taxonomy_type=taxonomy_type).first()
     if taxonomy is None:
-        return taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in '+taxonomy_type.upper()+', or no records of this taxon are recorded in Sandpiper. We recommend using the auto-complete function when searching to avoid typographical errors. Alternately, if this an NCBI taxonomy name, you could try searching for it at the GTDB website.')
+        return taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in either GTDB or GlobDB, or no records of this taxon are recorded in Sandpiper. We recommend using the auto-complete function when searching to avoid typographical errors. Alternately, if this an NCBI taxonomy name, you could try searching for it at the GTDB website.')
     total_num_hits = CondensedProfileCtas1.query.filter_by(taxonomy_id=taxonomy.id).count()
     if total_num_hits == 0:
         # This happens when there's a taxonomy in the full table that didn't make it into any condensed table

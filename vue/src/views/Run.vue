@@ -119,16 +119,14 @@
         <div class="container is-large">
           <h3 class="title">Download</h3>
 
-          <p>The taxonomic profile of this sample using the <b>GTDB</b> taxonomy can be downloaded in <a :href="profile_csv_link_gtdb">tab-separated "SingleM condensed" format</a>. In this format the coverage of each lineage is the coverage assigned to that taxon and not more specifically e.g. the coverage of a species is not included in the coverage shown for its genus.</p>
+          <p>
+            The taxonomic profile of this sample can be downloaded in tab-separated "SingleM condensed with extras" format, generated with <a :href="profile_csv_with_extras_link_gtdb">GTDB</a> or <a :href="profile_csv_with_extras_link_globdb">GlobDB</a> taxonomy. This details the coverage assigned to each taxon at each taxonomic level, both <a href="https://wwood.github.io/singlem/Glossary">filled and unfilled</a>, plus the relative abundance of each taxon.</p>
           <br />
 
-          <p>This taxonomic profiles can be converted to other forms (e.g. one that gives the relative abundance instead of the coverage) using the <a href="https://wwood.github.io/singlem/tools/summarise">SingleM summarise</a> tool.</p><br />
-
-          <p>The taxonomic profile using the <b>GlobDB</b> taxonomy can also be downloaded in <a :href="profile_csv_link_globdb">tab-separated "SingleM condensed" format</a>.</p>
+          <p>Concise "SingleM condensed" format files with three columns sample name, coverage, and taxonomy are also available for download (<a :href="profile_csv_link_gtdb">GTDB</a> or <a :href="profile_csv_link_globdb">GlobDB</a>). In this format the coverage of each lineage is the coverage assigned to that taxon and not more specifically e.g. the coverage of a species is not included in the coverage shown for its genus. This taxonomic profiles can be converted to other forms (e.g. one that gives the relative abundance instead of the coverage) using the <a href="https://wwood.github.io/singlem/tools/summarise">SingleM summarise</a> tool.</p>
           <br />
 
-          <p>The <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> is a tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.</p>
-          <br />
+          <p>The <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> is a (GTDB annotated) tab-separated file containing information about each OTU from each marker, and can be fed into the command line <a href="https://github.com/wwood/singlem">SingleM</a> program.</p>
         </div>
       </section>
     </div>
@@ -224,6 +222,12 @@ export default {
     },
     profile_csv_link_globdb: function () {
       return api_url() + '/condensed_csv/' + this.accession + '?taxonomy_type=globdb'
+    },
+    profile_csv_with_extras_link_gtdb: function () {
+      return api_url() + '/condensed_csv_with_extras/' + this.accession + '?taxonomy_type=gtdb'
+    },
+    profile_csv_with_extras_link_globdb: function () {
+      return api_url() + '/condensed_csv_with_extras/' + this.accession + '?taxonomy_type=globdb'
     },
     publications: function () {
       return this.metadata.metadata.study_links.filter(function (link) {
