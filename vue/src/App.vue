@@ -3,13 +3,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@5.8.55/css/materialdesignicons.min.css">
     <b-navbar :centered="true" type="is-light">
         <template #start>
-            <b-navbar-item tag="router-link" :to="{ path: '/' }">Home</b-navbar-item>
+            <!-- <b-navbar-item tag="router-link" :to="{ path: '/' }">Home</b-navbar-item>
             <b-navbar-item tag="router-link" :to="{ path: '/Search' }">Search</b-navbar-item>
 
             <b-navbar-item tag="router-link" :to="{ path: '/Run/SRR9841429' }">Example 1</b-navbar-item>
             <b-navbar-item tag="router-link" :to="{ path: '/Run/ERR1914274' }">Example 2</b-navbar-item>
 
-            <b-navbar-item tag="router-link" :to="{ path: '/About' }">About</b-navbar-item>
+            <b-navbar-item tag="router-link" :to="{ path: '/About' }">About</b-navbar-item> -->
         </template>
     </b-navbar>
     <router-view :key="$route.fullPath" />
