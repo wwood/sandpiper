@@ -3,7 +3,16 @@ import axios from 'axios'
 // Cannot set directly because different running locally (localhost:5000) and in production (sandpiper.qut.edu.au)
 let API_URL = 'unset'
 if (import.meta.env.PROD) {
-  API_URL = `https://${import.meta.env.VITE_API_URL}/api`
+  const raw = import.meta.env.VITE_API_URL
+  // Allow raw to be passed already with scheme
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    API_URL = `${raw.replace(/\/$/,'')}/api`
+  } else {
+    // Use http for localhost or anything containing a port (internal docker host like api:5000)
+    const hasPort = raw.includes(':')
+    const useHttps = !raw.includes('localhost') && !hasPort
+    API_URL = `${useHttps ? 'https' : 'http'}://${raw}/api`
+  }
 } else {
   API_URL = 'http://localhost:5000/api'
 }

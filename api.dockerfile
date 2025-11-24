@@ -37,6 +37,10 @@ RUN pip install --user --no-cache-dir \
 
 
 COPY backend /sandpiper
+USER root
+RUN chown sandpiper:sandpiper /sandpiper -R
+USER sandpiper
 
+# To add logging printed to terminal, use --logger stdio --log-format='%(method) %(uri) => %(status)'
 CMD uwsgi --http :5000 --ini sandpiper.ini
 # CMD flask run --host=0.0.0.0

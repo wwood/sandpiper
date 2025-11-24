@@ -1,7 +1,7 @@
 <template>
   <div class="sandpiperbackground">
     <section class="section container" v-if="num_terrabases!==null" >
-      <h1 class="title">{{ num_runs.toLocaleString("en-US") }} metagenomes screened</h1>
+      <h1 class="title">{{ num_runs.toLocaleString("en-US") }} metagenomes screened.</h1>
       <h2 class="subtitle">{{ num_terrabases.toLocaleString("en-US") }} Tbp and {{ num_bioprojects.toLocaleString("en-US") }} projects</h2>
 
       <p>Sandpiper {{ version }} is a resource for interrogating public shotgun metagenome datasets,

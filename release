@@ -43,10 +43,14 @@ if __name__ == '__main__':
     parser.add_argument('--quiet', help='only output errors', action="store_true")
 
     parser.add_argument('--version', required=True, help='e.g. 0.0.6')
+    parser.add_argument('--tag-version', help='e.g. 0.0.6. This is the version to tag the release with [default: same as --version]')
     parser.add_argument('--gtdb-version', required=True, help='e.g. R214')
     parser.add_argument('--scrape-date', required=True, help='e.g. Dec 15, 2021')
 
     args = parser.parse_args()
+
+    if args.tag_version is None:
+        args.tag_version = args.version
 
     # Setup logging
     if args.debug:
@@ -83,7 +87,7 @@ if __name__ == '__main__':
         f.write('__scrape_date__ = "{}"\n'.format(args.scrape_date))
     logging.info("Version file is now: {}".format(open(version_file).read()))
 
-    print(extern.run('git commit -am "v{}"'.format(args.version)))
-    print(extern.run('git tag v{}'.format(args.version)))
+    print(extern.run('git commit -am "v{}"'.format(args.tag_version)))
+    print(extern.run('git tag v{}'.format(args.tag_version)))
 
     logging.info("Now run git push && git push --tags, after making sure that the DB has been scp'd")
