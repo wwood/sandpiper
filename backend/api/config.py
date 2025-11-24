@@ -14,7 +14,8 @@ class BaseConfig:
         DB_NAME = 'sandpiper_21_test.duckdb'
     else:
         print("Running in DB production mode")
-        DB_NAME = 'sandpiper_35.duckdb'
+        # Open read-only to avoid database lock issues.
+        DB_NAME = 'sandpiper_35.duckdb?access_mode=READ_ONLY'
     LYRA_DB_PATH = 'duckdb:///'+os.path.join(os.path.dirname(__file__), '../db/{}'.format(DB_NAME))
     # LYRA_DB_PATH = 'duckdb:////scratch/sandpiper/sandpiper_33.duckdb'
     # LYRA_DB_PATH = 'duckdb:////scratch/sandpiper/sandpiper_19_test.duckdb'
