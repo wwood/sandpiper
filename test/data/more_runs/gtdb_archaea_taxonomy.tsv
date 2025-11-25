@@ -1,0 +1,57 @@
+genome_5	d__Archaea; p__Aenigmatarchaeota; c__Aenigmatarchaeia; o__CG10238-14; f__CG10238-14; g__JAHLMN01; s__genome_5
+genome_11	d__Archaea; p__Aenigmatarchaeota; c__Aenigmatarchaeia; o__QMZS01; f__QMZS01; g__JAFGCN01; s__genome_11
+genome_16	d__Archaea; p__Altiarchaeota; c__Altiarchaeia; o__IMC4; f__SCGC-AAA252-I15; g__JAHIYG01; s__genome_16
+genome_25	d__Archaea; p__Asgardarchaeota; c__Lokiarchaeia; o__Sigynarchaeales; f__SOKP01; g__SOKP01; s__genome_25
+genome_27	d__Archaea; p__Asgardarchaeota; c__Thorarchaeia; o__Thorarchaeales; f__Thorarchaeaceae; g__MP8T-1; s__genome_27
+genome_29	d__Archaea; p__Halobacteriota; c__Bog-38; o__Bog-38; f__Bog-38; g__Bog-38; s__genome_29
+genome_31	d__Archaea; p__Halobacteriota; c__Methanocellia; o__Methanocellales; f__Methanocellaceae; g__Methanocella; s__genome_31
+genome_32	d__Archaea; p__Halobacteriota; c__Methanocellia; o__Methanocellales; f__Methanocellaceae; g__Methanocella_A; s__genome_32
+genome_33	d__Archaea; p__Halobacteriota; c__Methanocellia; o__Methanocellales; f__Methanocellaceae; g__Methanocella_A; s__Methanocella_A sp002067315; s__genome_33
+genome_34	d__Archaea; p__Halobacteriota; c__Methanocellia; o__Methanocellales; f__Methanocellaceae; g__Methanooceanicella; s__genome_34
+genome_37	d__Archaea; p__Halobacteriota; c__Methanomicrobia; o__Methanomicrobiales; f__Methanospirillaceae; g__CAIKOD01; s__genome_37
+genome_38	d__Archaea; p__Halobacteriota; c__Methanomicrobia; o__Methanomicrobiales; f__Methanospirillaceae; g__MVRE01; s__genome_38
+genome_39	d__Archaea; p__Halobacteriota; c__Methanomicrobia; o__Methanomicrobiales; f__Methanospirillaceae; g__Methanoregula; s__genome_39
+genome_43	d__Archaea; p__Halobacteriota; c__Methanosarcinia; o__Methanosarcinales; f__Methanoperedenaceae; g__Methanoperedens; s__genome_43
+genome_45	d__Archaea; p__Halobacteriota; c__Methanosarcinia; o__Methanosarcinales; f__Methanosarcinaceae; g__Methanosarcina; s__genome_45
+genome_47	d__Archaea; p__Halobacteriota; c__Methanosarcinia; o__Methanotrichales; f__Methanotrichaceae; g__DATMZB01; s__genome_47
+genome_48	d__Archaea; p__Halobacteriota; c__Methanosarcinia; o__Methanotrichales; f__Methanotrichaceae; g__Fen-7; s__genome_48
+genome_49	d__Archaea; p__Halobacteriota; c__Methanosarcinia; o__Methanotrichales; f__Methanotrichaceae; g__JABLXE01; s__genome_49
+genome_50	d__Archaea; p__Halobacteriota; c__Methanosarcinia; o__Methanotrichales; f__Methanotrichaceae; g__JALHSR01; s__genome_50
+genome_51	d__Archaea; p__Halobacteriota; c__Methanosarcinia; o__Methanotrichales; f__Methanotrichaceae; g__Methanothrix; s__genome_51
+genome_52	d__Archaea; p__Halobacteriota; c__Methanosarcinia; o__Methanotrichales; f__Methanotrichaceae; g__UBA114; s__genome_52
+genome_55	d__Archaea; p__Iainarchaeota; c__Iainarchaeia; o__Iainarchaeales; f__JAAZKV01; g__JAAZKV01; s__genome_55
+genome_59	d__Archaea; p__Methanobacteriota; c__Methanobacteria; o__Methanobacteriales; f__Methanobacteriaceae; g__Methanobacterium; s__genome_59
+genome_60	d__Archaea; p__Methanobacteriota; c__Methanobacteria; o__Methanobacteriales; f__Methanobacteriaceae; g__Methanobacterium_A; s__genome_60
+genome_61	d__Archaea; p__Methanobacteriota; c__Methanobacteria; o__Methanobacteriales; f__Methanobacteriaceae; g__Methanobacterium_D; s__genome_61
+genome_72	d__Archaea; p__Nanobdellota; c__Nanobdellia; o__Pacearchaeales; f__GW2011-AR1; g__DAIEOU01; s__genome_72
+genome_73	d__Archaea; p__Nanobdellota; c__Nanobdellia; o__Pacearchaeales; f__GW2011-AR1; g__JAGVXH01; s__genome_73
+genome_82	d__Archaea; p__Nanobdellota; c__Nanobdellia; o__Woesearchaeales; f__JBAZVA01; g__JBAZVA01; s__genome_82
+genome_83	d__Archaea; p__Nanobdellota; c__Nanobdellia; o__Woesearchaeales; f__SKGA01; g__SKGA01; s__genome_83
+genome_88	d__Archaea; p__Nanobdellota; c__Nanobdellia; o__Woesearchaeales; f__UBA525; g__UBA525; s__genome_88
+genome_90	d__Archaea; p__Nanobdellota; c__Nanobdellia; o__Woesearchaeales; f__UBA9642; g__UBA9642; s__genome_90
+genome_93	d__Archaea; p__Nanobdellota; c__Nanobdellia; o__Woesearchaeales; f__WJKR01; g__WJKR01; s__genome_93
+genome_99	d__Archaea; p__Thermoplasmatota; c__E2; o__DHVEG-1; f__DHVEG-1; g__CAIRCU01; s__genome_99
+genome_100	d__Archaea; p__Thermoplasmatota; c__E2; o__DHVEG-1; f__DHVEG-1; g__SM1-50; s__genome_100
+genome_106	d__Archaea; p__Thermoplasmatota; c__Thermoplasmata; o__Methanomassiliicoccales; f__JACIVX01; g__JACIVX01; s__genome_106
+genome_108	d__Archaea; p__Thermoplasmatota; c__Thermoplasmata; o__Methanomassiliicoccales; f__Methanomassiliicoccaceae; g__DTU008; s__genome_108
+genome_109	d__Archaea; p__Thermoplasmatota; c__Thermoplasmata; o__Methanomassiliicoccales; f__Methanomassiliicoccaceae; g__Methanomassiliicoccus_A; s__genome_109
+genome_110	d__Archaea; p__Thermoplasmatota; c__Thermoplasmata; o__Methanomassiliicoccales; f__Methanomassiliicoccaceae; g__UBA6; s__genome_110
+genome_112	d__Archaea; p__Thermoplasmatota; c__Thermoplasmata; o__Methanomassiliicoccales; f__Methanomethylophilaceae; g__Methanoprimaticola; s__genome_112
+genome_113	d__Archaea; p__Thermoplasmatota; c__Thermoplasmata; o__Methanomassiliicoccales; f__Methanomethylophilaceae; g__Methanoprimaticola; s__Methanoprimaticola sp006954425; s__genome_113
+genome_115	d__Archaea; p__Thermoplasmatota; c__Thermoplasmata; o__Methanomassiliicoccales; f__UBA472; g__JAJRAL01; s__genome_115
+genome_123	d__Archaea; p__Thermoproteota; c__Bathyarchaeia; o__Bathyarchaeales; f__Bathyarchaeaceae; g__Bathyarchaeum; s__genome_123
+genome_125	d__Archaea; p__Thermoproteota; c__Bathyarchaeia; o__Bathyarchaeales; f__Bathycorpusculaceae; g__Bathycorpusculum; s__genome_125
+genome_126	d__Archaea; p__Thermoproteota; c__Bathyarchaeia; o__Bathyarchaeales; f__Bathycorpusculaceae; g__DASPPK01; s__genome_126
+genome_127	d__Archaea; p__Thermoproteota; c__Bathyarchaeia; o__Bathyarchaeales; f__Bathycorpusculaceae; g__JADGNF01; s__genome_127
+genome_128	d__Archaea; p__Thermoproteota; c__Bathyarchaeia; o__Bathyarchaeales; f__Bathycorpusculaceae; g__SG8-32-3; s__genome_128
+genome_133	d__Archaea; p__Thermoproteota; c__Bathyarchaeia; o__TCS64; f__TCS64; g__RBG-16-57-9; s__genome_133
+genome_134	d__Archaea; p__Thermoproteota; c__Bathyarchaeia; o__TCS64; f__TCS64; g__UBA8941; s__genome_134
+genome_140	d__Archaea; p__Thermoproteota; c__Nitrososphaeria; o__Nitrososphaerales; f__CADDZS01; g__DATLTL01; s__genome_140
+genome_141	d__Archaea; p__Thermoproteota; c__Nitrososphaeria; o__Nitrososphaerales; f__CADDZS01; g__JASHOD01; s__genome_141
+genome_143	d__Archaea; p__Thermoproteota; c__Nitrososphaeria; o__Nitrososphaerales; f__Nitrosopumilaceae; g__Nitrosopumilus; s__genome_143
+genome_144	d__Archaea; p__Thermoproteota; c__Nitrososphaeria; o__Nitrososphaerales; f__Nitrosopumilaceae; g__Nitrosopumilus; s__Nitrosopumilus sp029882185; s__genome_144
+genome_145	d__Archaea; p__Thermoproteota; c__Nitrososphaeria; o__Nitrososphaerales; f__Nitrosopumilaceae; g__Nitrosotalea; s__genome_145
+genome_147	d__Archaea; p__Thermoproteota; c__Nitrososphaeria; o__Nitrososphaerales; f__Nitrososphaeraceae; g__Nitrosopolaris; s__genome_147
+genome_148	d__Archaea; p__Thermoproteota; c__Nitrososphaeria; o__Nitrososphaerales; f__Nitrososphaeraceae; g__Nitrososphaera; s__genome_148
+genome_149	d__Archaea; p__Thermoproteota; c__Nitrososphaeria; o__Nitrososphaerales; f__Nitrososphaeraceae; g__TH5896; s__TH5896 sp009377575; s__genome_149
+genome_150	d__Archaea; p__Thermoproteota; c__Nitrososphaeria; o__Nitrososphaerales; f__Nitrososphaeraceae; g__TH5896; s__TH5896 sp014523695; s__genome_150
