@@ -26,11 +26,12 @@ RUN pip install --user --no-cache-dir \
     'Flask~=3.1.0' \
     'uWSGI~=2.0.31' \
     'iso8601~=2.1.0' \
-    'zenodo-backpack~=0.3.1' \
-    'sqlalchemy~=2.0.40' \
-    'polars~=1.26.0' \
+    # Dependencies of singlem too, so use the versions from there
+    # 'zenodo-backpack~=0.3.1' \
+    # 'sqlalchemy~=2.0.40' \
+    # 'polars~=1.35.1' \
     # Are dependencies of singlem actually needed? eh.
-    'singlem~=0.18.1'
+    'singlem~=0.20.3'
 RUN pip install --user --no-cache-dir \
     'duckdb-engine~=0.15.0' \
     'duckdb~=1.3.2'
