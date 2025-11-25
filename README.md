@@ -52,4 +52,4 @@ docker compose build web && docker compose up
 ```
 ./release --version 1.0.0 --gtdb-version R226 --scrape-date '20 Feb, 2025'
 ```
-Then follow instructions. Note also there is a `--tag-version` to disentangle the deploy from the actual version if needed.
+Then follow instructions. Note also there is a `--tag-version` to disentangle the deploy from the actual version if needed. Note, the tag number must increase, otherwise it doesn't get deployed.
