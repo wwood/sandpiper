@@ -71,7 +71,7 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
 
     <section class="section is-small container has-text-justified">
       <h1 class="title">Changelog</h1>
-      Note that point releases (e.g. v1.0.1, v1.1.1) may not be listed here, and are only for minor bug/deployment fixes.
+      <p>Note that point releases (e.g. v1.0.x, v1.1.x) may not be listed here, and are only for minor bug/deployment fixes.</p><br />
 
       <h2 class="title is-5">v1.1.*</h2>
         <div class="columns has-text-left"> 
