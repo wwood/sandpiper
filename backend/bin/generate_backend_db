@@ -60,8 +60,9 @@ from singlem.otu_table_collection import StreamingOtuTableCollection
 import glob
 
 
-def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, blacklist, run_accession_to_id,
-                                       taxonomy_type, taxonomy_name_to_id=None, next_taxonomy_id=None):
+def fill_condensed_and_taxonomy_tables(
+        db, db_path, condensed_otu_table_path, blacklist, run_accession_to_id,
+        taxonomy_type, taxonomy_name_to_id=None, next_taxonomy_id=None, allow_new_taxa=True):
     if taxonomy_name_to_id is None:
         taxonomy_name_to_id = {}
     if taxonomy_type not in taxonomy_name_to_id:
@@ -99,7 +100,7 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
                     (taxonomy_name_to_id, next_taxonomy_id,
                      count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries,
                                                               taxonomy_name_to_id, next_taxonomy_id, count, tf,
-                                                              taxonomy_type)
+                                                              taxonomy_type, allow_new_taxa)
                     if compute_known_species:
                         known_species_fractions.append({
                             'id': run_accession_to_id[current_sample],
@@ -124,7 +125,7 @@ def fill_condensed_and_taxonomy_tables(db, db_path, condensed_otu_table_path, bl
             (taxonomy_name_to_id, next_taxonomy_id,
              count) = fill_a_condensed_profile_sample(db, run_accession_to_id, current_sample_entries,
                                                       taxonomy_name_to_id, next_taxonomy_id, count, tf,
-                                                      taxonomy_type)
+                                                      taxonomy_type, allow_new_taxa)
             if compute_known_species:
                 known_species_fractions.append({
                     'id': run_accession_to_id[current_sample],  # We test that id == run_id in the add_smf function
@@ -183,8 +184,113 @@ def iterate_condensed_profile_reader_gzip_or_not(condensed_otu_table_path):
             yield from reader
 
 
+def split_taxonomy_string(taxonomy_string):
+    taxons_split = [tax.strip() for tax in taxonomy_string.split(';') if tax.strip() != '']
+    if len(taxons_split) == 0:
+        raise ValueError(f"Empty taxonomy string encountered: '{taxonomy_string}'")
+    if taxons_split[0] != 'Root':
+        taxons_split = ['Root'] + taxons_split
+    return taxons_split
+
+
+def taxonomy_level_from_taxon(taxon_name):
+    if taxon_name == 'Root':
+        return 'root'
+    prefix = taxon_name.split('__')[0]
+    level_map = {
+        'd': 'domain',
+        'p': 'phylum',
+        'c': 'class',
+        'o': 'order',
+        'f': 'family',
+        'g': 'genus',
+        's': 'species',
+    }
+    if prefix not in level_map:
+        raise KeyError(f"Unrecognised taxonomy prefix '{prefix}' for taxon '{taxon_name}'")
+    return level_map[prefix]
+
+
+def load_taxonomy_name_to_id(db, taxonomy_types=None):
+    taxonomy_name_to_id = {}
+    query = db.session.query(Taxonomy.id, Taxonomy.name, Taxonomy.taxonomy_type)
+    if taxonomy_types is not None:
+        query = query.filter(Taxonomy.taxonomy_type.in_(taxonomy_types))
+    for tax_id, name, taxonomy_type in query:
+        if taxonomy_type not in taxonomy_name_to_id:
+            taxonomy_name_to_id[taxonomy_type] = {}
+        taxonomy_name_to_id[taxonomy_type][name] = tax_id
+    return taxonomy_name_to_id
+
+
+def get_next_taxonomy_id(db):
+    return (db.session.query(func.max(Taxonomy.id)).scalar() or 0) + 1
+
+
+def add_taxonomy_path(db, taxons, taxonomy_type, taxonomy_name_to_id, next_taxonomy_id):
+    if taxonomy_type not in taxonomy_name_to_id:
+        taxonomy_name_to_id[taxonomy_type] = {}
+
+    if 'Root' not in taxonomy_name_to_id[taxonomy_type]:
+        existing_root = db.session.query(Taxonomy).filter(
+            Taxonomy.taxonomy_type == taxonomy_type, Taxonomy.name == 'Root').one_or_none()
+        if existing_root:
+            taxonomy_name_to_id[taxonomy_type]['Root'] = existing_root.id
+        else:
+            db.session.add(Taxonomy(
+                id=next_taxonomy_id,
+                taxonomy_level='root',
+                parent_id=None,
+                name='Root',
+                full_name='Root',
+                taxonomy_type=taxonomy_type,
+            ))
+            db.session.flush()
+            taxonomy_name_to_id[taxonomy_type]['Root'] = next_taxonomy_id
+            next_taxonomy_id += 1
+
+    for i, taxon in enumerate(taxons):
+        if taxon in taxonomy_name_to_id[taxonomy_type]:
+            continue
+
+        taxonomy_level = taxonomy_level_from_taxon(taxon)
+        parent_id = None if i == 0 else taxonomy_name_to_id[taxonomy_type][taxons[i - 1]]
+        full_taxonomy = 'Root' if taxon == 'Root' else '; '.join(taxons[1:(i + 1)])
+
+        db.session.add(Taxonomy(
+            id=next_taxonomy_id,
+            taxonomy_level=taxonomy_level,
+            parent_id=parent_id,
+            name=taxon,
+            full_name=full_taxonomy,
+            taxonomy_type=taxonomy_type,
+        ))
+        db.session.flush()
+        taxonomy_name_to_id[taxonomy_type][taxon] = next_taxonomy_id
+        next_taxonomy_id += 1
+
+    return taxonomy_name_to_id, next_taxonomy_id
+
+
+def add_taxonomy_from_tsv(db, taxonomy_path, taxonomy_type, taxonomy_name_to_id, next_taxonomy_id):
+    logging.info("Reading taxonomy file %s for taxonomy type %s", taxonomy_path, taxonomy_type)
+    opener = gzip.open if taxonomy_path.endswith('.gz') else open
+    with opener(taxonomy_path, 'rt') as f:
+        reader = csv.reader(f, delimiter='\t')
+        for row in reader:
+            if len(row) < 2:
+                continue
+            if row[1].lower().startswith('taxonomy'):
+                continue
+            taxons = split_taxonomy_string(row[1])
+            taxonomy_name_to_id, next_taxonomy_id = add_taxonomy_path(
+                db, taxons, taxonomy_type, taxonomy_name_to_id, next_taxonomy_id)
+
+    return taxonomy_name_to_id, next_taxonomy_id
+
+
 def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_name_to_id, next_taxonomy_id, count, tf,
-                                   taxonomy_type):
+                                   taxonomy_type, allow_new_taxa=True):
     total_coverage = sum([float(x[1]) for x in entries])
 
     # Generate WordNode tree so we can calculate relative abundance later
@@ -219,6 +325,10 @@ def fill_a_condensed_profile_sample(db, run_accession_to_id, entries, taxonomy_n
         taxonomy_ids_here = []
         for (i, species_aware_taxonomy) in enumerate(taxons):
             if species_aware_taxonomy not in taxonomy_name_to_id[taxonomy_type]:
+                if not allow_new_taxa:
+                    raise ValueError(
+                        f"Taxonomy '{species_aware_taxonomy}' missing for taxonomy type "
+                        f"'{taxonomy_type}'. Please upload taxonomy before processing condensed profiles.")
                 if species_aware_taxonomy == 'Root':
                     level = 'root'
                     parent_id = None
@@ -1111,7 +1221,11 @@ if __name__ == '__main__':
     parent_parser.add_argument('--parsed-metadata-table', help='parsed metadata table to read')
     parent_parser.add_argument('--otu-parquet-dir', help='directory for OTU parquet chunks')
 
-    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'stage2', 'tags', 'otus_parquet', 'otus_load', 'parsed_metadata'], required=True)
+    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'taxonomy_upload', 'stage2', 'tags', 'otus_parquet', 'otus_load', 'parsed_metadata'], required=True)
+
+    parent_parser.add_argument('--gtdb-archaea-taxonomy', help='GTDB archaea taxonomy TSV (two columns: accession, taxonomy)')
+    parent_parser.add_argument('--gtdb-bacteria-taxonomy', help='GTDB bacteria taxonomy TSV (two columns: accession, taxonomy)')
+    parent_parser.add_argument('--globdb-taxonomy', help='GlobDB taxonomy TSV (two columns: accession, taxonomy)')
 
     args = parent_parser.parse_args()
 
@@ -1202,6 +1316,30 @@ if __name__ == '__main__':
             run_accession_to_id = create_sample_metadata(db, args.condensed_otu_table, blacklist,
                                                          kingfisher_metadata_file_paths, corrections)
 
+        elif args.stage == 'taxonomy_upload':
+            if not args.gtdb_archaea_taxonomy:
+                raise Exception("gtdb-archaea-taxonomy must be specified for stage 'taxonomy_upload'")
+            if not args.gtdb_bacteria_taxonomy:
+                raise Exception("gtdb-bacteria-taxonomy must be specified for stage 'taxonomy_upload'")
+
+            starting_taxonomy_entries = db.session.query(func.count()).select_from(Taxonomy).scalar()
+            taxonomy_name_to_id = load_taxonomy_name_to_id(db)
+            next_taxonomy_id = get_next_taxonomy_id(db)
+
+            taxonomy_name_to_id, next_taxonomy_id = add_taxonomy_from_tsv(
+                db, args.gtdb_archaea_taxonomy, 'gtdb', taxonomy_name_to_id, next_taxonomy_id)
+            taxonomy_name_to_id, next_taxonomy_id = add_taxonomy_from_tsv(
+                db, args.gtdb_bacteria_taxonomy, 'gtdb', taxonomy_name_to_id, next_taxonomy_id)
+            if args.globdb_taxonomy:
+                taxonomy_name_to_id, next_taxonomy_id = add_taxonomy_from_tsv(
+                    db, args.globdb_taxonomy, 'globdb', taxonomy_name_to_id, next_taxonomy_id)
+
+            db.session.commit()
+            final_taxonomy_entries = db.session.query(func.count()).select_from(Taxonomy).scalar()
+            logging.info(
+                "Committed taxonomy uploads. Added {} new taxonomy entries.".format(
+                    final_taxonomy_entries - starting_taxonomy_entries))
+
         elif args.stage == 'stage2':
             if not args.host_predictions_tsv:
                 raise Exception("host-predictions-tsv must be specified for stage 'stage2'")
@@ -1212,16 +1350,29 @@ if __name__ == '__main__':
 
             run_accession_to_id = read_run_accession_to_id(db)
 
+            required_taxonomy_types = ['gtdb']
+            if args.globdb_condensed_otu_table:
+                required_taxonomy_types.append('globdb')
+            taxonomy_name_to_id = load_taxonomy_name_to_id(db, required_taxonomy_types)
+            missing_taxonomy_types = [t for t in required_taxonomy_types if t not in taxonomy_name_to_id]
+            if missing_taxonomy_types:
+                missing_taxonomy_list = ', '.join(missing_taxonomy_types)
+                raise Exception(
+                    f"Taxonomy types missing from DB: {missing_taxonomy_list}. Run taxonomy_upload stage first.")
+            next_taxonomy_id = get_next_taxonomy_id(db)
+
             add_smf(db, run_accession_to_id, args.smf_file)
 
             taxonomy_name_to_id, next_taxonomy_id = fill_condensed_and_taxonomy_tables(
                 db, db_path, args.condensed_otu_table,
-                blacklist, run_accession_to_id, 'gtdb')
+                blacklist, run_accession_to_id, 'gtdb', taxonomy_name_to_id, next_taxonomy_id,
+                allow_new_taxa=False)
 
             if args.globdb_condensed_otu_table:
                 taxonomy_name_to_id, next_taxonomy_id = fill_condensed_and_taxonomy_tables(
                     db, db_path, args.globdb_condensed_otu_table,
-                    blacklist, run_accession_to_id, 'globdb', taxonomy_name_to_id, next_taxonomy_id)
+                    blacklist, run_accession_to_id, 'globdb', taxonomy_name_to_id, next_taxonomy_id,
+                    allow_new_taxa=False)
 
             add_bioproject_associated_publications(db, db_path, args.bioproject_associated_publications)
 
