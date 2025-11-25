@@ -17,6 +17,9 @@ OTU_TABLE: '/work/microbiome/msingle/mess/198_R226_renew_mach2/processing_202504
 HOST_OR_NOT_PREDICTION: '/work/microbiome/msingle/mess/198_R226_renew_mach2/processing_20250409/host_or_not_prediction/host_or_not_preds.csv'
 SMF_FILE: '/work/microbiome/msingle/mess/198_R226_renew_mach2/processing_20250409/microbial_fractions.csv'
 GLOBDB_CONDENSED_OTU_TABLE: '/work/microbiome/ibis/deep_ocean/results/renew/20250411/condensed.tsv.gz'
+GTDB_ARCHAEA_TAXONOMY: '/path/to/gtdb_archaea_taxonomy.tsv'
+GTDB_BACTERIA_TAXONOMY: '/path/to/gtdb_bacteria_taxonomy.tsv'
+GLOBDB_TAXONOMY: '/path/to/globdb_taxonomy.tsv'
 
 TEST_OR_PROD: 'prod'
 SCRATCH_DIR: '/scratch/microbiome/woodcrob/sandpiper'
