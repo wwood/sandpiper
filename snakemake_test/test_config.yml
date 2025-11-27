@@ -18,9 +18,10 @@ OTU_TABLE: '../test/data/more_runs/otu_table.csv.gz'
 HOST_OR_NOT_PREDICTION: '../test/data/more_runs/host_or_not_preds.tsv.gz'
 SMF_FILE: '../test/data/more_runs/smf.csv'
 GLOBDB_CONDENSED_OTU_TABLE: '../test/data/more_runs/globdb_condensed.csv.gz'
-GTDB_ARCHAEA_TAXONOMY: '../test/data/more_runs/gtdb_archaea_taxonomy.tsv'
-GTDB_BACTERIA_TAXONOMY: '../test/data/more_runs/gtdb_bacteria_taxonomy.tsv'
-GLOBDB_TAXONOMY: '../test/data/more_runs/globdb_taxonomy.tsv'
+# TODO: These are all the taxonomies. Should grab everything needed to be test-data specific instead.
+GTDB_ARCHAEA_TAXONOMY: '../test/data/more_runs/gtdb_ar_example_taxonomies.tsv'
+GTDB_BACTERIA_TAXONOMY: '../test/data/more_runs/gtdb_bac_example_taxonomies.tsv'
+GLOBDB_TAXONOMY: '../test/data/more_runs/globdb_example_taxonomies.tsv'
 
 TEST_OR_PROD: 'test'
 SCRATCH_DIR: '/scratch/microbiome/woodcrob/sandpiper_test'

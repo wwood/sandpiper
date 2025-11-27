@@ -282,6 +282,8 @@ def add_taxonomy_from_tsv(db, taxonomy_path, taxonomy_type, taxonomy_name_to_id,
                 continue
             if row[1].lower().startswith('taxonomy'):
                 continue
+            if taxonomy_type=='globdb' and 'p_Unclassified' in row[1]:
+                continue
             taxons = split_taxonomy_string(row[1])
             taxonomy_name_to_id, next_taxonomy_id = add_taxonomy_path(
                 db, taxons, taxonomy_type, taxonomy_name_to_id, next_taxonomy_id)

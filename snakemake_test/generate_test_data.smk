@@ -25,7 +25,7 @@ with open(test_accessions_file, 'w') as f:
         'SRR10875094', # Virome -> has SMF warning
     ]))
 
-configfile: 'prod_config.yml'
+configfile: '../snakemake/prod_config.yml'
 
 rule all:
     input:
@@ -34,7 +34,83 @@ rule all:
         test_data_dir + '/globdb_condensed.csv.gz',
         test_data_dir + '/otu_table.csv.gz',
         test_data_dir + '/host_or_not_preds.tsv.gz',
-        test_data_dir + '/smf.csv'
+        test_data_dir + '/smf.csv',
+        test_data_dir + '/gtdb_bac_example_taxonomies.tsv',
+        test_data_dir + '/gtdb_ar_example_taxonomies.tsv',
+        test_data_dir + '/globdb_example_taxonomies.tsv',
+
+rule bac_taxonomy_examples:
+    input:
+        taxonomy=config['GTDB_BACTERIA_TAXONOMY'],
+        condensed=test_data_dir + '/condensed.csv.gz',
+    output:
+        test_data_dir + '/gtdb_bac_example_taxonomies.tsv',
+    shell:
+        """
+        while IFS= read -r pat; do     rg -m1 "$pat" {input.taxonomy} ||true; done < <(
+            zcat {input.condensed} \
+            | tail -n+2 \
+            | grep s__ \
+            | cut -f3 \
+            | sed 's/Root; //; s/; /;/g; s/$/$/' \
+        ) |sort |uniq >{output}
+        while IFS= read -r pat; do     rg -F -m1 "$pat" {input.taxonomy} ||true; done < <(
+            zcat {input.condensed} \
+            | tail -n+2 \
+            | grep -v s__ \
+            | cut -f3 \
+            | sed 's/Root; //; s/; /;/g; s/$/;/' \
+        ) |sort |uniq >>{output}
+        """
+
+rule ar_taxonomy_examples:
+    input:
+        taxonomy=config['GTDB_ARCHAEA_TAXONOMY'],
+        condensed=test_data_dir + '/condensed.csv.gz',
+    output:
+        test_data_dir + '/gtdb_ar_example_taxonomies.tsv',
+    shell:
+        """
+        # First grep for species, then for non-species to avoid substring matches
+        while IFS= read -r pat; do     rg -m1 "$pat" {input.taxonomy} ||true; done < <(
+            zcat {input.condensed} \
+            | tail -n+2 \
+            | grep s__ \
+            | cut -f3 \
+            | sed 's/Root; //; s/; /;/g; s/$/$/' \
+        ) |sort |uniq >{output}
+        while IFS= read -r pat; do     rg -F -m1 "$pat" {input.taxonomy} ||true; done < <(
+            zcat {input.condensed} \
+            | tail -n+2 \
+            | grep -v s__ \
+            | cut -f3 \
+            | sed 's/Root; //; s/; /;/g; s/$/;/' \
+        ) |sort |uniq >>{output}
+        """
+
+rule globdb_taxonomy_examples:
+    input:
+        taxonomy=config['GLOBDB_TAXONOMY'],
+        condensed=test_data_dir + '/globdb_condensed.csv.gz',
+    output:
+        test_data_dir + '/globdb_example_taxonomies.tsv',
+    shell:
+        """
+        while IFS= read -r pat; do     rg -z -m1 "$pat" {input.taxonomy} ||true; done < <(
+            zcat {input.condensed} \
+            | tail -n+2 \
+            | grep s__ \
+            | cut -f3 \
+            | sed 's/Root; //; s/; /;/g; s/$/$/' \
+        ) |sort |uniq >{output}
+        while IFS= read -r pat; do     rg -z -F -m1 "$pat" {input.taxonomy} ||true; done < <(
+            zcat {input.condensed} \
+            | tail -n+2 \
+            | grep -v s__ \
+            | cut -f3 \
+            | sed 's/Root; //; s/; /;/g; s/$/;/' \
+        ) |sort |uniq >>{output}
+        """
 
 rule json_metadata_files:
     input:
