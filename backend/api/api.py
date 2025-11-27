@@ -327,7 +327,16 @@ def fetch_full_profile(sample_name):
             last_taxon = taxons_to_wordnode[tax]
         last_taxon.coverage = otu.coverage
 
-    return jsonify({ 'otus': wordnode_json(root, 0, 0), 'sample_name': sample_name })    
+    return jsonify({ 'otus': wordnode_json(root, 0, 0), 'sample_name': sample_name })
+
+
+def _read_length_summary(read1_length_average, read2_length_average):
+    if read1_length_average is not None and read2_length_average is not None:
+        return '%.0fx%.0fbp reads' % (read1_length_average, read2_length_average)
+    if read1_length_average is not None:
+        return '%.0fbp reads' % read1_length_average
+    return None
+
 
 @api.route('/metadata/<string:sample_name>', methods=('GET',))
 def fetch_metadata(sample_name):
@@ -372,12 +381,9 @@ def fetch_metadata(sample_name):
         'study_abstract': metadata_dict['study_abstract'],
     }
 
-    read_length_summary = None
-    if meta.read1_length_average is not None and meta.read2_length_average is not None:
-        read_length_summary = '%.0fx%.0fbp reads' % (meta.read1_length_average, meta.read2_length_average)
-    elif meta.read1_length_average is not None:
-        read_length_summary = '%.0fbp reads' % meta.read1_length_average
-    metadata_parsed['read_length_summary'] = read_length_summary
+    metadata_parsed['read_length_summary'] = _read_length_summary(
+        meta.read1_length_average, meta.read2_length_average
+    )
 
     # Change format to be classification => [[name, description], [name, description], ..]
     # for fields that are known already
@@ -542,20 +548,43 @@ def taxonomy_search_csv(taxon):
     if worked:
         print('=== {}: worked core'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         df = pl.DataFrame(
-            [[
-            c.acc,
-            round(c.relative_abundance*100,2),
-            round(c.filled_coverage, 2),
-            c.taxon_name,
-            c.published.strftime('%Y'),
-            c.host_or_not_mature,
-            c.latitude,
-            c.longitude,]
-            for c in condensed_profile_hits],
+            [
+                [
+                    c.acc,
+                    round(c.relative_abundance * 100, 2),
+                    round(c.filled_coverage, 2),
+                    c.taxon_name,
+                    c.study_title,
+                    c.published.strftime('%Y'),
+                    c.bases,
+                    c.bacterial_archaeal_bases,
+                    c.host_or_not_mature,
+                    c.spots,
+                    _read_length_summary(c.read1_length_average, c.read2_length_average),
+                    c.model,
+                    c.collection_year,
+                    round(c.smf, 2) if c.smf is not None else None,
+                    c.smf_warning,
+                    round(c.known_species_fraction * 100, 2)
+                    if c.known_species_fraction is not None
+                    else None,
+                    round(c.globdb_known_species_fraction * 100, 2)
+                    if c.globdb_known_species_fraction is not None
+                    else None,
+                    c.latitude,
+                    c.longitude,
+                ]
+                for c in condensed_profile_hits
+            ],
             orient="row",
-            schema=['sample', 'relative_abundance', 'coverage', 'taxon_name', 'release_year', 
-            'eukaryotic_host_association',
-            'latitude', 'longitude']
+            schema=[
+                'sample', 'relative_abundance', 'coverage', 'taxon_name', 'study_title', 'release_year',
+                'metagenome_base_pairs', 'bacterial_archaeal_bases',
+                'eukaryotic_host_association', 'num_reads', 'read_length_summary', 'sequencing_instrument', 'collection_year',
+                'spf', 'spf_warning',
+                'gtdb_known_species_fraction_percent', 'globdb_known_species_fraction_percent',
+                'latitude', 'longitude'
+            ]
         )
         print('=== {}: df made'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         response = make_response(df.write_csv())
@@ -598,10 +627,22 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
                 CondensedProfileCtas1.relative_abundance,
                 CondensedProfileCtas1.filled_coverage,
                 NcbiMetadata.taxon_name,
+                NcbiMetadata.study_title,
                 NcbiMetadata.published,
-                # TODO: Add experiment title here, not currently in DB
                 ParsedSampleAttribute.host_or_not_mature,
-                ParsedSampleAttribute.latitude, ParsedSampleAttribute.longitude,
+                ParsedSampleAttribute.latitude,
+                ParsedSampleAttribute.longitude,
+                NcbiMetadata.bases,
+                ParsedSampleAttribute.bacterial_archaeal_bases,
+                NcbiMetadata.spots,
+                NcbiMetadata.read1_length_average,
+                NcbiMetadata.read2_length_average,
+                NcbiMetadata.model,
+                ParsedSampleAttribute.collection_year,
+                ParsedSampleAttribute.smf,
+                ParsedSampleAttribute.smf_warning,
+                ParsedSampleAttribute.known_species_fraction,
+                ParsedSampleAttribute.globdb_known_species_fraction,
             ).where(CondensedProfileCtas1.run_id == NcbiMetadata.id
             ).where(ParsedSampleAttribute.run_id == NcbiMetadata.id)
         else:
