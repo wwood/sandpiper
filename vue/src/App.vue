@@ -12,6 +12,7 @@
             <b-navbar-item tag="router-link" :to="{ path: '/About' }">About</b-navbar-item>
         </template>
     </b-navbar>
+    <div class="notification is-primary">Warning: Deployment of Sandpiper is currently in progress, and there is some instability. Apologies if you encounter problems. We are working on it.</div>
     <router-view :key="$route.fullPath" />
 
     &nbsp;
