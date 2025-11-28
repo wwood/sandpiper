@@ -114,6 +114,7 @@
           <span class="bd-anchor-name">Matching samples</span>
         </h2>
         <b-button tag="a" type="is-info" :href="csv_link()">Download CSV</b-button>
+        <b-button tag="a" class="ml-2" :href="minimal_csv_link()">Download table CSV</b-button>
         <b-table
           :data="search_result['condensed_profiles']"
           :striped="true"
@@ -389,6 +390,9 @@ export default {
     },
     csv_link () {
       return api_url() + '/taxonomy_search_csv/' + this.taxonomy + '?taxonomy_type=' + this.taxonomy_type
+    },
+    minimal_csv_link () {
+      return api_url() + '/taxonomy_search_csv_minimal/' + this.taxonomy + '?taxonomy_type=' + this.taxonomy_type
     }
   },
   watch: {
