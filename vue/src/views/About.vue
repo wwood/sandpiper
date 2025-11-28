@@ -78,6 +78,7 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
           <div class="column content">  
             <ul> 
               <li>Integration of <a href="https://globdb.org">GlobDB</a> R226 community profiles.</li> 
+              <li>Latitude, longitude and other metadata for taxon search results can now be downloaded.</li> 
               <li>Website infrastructure upgraded.</li>
               <li>(No new public metagenomes were analysed since the previous release).</li>
             </ul>

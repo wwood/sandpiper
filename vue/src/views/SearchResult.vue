@@ -113,8 +113,8 @@
           <a class="bd-anchor-link" href="#matching-samples"># </a>
           <span class="bd-anchor-name">Matching samples</span>
         </h2>
-        <b-button tag="a" type="is-info" :href="csv_link()">Download CSV</b-button>
-        <b-button tag="a" class="ml-2" :href="minimal_csv_link()">Download table CSV</b-button>
+        <b-button tag="a" type="is-info" :href="minimal_csv_link()">Download minimal CSV</b-button>&nbsp;
+        <b-button tag="a" type="is-info" :href="csv_link()">Download CSV with extra columns</b-button>
         <b-table
           :data="search_result['condensed_profiles']"
           :striped="true"
