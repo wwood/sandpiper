@@ -146,3 +146,44 @@ def test_taxonomy_search_csv_filename():
     assert resp.status_code == 200
     cd = resp.headers.get("Content-Disposition")
     assert cd is not None and taxonomy_type in cd
+
+
+def test_taxonomy_search_csv_columns():
+    session = requests.Session()
+    taxon = "d__Bacteria"
+    resp = session.get(
+        f"{BACKEND_URL}/api/taxonomy_search_csv/{taxon}?taxonomy_type=gtdb"
+    )
+    assert resp.status_code == 200
+    header = resp.text.splitlines()[0].split(",")
+    for column in [
+        "metagenome_base_pairs",
+        "bacterial_archaeal_bases",
+        "spf",
+        "spf_warning",
+        "gtdb_known_species_fraction_percent",
+        "globdb_known_species_fraction_percent",
+        "num_reads",
+        "read_length_summary",
+        "sequencing_instrument",
+        "collection_year",
+    ]:
+        assert column in header
+
+
+def test_taxonomy_search_csv_minimal_columns():
+    session = requests.Session()
+    taxon = "d__Bacteria"
+    resp = session.get(
+        f"{BACKEND_URL}/api/taxonomy_search_csv_minimal/{taxon}?taxonomy_type=gtdb"
+    )
+    assert resp.status_code == 200
+    header = resp.text.splitlines()[0].split(",")
+    for column in [
+        "run",
+        "environment",
+        "release_year",
+        "relative_abundance_percent",
+        "coverage",
+    ]:
+        assert column in header
