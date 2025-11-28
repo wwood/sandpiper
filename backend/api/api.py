@@ -3,10 +3,12 @@ api.py
 - provides the API endpoints for consuming and producing
   REST requests and responses
 """
+import csv
+import io
 import re
 import requests
 
-from flask import Blueprint, jsonify, request, make_response, current_app
+from flask import Blueprint, jsonify, request, make_response, current_app, Response, stream_with_context
 
 from sqlalchemy import select, distinct, or_
 from sqlalchemy.sql import func, text
@@ -547,9 +549,25 @@ def taxonomy_search_csv(taxon):
 
     if worked:
         print('=== {}: worked core'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-        df = pl.DataFrame(
-            [
-                [
+        headers = [
+            'sample', 'relative_abundance', 'coverage', 'taxon_name', 'study_title', 'release_year',
+            'metagenome_base_pairs', 'bacterial_archaeal_bases',
+            'eukaryotic_host_association', 'num_reads', 'read_length_summary', 'sequencing_instrument', 'collection_year',
+            'spf', 'spf_warning',
+            'gtdb_known_species_fraction_percent', 'globdb_known_species_fraction_percent',
+            'latitude', 'longitude'
+        ]
+
+        def generate_csv_rows():
+            buffer = io.StringIO()
+            writer = csv.writer(buffer)
+            writer.writerow(headers)
+            yield buffer.getvalue()
+            buffer.seek(0)
+            buffer.truncate(0)
+
+            for c in condensed_profile_hits:
+                writer.writerow([
                     c.acc,
                     round(c.relative_abundance * 100, 2),
                     round(c.filled_coverage, 2),
@@ -573,25 +591,14 @@ def taxonomy_search_csv(taxon):
                     else None,
                     c.latitude,
                     c.longitude,
-                ]
-                for c in condensed_profile_hits
-            ],
-            orient="row",
-            schema=[
-                'sample', 'relative_abundance', 'coverage', 'taxon_name', 'study_title', 'release_year',
-                'metagenome_base_pairs', 'bacterial_archaeal_bases',
-                'eukaryotic_host_association', 'num_reads', 'read_length_summary', 'sequencing_instrument', 'collection_year',
-                'spf', 'spf_warning',
-                'gtdb_known_species_fraction_percent', 'globdb_known_species_fraction_percent',
-                'latitude', 'longitude'
-            ]
-        )
-        print('=== {}: df made'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-        response = make_response(df.write_csv())
-        print('=== {}: after csv'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                ])
+                yield buffer.getvalue()
+                buffer.seek(0)
+                buffer.truncate(0)
+
+        response = Response(stream_with_context(generate_csv_rows()), mimetype='text/csv')
         cd = 'attachment; filename=sandpiper_v{}_{}_{}_sample_coverage.csv'.format(__version__, taxon, taxonomy_type)
         response.headers['Content-Disposition'] = cd
-        response.mimetype = 'text/csv'
         return response
     else:
         return condensed_profile_hits # Really returning a JSON indicating the failure
