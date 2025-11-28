@@ -566,35 +566,42 @@ def taxonomy_search_csv(taxon):
             buffer.seek(0)
             buffer.truncate(0)
 
-            for c in condensed_profile_hits:
-                writer.writerow([
-                    c.acc,
-                    round(c.relative_abundance * 100, 2),
-                    round(c.filled_coverage, 2),
-                    c.taxon_name,
-                    c.study_title,
-                    c.published.strftime('%Y'),
-                    c.bases,
-                    c.bacterial_archaeal_bases,
-                    c.host_or_not_mature,
-                    c.spots,
-                    _read_length_summary(c.read1_length_average, c.read2_length_average),
-                    c.model,
-                    c.collection_year,
-                    round(c.smf, 2) if c.smf is not None else None,
-                    c.smf_warning,
-                    round(c.known_species_fraction * 100, 2)
-                    if c.known_species_fraction is not None
-                    else None,
-                    round(c.globdb_known_species_fraction * 100, 2)
-                    if c.globdb_known_species_fraction is not None
-                    else None,
-                    c.latitude,
-                    c.longitude,
-                ])
-                yield buffer.getvalue()
-                buffer.seek(0)
-                buffer.truncate(0)
+            try:
+                while True:
+                    chunk = condensed_profile_hits.fetchmany(1000)
+                    if not chunk:
+                        break
+                    for c in chunk:
+                        writer.writerow([
+                            c.acc,
+                            round(c.relative_abundance * 100, 2),
+                            round(c.filled_coverage, 2),
+                            c.taxon_name,
+                            c.study_title,
+                            c.published.strftime('%Y'),
+                            c.bases,
+                            c.bacterial_archaeal_bases,
+                            c.host_or_not_mature,
+                            c.spots,
+                            _read_length_summary(c.read1_length_average, c.read2_length_average),
+                            c.model,
+                            c.collection_year,
+                            round(c.smf, 2) if c.smf is not None else None,
+                            c.smf_warning,
+                            round(c.known_species_fraction * 100, 2)
+                            if c.known_species_fraction is not None
+                            else None,
+                            round(c.globdb_known_species_fraction * 100, 2)
+                            if c.globdb_known_species_fraction is not None
+                            else None,
+                            c.latitude,
+                            c.longitude,
+                        ])
+                    yield buffer.getvalue()
+                    buffer.seek(0)
+                    buffer.truncate(0)
+            finally:
+                condensed_profile_hits.close()
 
         response = Response(stream_with_context(generate_csv_rows()), mimetype='text/csv')
         cd = 'attachment; filename=sandpiper_v{}_{}_{}_sample_coverage.csv'.format(__version__, taxon, taxonomy_type)
@@ -682,9 +689,11 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
         if not no_limit:
             hits_query = hits_query.limit(page_size).offset((page-1)*page_size)
             
-        condensed_profile_hits = db.session.execute(
-            hits_query.where(
-                CondensedProfileCtas1.taxonomy_id == taxonomy.id))
+        hits_query = hits_query.where(CondensedProfileCtas1.taxonomy_id == taxonomy.id)
+        if no_limit:
+            hits_query = hits_query.execution_options(stream_results=True)
+
+        condensed_profile_hits = db.session.execute(hits_query)
 
         return True, condensed_profile_hits
 
