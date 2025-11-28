@@ -85,15 +85,7 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
             </ul>
           </div> 
         </div>
-      <h2 class="title is-5">v1.0.1</h2>
-        <div class="columns has-text-left"> 
-          <div class="column content">  
-            <ul> 
-              <li>Website typographic errors fixed.</li>
-            </ul>
-          </div> 
-        </div>
-      <h2 class="title is-5">v1.0.0</h2>
+      <h2 class="title is-5">v1.0.*</h2>
         <div class="columns has-text-left"> 
           <div class="column content">  
             <ul> 
