@@ -491,16 +491,34 @@ def fetch_metadata(sample_name):
 def taxonomy_search_fail_json(reason):
     return jsonify({ 'taxon': reason })
 
+
+def taxonomy_types_for_name(taxon):
+    return db.session.execute(
+        select(distinct(Taxonomy.taxonomy_type)).where(Taxonomy.name == taxon)
+    ).scalars().all()
+
+
+def taxonomy_not_found_response(taxon):
+    taxonomy_types = taxonomy_types_for_name(taxon)
+    if len(taxonomy_types) == 0:
+        reason = f'"{taxon}" is not a known taxonomy in Sandpiper.'
+    else:
+        reason = (
+            f'"{taxon}" is a known taxonomy, but no samples containing it were found. '
+            f'It is a valid taxonomy in: {", ".join(sorted(taxonomy_types))}.'
+        )
+    return taxonomy_search_fail_json(reason)
+
 @api.route('/taxonomy_search_global_data/<string:taxon>', methods=('GET',))
 def taxonomy_search_global_data(taxon):
     taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
     taxonomy = Taxonomy.query.filter_by(name=taxon, taxonomy_type=taxonomy_type).first()
     if taxonomy is None:
-        return taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in either GTDB or GlobDB, or no records of this taxon are recorded in Sandpiper. We recommend using the auto-complete function when searching to avoid typographical errors. Alternately, if this an NCBI taxonomy name, you could try searching for it at the GTDB website.')
+        return taxonomy_not_found_response(taxon)
     total_num_hits = CondensedProfileCtas1.query.filter_by(taxonomy_id=taxonomy.id).count()
     if total_num_hits == 0:
         # This happens when there's a taxonomy in the full table that didn't make it into any condensed table
-        return taxonomy_search_fail_json('"'+taxon+'" is a known taxonomy, however no records of it are recorded in Sandpiper.')
+        return taxonomy_not_found_response(taxon)
     num_host_runs = taxonomy.host_sample_count
     num_ecological_runs = taxonomy.ecological_sample_count
     # lat_lons are commented out for now because it is too slow to query and
@@ -687,8 +705,11 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
 
     taxonomy = Taxonomy.query.filter_by(name=taxon, taxonomy_type=taxonomy_type).first()
     if taxonomy is None:
-        return False, taxonomy_search_fail_json('"'+taxon+'" is not a known taxonomy in '+taxonomy_type.upper()+', or no records of this taxon are recorded in Sandpiper.')
+        return False, taxonomy_not_found_response(taxon)
     else:
+        total_num_hits = CondensedProfileCtas1.query.filter_by(taxonomy_id=taxonomy.id).count()
+        if total_num_hits == 0:
+            return False, taxonomy_not_found_response(taxon)
         # Query for samples that contain this taxon
         if include_extras:
             stmt = select(
