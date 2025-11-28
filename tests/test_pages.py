@@ -169,3 +169,21 @@ def test_taxonomy_search_csv_columns():
         "collection_year",
     ]:
         assert column in header
+
+
+def test_taxonomy_search_csv_minimal_columns():
+    session = requests.Session()
+    taxon = "d__Bacteria"
+    resp = session.get(
+        f"{BACKEND_URL}/api/taxonomy_search_csv_minimal/{taxon}?taxonomy_type=gtdb"
+    )
+    assert resp.status_code == 200
+    header = resp.text.splitlines()[0].split(",")
+    for column in [
+        "run",
+        "environment",
+        "release_year",
+        "relative_abundance_percent",
+        "coverage",
+    ]:
+        assert column in header

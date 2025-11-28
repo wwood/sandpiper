@@ -610,6 +610,61 @@ def taxonomy_search_csv(taxon):
     else:
         return condensed_profile_hits # Really returning a JSON indicating the failure
 
+
+@api.route('/taxonomy_search_csv_minimal/<string:taxon>', methods=('GET',))
+def taxonomy_search_csv_minimal(taxon):
+    taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
+    worked, condensed_profile_hits = taxonomy_search_core(
+        taxon, request.args, no_limit=True, include_extras=False
+    )
+
+    if worked:
+        headers = [
+            'run', 'environment', 'release_year', 'relative_abundance_percent', 'coverage'
+        ]
+
+        def generate_csv_rows():
+            buffer = io.StringIO()
+            writer = csv.writer(buffer)
+            writer.writerow(headers)
+            yield buffer.getvalue()
+            buffer.seek(0)
+            buffer.truncate(0)
+
+            try:
+                while True:
+                    chunk = condensed_profile_hits.fetchmany(1000)
+                    if not chunk:
+                        break
+                    for c in chunk:
+                        environment = (
+                            "unspecified"
+                            if c.taxon_name is None
+                            else c.taxon_name.replace(' metagenome', '')
+                        )
+                        release_year = c.published.strftime('%Y') if c.published else None
+                        writer.writerow([
+                            c.acc,
+                            environment,
+                            release_year,
+                            round(c.relative_abundance * 100, 2),
+                            round(c.filled_coverage, 2),
+                        ])
+                    yield buffer.getvalue()
+                    buffer.seek(0)
+                    buffer.truncate(0)
+            finally:
+                condensed_profile_hits.close()
+
+        response = Response(stream_with_context(generate_csv_rows()), mimetype='text/csv')
+        cd = 'attachment; filename=sandpiper_v{}_{}_{}_runs.csv'.format(
+            __version__, taxon, taxonomy_type
+        )
+        response.headers['Content-Disposition'] = cd
+        return response
+    else:
+        return condensed_profile_hits # Really returning a JSON indicating the failure
+
 def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
     '''Returns (bool, iterable|json) where bool is whether it worked (True)
     or not (False) and iterable is the data to render. json is the error if
