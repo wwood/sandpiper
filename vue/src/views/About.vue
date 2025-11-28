@@ -80,6 +80,7 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
               <li>Integration of <a href="https://globdb.org">GlobDB</a> R226 community profiles.</li> 
               <li>Latitude, longitude and other metadata for taxon search results can now be downloaded.</li> 
               <li>Website infrastructure upgraded.</li>
+              <li>Metadata annotations for each run procured using <a href="https://github.com/wwood/kingfisher-download/">Kingfisher</a> on 27 August, 2025.</li>
               <li>(No new public metagenomes were analysed since the previous release).</li>
             </ul>
           </div> 
