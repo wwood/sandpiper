@@ -3,8 +3,8 @@
 rule all:
     input:
         "2024-08/sylph.tsv.gz",
-        "2024-08/sylph_runs.tsv",
-        "2024-08/sylph_mbases.csv"
+        "snakedata/sylph_runs.tsv",
+        "snakedata/sylph_mbases.csv"
 
 rule download_allthebacteria_sylph:
     output:
@@ -16,7 +16,7 @@ rule extract_sylph_runs:
     input:
         "2024-08/sylph.tsv.gz"
     output:
-        "2024-08/sylph_runs.tsv"
+        "snakedata/sylph_runs.tsv"
     shell:
         r'''
         python - <<'PY'
@@ -47,9 +47,9 @@ PY
 
 rule query_sra_mbases:
     input:
-        runs="2024-08/sylph_runs.tsv"
+        runs="snakedata/sylph_runs.tsv"
     output:
-        "2024-08/sylph_mbases.csv"
+        "snakedata/sylph_mbases.csv"
     shell:
         r'''
         set -euo pipefail
