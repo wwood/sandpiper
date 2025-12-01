@@ -17,8 +17,9 @@ frontend:
 ```
 cd vue
 pixi shell -e sandpiper
-SANDPIPER_TESTING=1 npm run dev -- --host 127.0.0.1
+CHOKIDAR_USEPOLLING=1 SANDPIPER_TESTING=1 npm run dev -- --host 127.0.0.1
 ```
+`CHOKIDAR_USEPOLLING=1` is needed on aqua to get file watching to work properly.
 
 generating the test database:
 ```

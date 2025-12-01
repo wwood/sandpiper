@@ -501,7 +501,7 @@ def taxonomy_types_for_name(taxon):
 def taxonomy_not_found_response(taxon):
     taxonomy_types = taxonomy_types_for_name(taxon)
     if len(taxonomy_types) == 0:
-        reason = f'"{taxon}" is not a known taxonomy in Sandpiper.'
+        reason = f'"{taxon}" is not a known taxonomy in Sandpiper, suggesting it is not known in GTDB or GlobDB either.'
     else:
         reason = (
             f'"{taxon}" is a known taxonomy, but no samples containing it were found. '
