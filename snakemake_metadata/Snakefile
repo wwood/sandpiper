@@ -1,0 +1,67 @@
+# Snakemake workflow for metadata downloads
+
+rule all:
+    input:
+        "2024-08/sylph.tsv.gz",
+        "2024-08/sylph_runs.tsv",
+        "2024-08/sylph_mbases.csv"
+
+rule download_allthebacteria_sylph:
+    output:
+        "2024-08/sylph.tsv.gz"
+    shell:
+        "mkdir -p $(dirname {output}) && curl -L -o {output} https://osf.io/download/nu5a6/"
+
+
+rule extract_sylph_runs:
+    input:
+        "2024-08/sylph.tsv.gz"
+    output:
+        "2024-08/sylph_runs.tsv"
+    shell:
+        r'''
+        python - <<'PY'
+import csv
+import gzip
+from pathlib import Path
+
+input_path = Path(r"{input}")
+output_path = Path(r"{output}")
+output_path.parent.mkdir(parents=True, exist_ok=True)
+
+runs = set()
+with gzip.open(input_path, "rt", newline="") as handle:
+    reader = csv.DictReader(handle, delimiter="\t")
+    for row in reader:
+        run = row.get("Run")
+        if run:
+            runs.add(run)
+
+with output_path.open("w", newline="") as handle:
+    writer = csv.writer(handle, delimiter="\t")
+    writer.writerow(["Run"])
+    for run in sorted(runs):
+        writer.writerow([run])
+PY
+        '''
+
+
+rule query_sra_mbases:
+    input:
+        runs="2024-08/sylph_runs.tsv"
+    output:
+        "2024-08/sylph_mbases.csv"
+    shell:
+        r'''
+        set -euo pipefail
+        mkdir -p $(dirname {output})
+
+        # Ensure local dataset exists for staging run accessions
+        bq mk -f -d metadata
+
+        # Stage unique run accessions into BigQuery
+        bq load --replace --source_format=CSV --field_delimiter='\t' --skip_leading_rows=1 metadata.sylph_runs {input.runs} Run:STRING
+
+        # Query SRA metadata table for mbases per run
+        bq query --use_legacy_sql=false --format=csv "SELECT r.Run, m.mbases FROM `metadata.sylph_runs` r LEFT JOIN `nih-sra-datastore.sra.metadata` m ON r.Run = m.acc" > {output}
+        '''
