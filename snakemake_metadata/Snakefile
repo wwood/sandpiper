@@ -1,0 +1,11 @@
+# Snakemake workflow for metadata downloads
+
+rule all:
+    input:
+        "2024-08/sylph.tsv.gz"
+
+rule download_allthebacteria_sylph:
+    output:
+        "2024-08/sylph.tsv.gz"
+    shell:
+        "mkdir -p $(dirname {output}) && curl -L -o {output} https://osf.io/download/nu5a6/"
