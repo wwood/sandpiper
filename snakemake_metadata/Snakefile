@@ -62,5 +62,5 @@ rule query_sra_mbases:
         bq load --replace --source_format=CSV --field_delimiter='\t' --skip_leading_rows=1 metadata.sylph_runs {input.runs} Run:STRING
 
         # Query SRA metadata table for mbases per run
-        bq query --use_legacy_sql=false --format=csv "SELECT r.Run, m.mbases FROM `metadata.sylph_runs` r LEFT JOIN `nih-sra-datastore.sra.metadata` m ON r.Run = m.acc" > {output}
+        bq query --use_legacy_sql=false --format=csv "SELECT r.Run, m.mbases FROM \`metadata.sylph_runs\` r LEFT JOIN \`nih-sra-datastore.sra.metadata\` m ON r.Run = m.acc" > {output}
         '''

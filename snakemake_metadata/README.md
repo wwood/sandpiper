@@ -1,0 +1,1 @@
+NOTE: Since this script uses bigquery, it costs some (little) money to run. Maybe in future migrate to the QUT AWS account? Also has only been run on b2 so far, since bq isn't on aqua.
