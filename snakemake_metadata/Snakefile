@@ -4,7 +4,9 @@ rule all:
     input:
         "2024-08/sylph.tsv.gz",
         "snakedata/sylph_runs.tsv",
-        "snakedata/sylph_mbases.csv"
+        "snakedata/sylph_mbases.csv",
+        "snakedata/sylph_metagenome_sizes.tsv",
+        "snakedata/sylph_singlem_condensed.tsv"
 
 rule download_allthebacteria_sylph:
     output:
@@ -63,4 +65,103 @@ rule query_sra_mbases:
 
         # Query SRA metadata table for mbases per run
         bq query --use_legacy_sql=false --format=csv "SELECT r.Run, m.mbases FROM \`metadata.sylph_runs\` r LEFT JOIN \`nih-sra-datastore.sra.metadata\` m ON r.Run = m.acc" > {output}
+        '''
+
+
+rule mbases_to_bases:
+    input:
+        "snakedata/sylph_mbases.csv"
+    output:
+        "snakedata/sylph_metagenome_sizes.tsv"
+    shell:
+        r'''
+        python - <<'PY'
+from pathlib import Path
+import csv
+
+input_path = Path(r"{input}")
+output_path = Path(r"{output}")
+output_path.parent.mkdir(parents=True, exist_ok=True)
+
+with input_path.open(newline="") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+
+with output_path.open("w", newline="") as handle:
+    writer = csv.writer(handle, delimiter="\t")
+    writer.writerow(["sample_name", "metagenome_size"])
+    for row in rows:
+        run = row.get("Run")
+        mbases = row.get("mbases")
+        if not run or mbases in (None, ""):
+            continue
+        try:
+            bases = float(mbases) * 1000
+        except ValueError:
+            continue
+        writer.writerow([run, int(bases)])
+PY
+        '''
+
+
+rule sylph_to_singlem_condensed:
+    input:
+        sylph="2024-08/sylph.tsv.gz",
+        bac_metadata="/work/microbiome/db/gtdb/gtdb_release214/bac120_metadata_r214.tsv",
+        arch_metadata="/work/microbiome/db/gtdb/gtdb_release214/ar53_metadata_r214.tsv"
+    output:
+        "snakedata/sylph_singlem_condensed.tsv"
+    shell:
+        r'''
+        python - <<'PY'
+from collections import Counter
+from pathlib import Path
+import csv
+import gzip
+
+
+def load_taxonomy(paths):
+    species_to_taxonomy = {}
+    for path in paths:
+        with Path(path).open() as handle:
+            reader = csv.DictReader(handle, delimiter="\t")
+            for row in reader:
+                taxonomy = row.get("gtdb_taxonomy")
+                if not taxonomy:
+                    continue
+                parts = taxonomy.split(";")
+                if not parts:
+                    continue
+                species = parts[-1].strip()
+                if species.startswith("s__") and species not in species_to_taxonomy:
+                    species_to_taxonomy[species] = taxonomy
+    return species_to_taxonomy
+
+
+species_taxonomy = load_taxonomy([
+    r"{input.bac_metadata}",
+    r"{input.arch_metadata}",
+])
+
+species_counts = Counter()
+with gzip.open(r"{input.sylph}", "rt", newline="") as handle:
+    reader = csv.DictReader(handle, delimiter="\t")
+    for row in reader:
+        species = row.get("Species")
+        if not species:
+            continue
+        species_key = species if species.startswith("s__") else f"s__{species}"
+        if species_key in species_taxonomy:
+            species_counts[species_key] += 1
+
+output_path = Path(r"{output}")
+output_path.parent.mkdir(parents=True, exist_ok=True)
+
+with output_path.open("w", newline="") as handle:
+    writer = csv.writer(handle, delimiter="\t")
+    writer.writerow(["taxonomy", "count"])
+    for species, count in sorted(species_counts.items()):
+        taxonomy = species_taxonomy[species]
+        writer.writerow([f"Root;{taxonomy}", count])
+PY
         '''
