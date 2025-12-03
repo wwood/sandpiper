@@ -34,4 +34,5 @@ class BaseConfig:
     # graceful shutdowns are not delayed by unnecessary transaction cleanup.
     SQLALCHEMY_ENGINE_OPTIONS = {
         "isolation_level": "AUTOCOMMIT",
+        "connect_args": {"read_only": True},
     }
