@@ -45,6 +45,7 @@ import duckdb
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')] + sys.path
 from api.application import generate_app
+from api.duckdb_limits import configure_duckdb_connection, register_duckdb_limits
 
 # from flask import Flask
 from sqlalchemy import update, bindparam, select, insert, func
@@ -1250,6 +1251,7 @@ if __name__ == '__main__':
     app.config['SQLALCHEMY_ECHO'] = args.debug is True
     db.init_app(app)
     with app.app_context():
+        register_duckdb_limits(db.engine)
         if args.stage == 'start' or args.stage == 'stage2':
             blacklist = set()
             if args.run_blacklist:
@@ -1279,6 +1281,7 @@ if __name__ == '__main__':
                 os.remove(db_path)
             logging.info("Making new DB ..")
             conn = duckdb.connect(db_path)
+            configure_duckdb_connection(conn)
             # Create sequences for autoincrementing IDs
             seqs = [
                 'otus_id_seq',
