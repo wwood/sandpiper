@@ -30,3 +30,8 @@ class BaseConfig:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO=True
+    # Avoid explicit ROLLBACK statements when using DuckDB in read-only mode so
+    # graceful shutdowns are not delayed by unnecessary transaction cleanup.
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "isolation_level": "AUTOCOMMIT",
+    }
