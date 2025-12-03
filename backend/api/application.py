@@ -36,6 +36,10 @@ def create_app(app_name='SURVEY_API'):
 
     from api.models import db
     db.init_app(app)
+    from api.duckdb_limits import register_duckdb_limits
+
+    with app.app_context():
+        register_duckdb_limits(db.engine)
 
     return app
 
