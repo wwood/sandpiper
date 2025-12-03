@@ -6,12 +6,12 @@ import sys
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)), ".."), *sys.path]
 
-from api.duckdb_limits import configure_duckdb_connection
+# from api.duckdb_limits import configure_duckdb_connection
 
 
 def main(db_path: str):
     con = duckdb.connect(db_path)
-    configure_duckdb_connection(con)
+    # configure_duckdb_connection(con)
     con.execute(
         """
         CREATE OR REPLACE TABLE condensed_profiles_ctas1 AS
