@@ -17,6 +17,7 @@ from api.models import (
 )
 from sqlalchemy.sql import func
 from sqlalchemy import distinct
+from api.duckdb_limits import register_duckdb_limits
 
 from sandpiper.biosample_attributes import BioSampleAttributes, NcbiMetadataExtraInfos
 
@@ -26,6 +27,7 @@ def main(db_path: str):
     app.config["SQLALCHEMY_DATABASE_URI"] = f"duckdb:///{db_path}"
     db.init_app(app)
     with app.app_context():
+        register_duckdb_limits(db.engine)
         db.create_all()
         SandpiperCache.query.delete()
 
