@@ -42,3 +42,7 @@ uwsgi = ">=2.0.31,<3" # For deployment
 sandpiper = ["sandpiper"]
 kingfisher = ["kingfisher"]
 
+[dependencies]
+memory_profiler = ">=0.61.0,<0.62"
+line_profiler = ">=5.0.0,<6"
+

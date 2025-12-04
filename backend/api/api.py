@@ -47,6 +47,21 @@ sandpiper_marker_id_to_name = None
 biosample_attribute_definitions = None
 ncbi_metadata_infos = None
 
+
+### For profiling routes ###
+import time
+from functools import wraps
+from memory_profiler import profile
+def walltime(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        t0 = time.perf_counter()
+        result = func(*args, **kwargs)
+        dt = time.perf_counter() - t0
+        print(f"[WALLTIME] {func.__name__}: {dt:.6f} s")
+        return result
+    return wrapper
+
 def generate_cache():
     global sandpiper_stats_cache
     global sandpiper_taxonomy_id_to_full_name
@@ -66,10 +81,6 @@ def generate_cache():
             cache = {row.key: json.loads(row.value) for row in cache_rows}
             if 'stats' in cache and sandpiper_stats_cache is None:
                 sandpiper_stats_cache = cache['stats']
-            if 'taxonomy_id_to_full_name' in cache and sandpiper_taxonomy_id_to_full_name is None:
-                sandpiper_taxonomy_id_to_full_name = {
-                    int(k): v for k, v in cache['taxonomy_id_to_full_name'].items()
-                }
             if 'marker_id_to_name' in cache and sandpiper_marker_id_to_name is None:
                 sandpiper_marker_id_to_name = {
                     int(k): v for k, v in cache['marker_id_to_name'].items()
@@ -94,11 +105,6 @@ def generate_cache():
         sandpiper_stats_cache['sandpiper_total_terrabases'] = db.session.query(func.sum(NcbiMetadata.bases)).scalar()/10**12
         sandpiper_stats_cache['sandpiper_num_runs'] = db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar()
         sandpiper_stats_cache['sandpiper_num_bioprojects'] = db.session.query(func.count(distinct(NcbiMetadata.bioproject))).scalar()
-    if sandpiper_taxonomy_id_to_full_name is None:
-        cache = {}
-        for taxon in Taxonomy.query.all():
-            cache[taxon.id] = taxon.full_name
-        sandpiper_taxonomy_id_to_full_name = cache
     if sandpiper_marker_id_to_name is None:
         cache = {}
         for marker in Marker.query.all():
@@ -108,6 +114,64 @@ def generate_cache():
         biosample_attribute_definitions = BioSampleAttributes(current_app.logger).attributes
     if ncbi_metadata_infos is None:
         ncbi_metadata_infos = NcbiMetadataExtraInfos().extra_info
+
+
+@api.route('/profile_cache', methods=('GET',))
+@profile
+def cache_for_profile(): # Temporary route to trigger cache generation for profiling
+    sandpiper_stats_cache = None
+    sandpiper_taxonomy_id_to_full_name = None
+    sandpiper_marker_id_to_name = None
+    biosample_attribute_definitions = None
+    ncbi_metadata_infos = None
+    print(SandpiperCache.query.count())
+    if (
+        sandpiper_stats_cache is None
+        or sandpiper_taxonomy_id_to_full_name is None
+        or sandpiper_marker_id_to_name is None
+        or biosample_attribute_definitions is None
+        or ncbi_metadata_infos is None
+    ):
+        try:
+            cache_rows = SandpiperCache.query.filter(SandpiperCache.key != 'taxonomy_id_to_full_name').all()
+            cache = {row.key: json.loads(row.value) for row in cache_rows}
+            if 'stats' in cache and sandpiper_stats_cache is None:
+                sandpiper_stats_cache = cache['stats']
+            if 'marker_id_to_name' in cache and sandpiper_marker_id_to_name is None:
+                sandpiper_marker_id_to_name = {
+                    int(k): v for k, v in cache['marker_id_to_name'].items()
+                }
+            if 'biosample_attribute_definitions' in cache and biosample_attribute_definitions is None:
+                biosample_attribute_definitions = {
+                    k: BioSampleAttribute(**v)
+                    for k, v in cache['biosample_attribute_definitions'].items()
+                }
+            if 'ncbi_metadata_infos' in cache and ncbi_metadata_infos is None:
+                ncbi_metadata_infos = {
+                    k: NcbiMetadataExtraInfo(**v)
+                    for k, v in cache['ncbi_metadata_infos'].items()
+                }
+        except Exception as e:
+            current_app.logger.warning(
+                'Failed to load cache table, regenerating dynamically: %s', e
+            )
+
+    if sandpiper_stats_cache is None or len(sandpiper_stats_cache) != 3:
+        sandpiper_stats_cache = {}
+        sandpiper_stats_cache['sandpiper_total_terrabases'] = db.session.query(func.sum(NcbiMetadata.bases)).scalar()/10**12
+        sandpiper_stats_cache['sandpiper_num_runs'] = db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar()
+        sandpiper_stats_cache['sandpiper_num_bioprojects'] = db.session.query(func.count(distinct(NcbiMetadata.bioproject))).scalar()
+    if sandpiper_marker_id_to_name is None:
+        cache = {}
+        for marker in Marker.query.all():
+            cache[marker.id] = marker.marker
+        sandpiper_marker_id_to_name = cache
+    if biosample_attribute_definitions is None:
+        biosample_attribute_definitions = BioSampleAttributes(current_app.logger).attributes
+    if ncbi_metadata_infos is None:
+        ncbi_metadata_infos = NcbiMetadataExtraInfos().extra_info
+
+    return jsonify({ }) 
 
 
 
@@ -161,11 +225,17 @@ def fetch_markers():
     markers = Marker.query.all()
     return jsonify({ 'markers': [s.to_dict() for s in markers] })
 
+from memory_profiler import profile
+
 @api.route('/condensed/<string:sample_name>', methods=('GET',))
+# @walltime
+@profile
 def fetch_condensed(sample_name):
     taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
     root = WordNode(None, 'Root')
     taxons_to_wordnode = {root.word: root}
+
+    generate_cache()
 
     condensed = db.session.execute(
         select(CondensedProfile.coverage, Taxonomy.full_name)
@@ -341,6 +411,7 @@ def _read_length_summary(read1_length_average, read2_length_average):
 
 
 @api.route('/metadata/<string:sample_name>', methods=('GET',))
+@profile
 def fetch_metadata(sample_name):
     global biosample_attribute_definitions, ncbi_metadata_infos
 
@@ -855,37 +926,6 @@ def get_lat_lons(taxonomy_id, max_to_show):
         min_lat_lon_relabund = 0
     return list(lat_lons.values()), lat_lons_count, min_lat_lon_relabund
 
-@api.route('/otus/<string:acc>', methods=('GET',))
-def otus(acc):
-    global sandpiper_taxonomy_id_to_full_name, sandpiper_marker_id_to_name
-
-    # Doesn't usually cache anything, but useful to have here for testing
-    generate_cache()
-
-    run_id = NcbiMetadata.query.filter_by(acc=acc).first().id
-    if run_id is None:
-        return jsonify({ 'error': 'no run found for acc '+acc })
-
-    otus = OtuIndexed.query.filter_by(run_id=run_id).order_by(OtuIndexed.id).all()
-
-    df = pd.DataFrame(
-        [[
-            # gene	sample	sequence	num_hits	coverage	taxonomy
-            sandpiper_marker_id_to_name[otu.marker_id],
-            acc,
-            otu.sequence,
-            otu.num_hits,
-            otu.coverage,
-            ('Root' if otu.taxonomy_id==0 else 'Root; ' + sandpiper_taxonomy_id_to_full_name[otu.taxonomy_id]) if otu.taxonomy_id in sandpiper_taxonomy_id_to_full_name else otu.taxonomy_id
-        ] for otu in otus],
-        columns=['gene','sample','sequence','num_hits','coverage','taxonomy']
-    )
-    response = make_response(df.to_csv(index=False, header=True, sep='\t'))
-    taxonomy_type = 'gtdb' #TODO: Add GlobDB
-    cd = 'attachment; filename=sandpiper_v{}_{}_{}.otu_table.csv'.format(__version__, acc, taxonomy_type)
-    response.headers['Content-Disposition'] = cd
-    response.mimetype = 'text/csv'
-    return response
 
 # ?host=${host}&ecological=${ecological}&two_gbp=${two_gbp}
 @api.route('/random_run', methods=('GET',))

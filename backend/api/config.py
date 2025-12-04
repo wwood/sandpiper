@@ -5,13 +5,12 @@
 import os
 
 class BaseConfig:
-    DEBUG = True
-
     # Recently, it because required somehow that the DB path is an absolute path
     # Check if we're in testing mode
     if os.environ.get('SANDPIPER_TESTING'):
         print("Running in DB testing mode")
         DB_NAME = 'sandpiper_21_test.duckdb'
+        DEBUG = True # Does making it not debug when in prod reduce RAM?
     else:
         print("Running in DB production mode")
         # Open read-only to avoid database lock issues.
