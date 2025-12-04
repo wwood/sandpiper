@@ -187,3 +187,35 @@ def test_taxonomy_search_csv_minimal_columns():
         "coverage",
     ]:
         assert column in header
+
+
+def test_taxonomy_search_csv_streams_download():
+    session = requests.Session()
+    taxon = "d__Bacteria"
+    with session.get(
+        f"{BACKEND_URL}/api/taxonomy_search_csv/{taxon}?taxonomy_type=gtdb",
+        stream=True,
+    ) as resp:
+        assert resp.status_code == 200
+        lines = list(resp.iter_lines())
+
+    assert lines, "No CSV data returned"
+    header = lines[0].decode().split(",")
+    assert "sample" in header
+    assert "coverage" in header
+
+
+def test_taxonomy_search_csv_minimal_streams_download():
+    session = requests.Session()
+    taxon = "d__Bacteria"
+    with session.get(
+        f"{BACKEND_URL}/api/taxonomy_search_csv_minimal/{taxon}?taxonomy_type=gtdb",
+        stream=True,
+    ) as resp:
+        assert resp.status_code == 200
+        lines = list(resp.iter_lines())
+
+    assert lines, "No CSV data returned"
+    header = lines[0].decode().split(",")
+    assert "run" in header
+    assert "coverage" in header
