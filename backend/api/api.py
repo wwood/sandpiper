@@ -562,7 +562,9 @@ def taxonomy_search_csv(taxon):
     taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
     from datetime import datetime
     print('=== {}: running core'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-    worked, condensed_profile_hits = taxonomy_search_core(taxon, request.args, no_limit=True, include_extras=True)
+    worked, condensed_profile_hits = taxonomy_search_core(
+        taxon, request.args, no_limit=True, include_extras=True, return_open_cursor=True
+    )
     print('=== {}: after core'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
     if worked:
@@ -633,7 +635,7 @@ def taxonomy_search_csv(taxon):
 def taxonomy_search_csv_minimal(taxon):
     taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
     worked, condensed_profile_hits = taxonomy_search_core(
-        taxon, request.args, no_limit=True, include_extras=False
+        taxon, request.args, no_limit=True, include_extras=False, return_open_cursor=True
     )
 
     if worked:
@@ -683,7 +685,22 @@ def taxonomy_search_csv_minimal(taxon):
     else:
         return condensed_profile_hits # Really returning a JSON indicating the failure
 
-def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
+class _OpenCursorWrapper:
+    def __init__(self, connection, result):
+        self.connection = connection
+        self.result = result
+
+    def fetchmany(self, size=None):
+        return self.result.fetchmany(size)
+
+    def close(self):
+        self.result.close()
+        self.connection.close()
+
+
+def taxonomy_search_core(
+    taxon, args, no_limit=False, include_extras=False, return_open_cursor=False
+):
     '''Returns (bool, iterable|json) where bool is whether it worked (True)
     or not (False) and iterable is the data to render. json is the error if
     it failed.'''
@@ -766,8 +783,13 @@ def taxonomy_search_core(taxon, args, no_limit=False, include_extras=False):
             hits_query = hits_query.limit(page_size).offset((page-1)*page_size)
             
         hits_query = hits_query.where(CondensedProfileCtas1.taxonomy_id == taxonomy.id)
-        if no_limit:
+        if no_limit or return_open_cursor:
             hits_query = hits_query.execution_options(stream_results=True)
+
+        if return_open_cursor:
+            connection = db.engine.connect()
+            condensed_profile_hits = connection.execute(hits_query)
+            return True, _OpenCursorWrapper(connection, condensed_profile_hits)
 
         condensed_profile_hits = db.session.execute(hits_query)
 
