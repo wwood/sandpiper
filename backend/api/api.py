@@ -301,8 +301,6 @@ def wordnode_json(wordnode, order, depth):
 
 @api.route('/full_profile/<string:sample_name>', methods=('GET',))
 def fetch_full_profile(sample_name):
-    global sandpiper_taxonomy_id_to_full_name, sandpiper_marker_id_to_name
-
     # Doesn't usually cache anything, but useful to have here for testing
     generate_cache()
 
@@ -310,14 +308,25 @@ def fetch_full_profile(sample_name):
     if run_id is None:
         return jsonify({ 'error': 'no run found for acc '+sample_name })
 
-    otus = OtuIndexed.query.filter_by(run_id=run_id, marker_id=1).order_by(OtuIndexed.id).all()
+    otus = db.session.execute(
+        select(OtuIndexed, Taxonomy.full_name)
+        .outerjoin(Taxonomy, OtuIndexed.taxonomy_id == Taxonomy.id)
+        .where(OtuIndexed.run_id == run_id)
+        .where(OtuIndexed.marker_id == 1)
+        .order_by(OtuIndexed.id)
+    ).all()
 
     root = WordNode(None, 'Root')
     taxons_to_wordnode = {root.word: root}
 
-    for (i, otu) in enumerate(otus):
-        taxonomy = ('Root' if otu.taxonomy_id==0 else 'Root; ' + sandpiper_taxonomy_id_to_full_name[otu.taxonomy_id]) if otu.taxonomy_id in sandpiper_taxonomy_id_to_full_name else otu.taxonomy_id
-        taxons = taxonomy.split('; ')+['OTU '+str(i+1)]
+    for (i, (otu, taxonomy_full_name)) in enumerate(otus):
+        if otu.taxonomy_id == 0:
+            taxonomy = 'Root'
+        elif taxonomy_full_name is not None:
+            taxonomy = 'Root; ' + taxonomy_full_name
+        else:
+            taxonomy = otu.taxonomy_id
+        taxons = taxonomy.split('; ') + ['OTU ' + str(i + 1)]
 
         last_taxon = root
         wn = None

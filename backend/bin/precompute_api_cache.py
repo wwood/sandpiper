@@ -12,7 +12,6 @@ from api.models import (
     db,
     NcbiMetadata,
     Marker,
-    Taxonomy,
     SandpiperCache,
 )
 from sqlalchemy.sql import func
@@ -34,18 +33,11 @@ def main(db_path: str):
             'sandpiper_num_runs': db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar(),
             'sandpiper_num_bioprojects': db.session.query(func.count(distinct(NcbiMetadata.bioproject))).scalar(),
         }
-        tax_map = {t.id: t.full_name for t in Taxonomy.query.all()}
         marker_map = {m.id: m.marker for m in Marker.query.all()}
         biosample_attrs = BioSampleAttributes(app.logger).attributes
         ncbi_infos = NcbiMetadataExtraInfos().extra_info
 
         db.session.add(SandpiperCache(key='stats', value=json.dumps(stats)))
-        db.session.add(
-            SandpiperCache(
-                key='taxonomy_id_to_full_name',
-                value=json.dumps(tax_map),
-            )
-        )
         db.session.add(
             SandpiperCache(
                 key='marker_id_to_name', value=json.dumps(marker_map)
