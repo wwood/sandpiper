@@ -22,6 +22,8 @@ from sandpiper.biosample_attributes import BioSampleAttributes, NcbiMetadataExtr
 
 
 def main(db_path: str):
+    # Set 'SANDPIPER_LOADING_DATA'):
+    os.environ['SANDPIPER_LOADING_DATA'] = '1'
     app = generate_app()
     app.config["SQLALCHEMY_DATABASE_URI"] = f"duckdb:///{db_path}"
     db.init_app(app)

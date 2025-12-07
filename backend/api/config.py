@@ -15,7 +15,7 @@ class BaseConfig:
     else:
         print("Running in DB production mode")
         # Open read-only to avoid database lock issues.
-        DB_NAME = 'sandpiper_35.duckdb?access_mode=READ_ONLY'
+        DB_NAME = 'sandpiper_36.duckdb'
     LYRA_DB_PATH = 'duckdb:///'+os.path.join(os.path.dirname(__file__), '../db/{}'.format(DB_NAME))
     # LYRA_DB_PATH = 'duckdb:////scratch/sandpiper/sandpiper_33.duckdb'
     # LYRA_DB_PATH = 'duckdb:////scratch/sandpiper/sandpiper_19_test.duckdb'
@@ -30,6 +30,8 @@ class BaseConfig:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO=True
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "connect_args": {"read_only": True}
-    }
+    # Set as read-only to avoid locking issues unless we are loading it with data
+    if not os.environ.get('SANDPIPER_LOADING_DATA'):
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "connect_args": {"read_only": True}
+        }

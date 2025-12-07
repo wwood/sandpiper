@@ -1244,6 +1244,9 @@ if __name__ == '__main__':
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
+    # Set 'SANDPIPER_LOADING_DATA'):
+    os.environ['SANDPIPER_LOADING_DATA'] = '1'
+
     # Create the app and create the tables
     db_path = args.o
     app = generate_app()
@@ -1377,7 +1380,7 @@ if __name__ == '__main__':
                 taxonomy_name_to_id, next_taxonomy_id = fill_condensed_and_taxonomy_tables(
                     db, db_path, args.globdb_condensed_otu_table,
                     blacklist, run_accession_to_id, 'globdb', taxonomy_name_to_id, next_taxonomy_id,
-                    allow_new_taxa=False)
+                    allow_new_taxa=True) # Have to allow new taxa here because of the strange s__F0422 sp916438745 case that I emailed Daan about (and maybe more).
 
             add_bioproject_associated_publications(db, db_path, args.bioproject_associated_publications)
 
