@@ -33,7 +33,7 @@ Running unit tests, which tests both frontend and backend:
 pixi run -e sandpiper pytest tests
 ```
 
-# Testing for deplyment
+# Testing for deployment
 
 To ensure that the build process works, before release test that the following works. So far this has only been tested on b2, because docker is unavailable on aqua, which means the DB is unavailable and full testing cannot be done. But at least the containers should build.
 
