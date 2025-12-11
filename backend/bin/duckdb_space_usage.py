@@ -4,8 +4,7 @@ Calculate disk space usage for each table and index inside a DuckDB database fil
 """
 
 import argparse
-import json
-from typing import Dict, Iterable, List, Set, Tuple
+from typing import List, Tuple
 
 import duckdb
 
@@ -18,36 +17,6 @@ def _format_size(num_bytes: int) -> str:
         size /= 1024
         unit += 1
     return f"{size:.2f} {units[unit]}"
-
-
-def _collect_blocks(rows: Iterable[Dict]) -> Tuple[Set[int], Set[int]]:
-    data_blocks: Set[int] = set()
-    index_blocks: Set[int] = set()
-
-    for row in rows:
-        segment_type = str(row.get("segment_type", ""))
-        block_id = row.get("block_id")
-        additional_blocks = row.get("additional_block_ids")
-
-        target = index_blocks if "INDEX" in segment_type.upper() else data_blocks
-
-        if block_id is not None and block_id >= 0:
-            target.add(int(block_id))
-
-        if additional_blocks in (None, ""):
-            continue
-
-        if isinstance(additional_blocks, str):
-            try:
-                additional_blocks = json.loads(additional_blocks)
-            except json.JSONDecodeError:
-                additional_blocks = []
-
-        for extra in additional_blocks:
-            if extra is not None and extra >= 0:
-                target.add(int(extra))
-
-    return data_blocks, index_blocks
 
 
 def _describe_database(con: duckdb.DuckDBPyConnection) -> Tuple[int, List[Tuple[str, str]]]:
@@ -73,6 +42,40 @@ def _quote_identifier(identifier: str) -> str:
     return f'"{escaped}"'
 
 
+def _block_counts(con: duckdb.DuckDBPyConnection, qualified_name: str) -> Tuple[int, int]:
+    """Return (data_block_count, index_block_count) for the given table.
+
+    Computing this inside DuckDB avoids returning per-segment rows to Python, which
+    keeps large databases fast.
+    """
+
+    query = f"""
+        WITH info AS (SELECT * FROM pragma_storage_info({qualified_name})),
+        expanded AS (
+            SELECT segment_type, block_id
+            FROM info
+            WHERE block_id IS NOT NULL AND block_id >= 0
+
+            UNION ALL
+
+            SELECT segment_type, unnest(additional_block_ids) AS block_id
+            FROM info
+            WHERE additional_block_ids IS NOT NULL
+        ),
+        deduped AS (
+            SELECT DISTINCT segment_type, block_id FROM expanded
+        )
+        SELECT
+            COUNT(CASE WHEN segment_type ILIKE '%INDEX%' THEN 1 END) AS index_blocks,
+            COUNT(CASE WHEN segment_type NOT ILIKE '%INDEX%' THEN 1 END) AS data_blocks
+        FROM deduped
+    """
+
+    cursor = con.execute(query)
+    index_blocks, data_blocks = cursor.fetchone()
+    return int(data_blocks), int(index_blocks)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("database", help="Path to DuckDB database file")
@@ -90,17 +93,13 @@ def main() -> None:
             if schema and schema != "main"
             else _quote_identifier(name)
         )
-        cursor = con.execute(f"pragma storage_info({qualified_name})")
-        columns = [col[0] for col in cursor.description]
-        rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
-
-        data_blocks, index_blocks = _collect_blocks(rows)
-        data_bytes = len(data_blocks) * block_size
-        index_bytes = len(index_blocks) * block_size
+        data_blocks, index_blocks = _block_counts(con, qualified_name)
+        data_bytes = data_blocks * block_size
+        index_bytes = index_blocks * block_size
 
         print(f"{schema}.{name}:")
-        print(f"  table size : {_format_size(data_bytes)} ({len(data_blocks)} blocks)")
-        print(f"  index size : {_format_size(index_bytes)} ({len(index_blocks)} blocks)")
+        print(f"  table size : {_format_size(data_bytes)} ({data_blocks} blocks)")
+        print(f"  index size : {_format_size(index_bytes)} ({index_blocks} blocks)")
         print()
 
 
