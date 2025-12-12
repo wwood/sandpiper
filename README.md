@@ -33,6 +33,11 @@ Running unit tests, which tests both frontend and backend:
 pixi run -e sandpiper pytest tests
 ```
 
+Generating the production database is similar, but uses prod_config.yml and takes much longer:
+```
+~/git/sandpiper/snakemake$ pixi run -e sandpiper snakemake --resources ncbi_api=1 -c32 --profile aqua --configfile prod_config.yml
+```
+
 # Testing for deployment
 
 To ensure that the build process works, before release test that the following works. So far this has only been tested on b2, because docker is unavailable on aqua, which means the DB is unavailable and full testing cannot be done. But at least the containers should build.
