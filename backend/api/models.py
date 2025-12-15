@@ -82,6 +82,7 @@ class Taxonomy(db.Model):
     ecological_sample_count = db.Column(db.Integer)
 
     condensed_profiles = db.relationship('CondensedProfile', back_populates='taxonomy', foreign_keys=[CondensedProfile.taxonomy_id])
+    # Below relationships are commented out but preserved for potential future use:
     # condensed_profile_domains = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.domain_id])
     # condensed_profile_phyla = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.phylum_id])
     # condensed_profile_classes = db.relationship('CondensedProfile', foreign_keys=[CondensedProfile.class_id])
