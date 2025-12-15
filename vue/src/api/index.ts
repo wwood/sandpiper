@@ -37,10 +37,6 @@ export function fetchProjectMetadata (model_bioproject: string) {
   return axios.get(`${API_URL}/project?model_bioproject=${model_bioproject}`)
 }
 
-export function fetchOtus (runId: string) {
-  return axios.get(`${API_URL}/full_profile/${runId}`)
-}
-
 export function fetchRunsByTaxonomy (
   taxonomy: string,
   taxonomyType: string,

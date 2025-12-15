@@ -107,7 +107,6 @@ def test_pages():
         "/taxonomy/Bacteria",
         "/run/ERR2194039",
         "/project",
-        "/otus/ERR2194039",
         "/random_run",
         "/accession/ERR2194039",
         "/about",
