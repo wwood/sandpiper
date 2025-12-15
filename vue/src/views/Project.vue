@@ -114,9 +114,6 @@ export default {
     //     return '| ' + this.metadata.metadata_parsed.read_length_summary + ' '
     //   }      
     // },
-    // full_profile_link: function () {
-    //   return api_url() + '/otus/' + this.accession
-    // },
     // publications: function () {
     //   return this.metadata.metadata.study_links.filter(function (link) {
     //     return (typeof link['database'] !== 'undefined')

@@ -19,13 +19,11 @@ from .models import (
     ParsedSampleAttribute,
     db,
     Marker,
-    OtuIndexed,
     CondensedProfile,
     CondensedProfileCtas1,
     Taxonomy,
     SandpiperCache,
 )
-import pandas as pd
 import polars as pl
 # from api.models import #for flask shell
 from .version import __version__, __gtdb_version__, __scrape_date__
@@ -42,22 +40,16 @@ from sandpiper.parse_biosample_extras import ACTUALLY_MISSING
 api = Blueprint('api', __name__)
 
 sandpiper_stats_cache = None
-sandpiper_taxonomy_id_to_full_name = None
-sandpiper_marker_id_to_name = None
 biosample_attribute_definitions = None
 ncbi_metadata_infos = None
 
 def generate_cache():
     global sandpiper_stats_cache
-    global sandpiper_taxonomy_id_to_full_name
-    global sandpiper_marker_id_to_name
     global biosample_attribute_definitions
     global ncbi_metadata_infos
 
     if (
         sandpiper_stats_cache is None
-        or sandpiper_taxonomy_id_to_full_name is None
-        or sandpiper_marker_id_to_name is None
         or biosample_attribute_definitions is None
         or ncbi_metadata_infos is None
     ):
@@ -66,14 +58,6 @@ def generate_cache():
             cache = {row.key: json.loads(row.value) for row in cache_rows}
             if 'stats' in cache and sandpiper_stats_cache is None:
                 sandpiper_stats_cache = cache['stats']
-            if 'taxonomy_id_to_full_name' in cache and sandpiper_taxonomy_id_to_full_name is None:
-                sandpiper_taxonomy_id_to_full_name = {
-                    int(k): v for k, v in cache['taxonomy_id_to_full_name'].items()
-                }
-            if 'marker_id_to_name' in cache and sandpiper_marker_id_to_name is None:
-                sandpiper_marker_id_to_name = {
-                    int(k): v for k, v in cache['marker_id_to_name'].items()
-                }
             if 'biosample_attribute_definitions' in cache and biosample_attribute_definitions is None:
                 biosample_attribute_definitions = {
                     k: BioSampleAttribute(**v)
@@ -94,16 +78,6 @@ def generate_cache():
         sandpiper_stats_cache['sandpiper_total_terrabases'] = db.session.query(func.sum(NcbiMetadata.bases)).scalar()/10**12
         sandpiper_stats_cache['sandpiper_num_runs'] = db.session.query(func.count(distinct(NcbiMetadata.acc))).scalar()
         sandpiper_stats_cache['sandpiper_num_bioprojects'] = db.session.query(func.count(distinct(NcbiMetadata.bioproject))).scalar()
-    if sandpiper_taxonomy_id_to_full_name is None:
-        cache = {}
-        for taxon in Taxonomy.query.all():
-            cache[taxon.id] = taxon.full_name
-        sandpiper_taxonomy_id_to_full_name = cache
-    if sandpiper_marker_id_to_name is None:
-        cache = {}
-        for marker in Marker.query.all():
-            cache[marker.id] = marker.marker
-        sandpiper_marker_id_to_name = cache
     if biosample_attribute_definitions is None:
         biosample_attribute_definitions = BioSampleAttributes(current_app.logger).attributes
     if ncbi_metadata_infos is None:
@@ -142,7 +116,7 @@ def setup_sql_logging():
 
 @api.route('/sandpiper_stats', methods=['GET'])
 def sandpiper_stats():
-    global sandpiper_stats_cache, sandpiper_taxonomy_id_to_full_name, sandpiper_marker_id_to_name
+    global sandpiper_stats_cache
 
     # Cache results because they don't change unless the DB changes
     generate_cache()
@@ -298,48 +272,6 @@ def wordnode_json(wordnode, order, depth):
     if len(wordnode.children.values()) > 0:
         j['children'] = [wordnode_json(child, order+i, depth+1) for i, child in enumerate(sorted_children)]
     return j
-
-@api.route('/full_profile/<string:sample_name>', methods=('GET',))
-def fetch_full_profile(sample_name):
-    # Doesn't usually cache anything, but useful to have here for testing
-    generate_cache()
-
-    run_id = NcbiMetadata.query.filter_by(acc=sample_name).first().id
-    if run_id is None:
-        return jsonify({ 'error': 'no run found for acc '+sample_name })
-
-    otus = db.session.execute(
-        select(OtuIndexed, Taxonomy.full_name)
-        .outerjoin(Taxonomy, OtuIndexed.taxonomy_id == Taxonomy.id)
-        .where(OtuIndexed.run_id == run_id)
-        .where(OtuIndexed.marker_id == 1)
-        .order_by(OtuIndexed.id)
-    ).all()
-
-    root = WordNode(None, 'Root')
-    taxons_to_wordnode = {root.word: root}
-
-    for (i, (otu, taxonomy_full_name)) in enumerate(otus):
-        if otu.taxonomy_id == 0:
-            taxonomy = 'Root'
-        elif taxonomy_full_name is not None:
-            taxonomy = 'Root; ' + taxonomy_full_name
-        else:
-            taxonomy = otu.taxonomy_id
-        taxons = taxonomy.split('; ') + ['OTU ' + str(i + 1)]
-
-        last_taxon = root
-        wn = None
-        for tax in taxons:
-            if tax not in taxons_to_wordnode:
-                wn = WordNode(last_taxon, tax)
-                last_taxon.children[tax] = wn
-                taxons_to_wordnode[tax] = wn #TODO: Problem when there is non-unique labels? Require full taxonomy used?
-            last_taxon = taxons_to_wordnode[tax]
-        last_taxon.coverage = otu.coverage
-
-    return jsonify({ 'otus': wordnode_json(root, 0, 0), 'sample_name': sample_name })
-
 
 def _read_length_summary(read1_length_average, read2_length_average):
     if read1_length_average is not None and read2_length_average is not None:
@@ -863,38 +795,6 @@ def get_lat_lons(taxonomy_id, max_to_show):
         # are no lat lons for any sample where this taxon is found.
         min_lat_lon_relabund = 0
     return list(lat_lons.values()), lat_lons_count, min_lat_lon_relabund
-
-@api.route('/otus/<string:acc>', methods=('GET',))
-def otus(acc):
-    global sandpiper_taxonomy_id_to_full_name, sandpiper_marker_id_to_name
-
-    # Doesn't usually cache anything, but useful to have here for testing
-    generate_cache()
-
-    run_id = NcbiMetadata.query.filter_by(acc=acc).first().id
-    if run_id is None:
-        return jsonify({ 'error': 'no run found for acc '+acc })
-
-    otus = OtuIndexed.query.filter_by(run_id=run_id).order_by(OtuIndexed.id).all()
-
-    df = pd.DataFrame(
-        [[
-            # gene	sample	sequence	num_hits	coverage	taxonomy
-            sandpiper_marker_id_to_name[otu.marker_id],
-            acc,
-            otu.sequence,
-            otu.num_hits,
-            otu.coverage,
-            ('Root' if otu.taxonomy_id==0 else 'Root; ' + sandpiper_taxonomy_id_to_full_name[otu.taxonomy_id]) if otu.taxonomy_id in sandpiper_taxonomy_id_to_full_name else otu.taxonomy_id
-        ] for otu in otus],
-        columns=['gene','sample','sequence','num_hits','coverage','taxonomy']
-    )
-    response = make_response(df.to_csv(index=False, header=True, sep='\t'))
-    taxonomy_type = 'gtdb' #TODO: Add GlobDB
-    cd = 'attachment; filename=sandpiper_v{}_{}_{}.otu_table.csv'.format(__version__, acc, taxonomy_type)
-    response.headers['Content-Disposition'] = cd
-    response.mimetype = 'text/csv'
-    return response
 
 # ?host=${host}&ecological=${ecological}&two_gbp=${two_gbp}
 @api.route('/random_run', methods=('GET',))
