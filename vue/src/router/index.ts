@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import Search from '../views/Search.vue'
 import Run from '../views/Run.vue'
-import Otus from '../views/Otus.vue'
 import SearchResults from '../views/SearchResult.vue'
 import About from '../views/About.vue'
 import RunRandom from '../views/RunRandom.vue'
@@ -36,12 +35,6 @@ const routes = [
     path: '/project',
     name: 'Project',
     component: Project,
-    props: true
-  },
-  {
-    path: '/otus/:accession',
-    name: 'Otus',
-    component: Otus,
     props: true
   },
   {

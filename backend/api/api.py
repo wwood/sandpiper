@@ -19,7 +19,6 @@ from .models import (
     ParsedSampleAttribute,
     db,
     Marker,
-    OtuIndexed,
     CondensedProfile,
     CondensedProfileCtas1,
     Taxonomy,
@@ -299,46 +298,7 @@ def wordnode_json(wordnode, order, depth):
         j['children'] = [wordnode_json(child, order+i, depth+1) for i, child in enumerate(sorted_children)]
     return j
 
-@api.route('/full_profile/<string:sample_name>', methods=('GET',))
-def fetch_full_profile(sample_name):
-    # Doesn't usually cache anything, but useful to have here for testing
-    generate_cache()
 
-    run_id = NcbiMetadata.query.filter_by(acc=sample_name).first().id
-    if run_id is None:
-        return jsonify({ 'error': 'no run found for acc '+sample_name })
-
-    otus = db.session.execute(
-        select(OtuIndexed, Taxonomy.full_name)
-        .outerjoin(Taxonomy, OtuIndexed.taxonomy_id == Taxonomy.id)
-        .where(OtuIndexed.run_id == run_id)
-        .where(OtuIndexed.marker_id == 1)
-        .order_by(OtuIndexed.id)
-    ).all()
-
-    root = WordNode(None, 'Root')
-    taxons_to_wordnode = {root.word: root}
-
-    for (i, (otu, taxonomy_full_name)) in enumerate(otus):
-        if otu.taxonomy_id == 0:
-            taxonomy = 'Root'
-        elif taxonomy_full_name is not None:
-            taxonomy = 'Root; ' + taxonomy_full_name
-        else:
-            taxonomy = otu.taxonomy_id
-        taxons = taxonomy.split('; ') + ['OTU ' + str(i + 1)]
-
-        last_taxon = root
-        wn = None
-        for tax in taxons:
-            if tax not in taxons_to_wordnode:
-                wn = WordNode(last_taxon, tax)
-                last_taxon.children[tax] = wn
-                taxons_to_wordnode[tax] = wn #TODO: Problem when there is non-unique labels? Require full taxonomy used?
-            last_taxon = taxons_to_wordnode[tax]
-        last_taxon.coverage = otu.coverage
-
-    return jsonify({ 'otus': wordnode_json(root, 0, 0), 'sample_name': sample_name })
 
 
 def _read_length_summary(read1_length_average, read2_length_average):
@@ -864,37 +824,7 @@ def get_lat_lons(taxonomy_id, max_to_show):
         min_lat_lon_relabund = 0
     return list(lat_lons.values()), lat_lons_count, min_lat_lon_relabund
 
-@api.route('/otus/<string:acc>', methods=('GET',))
-def otus(acc):
-    global sandpiper_taxonomy_id_to_full_name, sandpiper_marker_id_to_name
 
-    # Doesn't usually cache anything, but useful to have here for testing
-    generate_cache()
-
-    run_id = NcbiMetadata.query.filter_by(acc=acc).first().id
-    if run_id is None:
-        return jsonify({ 'error': 'no run found for acc '+acc })
-
-    otus = OtuIndexed.query.filter_by(run_id=run_id).order_by(OtuIndexed.id).all()
-
-    df = pd.DataFrame(
-        [[
-            # gene	sample	sequence	num_hits	coverage	taxonomy
-            sandpiper_marker_id_to_name[otu.marker_id],
-            acc,
-            otu.sequence,
-            otu.num_hits,
-            otu.coverage,
-            ('Root' if otu.taxonomy_id==0 else 'Root; ' + sandpiper_taxonomy_id_to_full_name[otu.taxonomy_id]) if otu.taxonomy_id in sandpiper_taxonomy_id_to_full_name else otu.taxonomy_id
-        ] for otu in otus],
-        columns=['gene','sample','sequence','num_hits','coverage','taxonomy']
-    )
-    response = make_response(df.to_csv(index=False, header=True, sep='\t'))
-    taxonomy_type = 'gtdb' #TODO: Add GlobDB
-    cd = 'attachment; filename=sandpiper_v{}_{}_{}.otu_table.csv'.format(__version__, acc, taxonomy_type)
-    response.headers['Content-Disposition'] = cd
-    response.mimetype = 'text/csv'
-    return response
 
 # ?host=${host}&ecological=${ecological}&two_gbp=${two_gbp}
 @api.route('/random_run', methods=('GET',))

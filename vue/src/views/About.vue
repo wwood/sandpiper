@@ -47,7 +47,7 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
       <p>Community profiles derived from older versions are available as a bulk download (see above).</p><br />
 
       <h2 class="title is-5">Community profiling</h2>
-      <p>These raw SingleM taxonomic profiles, which contain OTUs derived from the 59 genes, are available for download from each run's page. However, for ease of interpretation and search, runs on this website are usually represented as a 'condensed' profile. These condensed profiles are a unified version of the profiles derived from each marker gene, so there is only one profile to inspect (instead of 59), though condensed profiles collapse the OTUs from each taxon into a single group.</p><br />
+      <p>For ease of interpretation and search, runs on this website are represented as a 'condensed' profile. These condensed profiles unify the profiles from each marker gene into a single profile (instead of 59 separate profiles), collapsing OTUs from each taxon into unified groups.</p><br />
 
       <p>For more complicated analyses, such as searching for OTUs that cannot be easily isolated through their taxonomy (e.g. if they are novel), a more bespoke search procedure might be more appropriate. These kinds of analyses cannot currently be done on the sandpiper website, but in such cases please <a :href="'mailto:'+decode('o.jbbqpebsg@dhg.rqh.nh')">get in touch</a> with us.</p><br />
 
