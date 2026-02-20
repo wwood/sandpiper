@@ -44,7 +44,7 @@ if __name__ == '__main__':
     parent_parser.add_argument('--debug', help='output debug information', action="store_true")
     #parent_parser.add_argument('--version', help='output version information and quit',  action='version', version=repeatm.__version__)
     parent_parser.add_argument('--quiet', help='only output errors', action="store_true")
-    parent_parser.add_argument('--target', help='amplicon or shotgun', choices=['amplicon','shotgun'], required=True)
+    parent_parser.add_argument('--target', help='amplicon or shotgun', choices=['amplicon','shotgun','shotgun-nanopore'], required=True)
     parent_parser.add_argument('--bucket-name', help='bucket name', default='singlem-sra-metadata-gathering')
 
     args = parent_parser.parse_args()
@@ -138,7 +138,7 @@ WHERE
 		 or 
 	organism IN (SELECT sci_name FROM metadata.emp)
 	)
-    AND platform = 'ILLUMINA'
+    AND platform = '__SQL_PLATFORM__'
     AND consent = 'public'
 """
 
@@ -175,19 +175,35 @@ WHERE
       shotgun_destination_path = 'gs://{}/shotgun_sra_{}/*'.format(args.bucket_name, args.date)
       logging.info("Querying and writing shotgun results to {} ..".format(shotgun_destination_path))
 
-      sql1 = sql.replace('__SQL_JSON_RESULTS_URI__',shotgun_destination_path) + metagenome_specfic_sql
+      sql1 = sql.replace(
+         '__SQL_JSON_RESULTS_URI__',shotgun_destination_path).replace(
+            '__SQL_PLATFORM__', 'ILLUMINA') + metagenome_specfic_sql
 
       extern.run('bq query --use_legacy_sql=false', stdin=sql1)
       logging.info("Finished querying for shotgun")
 
 
+    #### SHOTGUN NANOPORE
+    elif args.target == 'shotgun-nanopore':
+      shotgun_destination_path = 'gs://{}/shotgun_nanopore_sra_{}/*'.format(args.bucket_name, args.date)
+      logging.info("Querying and writing shotgun nanopore results to {} ..".format(shotgun_destination_path))
+
+      sql1 = sql.replace(
+         '__SQL_JSON_RESULTS_URI__',shotgun_destination_path).replace(
+            '__SQL_PLATFORM__', 'OXFORD_NANOPORE') + metagenome_specfic_sql
+
+      extern.run('bq query --use_legacy_sql=false', stdin=sql1)
+      logging.info("Finished querying for shotgun nanopore")
+
+
     ##### AMPLICON
     elif args.target == 'amplicon':
       amplicon_destination_path = 'gs://{}/amplicon_sra_{}/*'.format(args.bucket_name, args.date)
-      logging.info("Querying and writing shotgun results to {} ..".format(amplicon_destination_path))
+      logging.info("Querying and writing amplicon results to {} ..".format(amplicon_destination_path))
 
-      sql2 = sql.replace('__SQL_JSON_RESULTS_URI__',amplicon_destination_path) + amplicon_specific_sql
-      # print(sql2)
+      sql2 = sql.replace(
+         '__SQL_JSON_RESULTS_URI__',amplicon_destination_path).replace(
+            '__SQL_PLATFORM__', 'ILLUMINA') + amplicon_specific_sql
 
       extern.run('bq query --use_legacy_sql=false', stdin=sql2)
       logging.info("Finished querying for amplicon")
