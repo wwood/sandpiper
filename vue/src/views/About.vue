@@ -25,7 +25,7 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
       <p>Ben J. Woodcroft, Samuel T. N. Aroney, Rossen Zhao, Mitchell Cunningham, Joshua A. M. Mitchell, Rizky Nurdiansyah, Linda Blackall & Gene W. Tyson. <i>Comprehensive taxonomic identification of microbial species in metagenomic data using SingleM and Sandpiper</i>. Nat Biotechnol (2025). <a>https://doi.org/10.1038/s41587-025-02738-1</a></p><br />
 
       <p>The prokaryotic fraction (SPF) mode of SingleM:</p><br />
-      <p>Eisenhofer, Raphael, Antton Alberdi, and Ben J. Woodcroft. <i>Large-scale estimation of bacterial and archaeal DNA prevalence in metagenomes reveals biome-specific patterns.</i> bioRxiv (2024): 2024-05. <a href='https://doi.org/10.1101/2024.05.16.594470'>https://doi.org/10.1101/2024.05.16.594470</a></p><br />
+      <p>Raphael Eisenhofer, Antton Alberdi, Ben J. Woodcroft. <i>Large-scale estimation of bacterial and archaeal DNA prevalence in metagenomes reveals biome-specific patterns</i>. mSystems 0:e01062-25. <a href="https://doi.org/10.1128/msystems.01062-25">https://doi.org/10.1128/msystems.01062-25</a>.</p><br />
     </section>
 
     <section class="section is-small container has-text-justified">
