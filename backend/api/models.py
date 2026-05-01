@@ -130,6 +130,9 @@ class ParsedSampleAttribute(db.Model):
     smf_warning = db.Column(db.Boolean)
     known_species_fraction = db.Column(db.Float)
     globdb_known_species_fraction = db.Column(db.Float)
+    low_complexity = db.Column(db.Boolean)
+    top1_order_fraction = db.Column(db.Float)
+    top3_order_fraction = db.Column(db.Float)
 
     def to_displayable_dict(self):
         return dict(
@@ -146,7 +149,10 @@ class ParsedSampleAttribute(db.Model):
             smf=self.smf,
             smf_warning=self.smf_warning,
             known_species_fraction=self.known_species_fraction,
-            globdb_known_species_fraction=self.globdb_known_species_fraction)
+            globdb_known_species_fraction=self.globdb_known_species_fraction,
+            low_complexity=self.low_complexity,
+            top1_order_fraction=self.top1_order_fraction,
+            top3_order_fraction=self.top3_order_fraction)
 
 
 class StudyLink(db.Model):

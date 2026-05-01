@@ -312,6 +312,9 @@ def fetch_metadata(sample_name):
         'host_or_not_mature': host_mature,
         'smf': round(metadata_dict['parsed_sample_attributes']['smf']),
         'smf_warning': metadata_dict['parsed_sample_attributes']['smf_warning'],
+        'low_complexity': metadata_dict['parsed_sample_attributes']['low_complexity'],
+        'top1_order_fraction': metadata_dict['parsed_sample_attributes']['top1_order_fraction'],
+        'top3_order_fraction': metadata_dict['parsed_sample_attributes']['top3_order_fraction'],
         'known_species_fraction': round(metadata_dict['parsed_sample_attributes']['known_species_fraction']*100),
         'globdb_known_species_fraction': (
             round(metadata_dict['parsed_sample_attributes']['globdb_known_species_fraction'] * 100)
@@ -398,6 +401,26 @@ def fetch_metadata(sample_name):
     if SAMPLE_INFO_TYPE_METADATA not in d2:
         d2[SAMPLE_INFO_TYPE_METADATA] = []
     d2[SAMPLE_INFO_TYPE_METADATA].extend(biosample_dict)
+
+    # Inject computed complexity fractions into sequencing metadata
+    if SEQUENCING_TYPE_METADATA not in d2:
+        d2[SEQUENCING_TYPE_METADATA] = []
+    top1 = metadata_dict['parsed_sample_attributes']['top1_order_fraction']
+    top3 = metadata_dict['parsed_sample_attributes']['top3_order_fraction']
+    if top1 is not None:
+        d2[SEQUENCING_TYPE_METADATA].append({
+            'k': 'top order fraction',
+            'v': f'{top1:.2f}%',
+            'is_custom': False,
+            'description': 'Fraction of prokaryotic reads assigned to the single most abundant order. High values (≥0.95) indicate a low complexity sample dominated by one bacterial/archaeal order.'
+        })
+    if top3 is not None:
+        d2[SEQUENCING_TYPE_METADATA].append({
+            'k': 'top 3 orders fraction',
+            'v': f'{top3:.2f}%',
+            'is_custom': False,
+            'description': 'Fraction of prokaryotic reads assigned to the three most abundant orders. High values (≥0.95) indicate a low complexity sample dominated by a small number of bacterial/archaeal orders.'
+        })
 
     # Some are double e.g. https://sandpiper.qut.edu.au/run/SRR9224309 has 2 PubMed study_links
     final_study_links = []
@@ -491,7 +514,8 @@ def taxonomy_search_run_data(taxon):
                 'relative_abundance': round(c.relative_abundance*100,2),
                 'coverage': round(c.filled_coverage, 2),
                 'organism': "unspecified" if c.taxon_name is None else c.taxon_name.replace(' metagenome',''),
-                'release_year': c.published.strftime('%Y'),}
+                'release_year': c.published.strftime('%Y'),
+                'top1_order_fraction': round(c.top1_order_fraction, 2) if c.top1_order_fraction is not None else None,}
                 for c in condensed_profile_hits],                
             }
         })
@@ -516,7 +540,7 @@ def taxonomy_search_csv(taxon):
             'eukaryotic_host_association', 'num_reads', 'read_length_summary', 'sequencing_instrument', 'collection_year',
             'spf', 'spf_warning',
             'gtdb_known_species_fraction_percent', 'globdb_known_species_fraction_percent',
-            'latitude', 'longitude'
+            'latitude', 'longitude', 'top1_order_fraction_percent'
         ]
 
         def generate_csv_rows():
@@ -557,6 +581,7 @@ def taxonomy_search_csv(taxon):
                             else None,
                             c.latitude,
                             c.longitude,
+                            f'{round(c.top1_order_fraction)}%' if c.top1_order_fraction is not None else None,
                         ])
                     yield buffer.getvalue()
                     buffer.seek(0)
@@ -581,7 +606,7 @@ def taxonomy_search_csv_minimal(taxon):
 
     if worked:
         headers = [
-            'run', 'environment', 'release_year', 'relative_abundance_percent', 'coverage'
+            'run', 'environment', 'release_year', 'relative_abundance_percent', 'coverage', 'low_complexity'
         ]
 
         def generate_csv_rows():
@@ -610,6 +635,7 @@ def taxonomy_search_csv_minimal(taxon):
                             release_year,
                             round(c.relative_abundance * 100, 2),
                             round(c.filled_coverage, 2),
+                            c.low_complexity,
                         ])
                     yield buffer.getvalue()
                     buffer.seek(0)
@@ -656,7 +682,7 @@ def taxonomy_search_core(
     page = int(page) if page is not None else 0
     page_size = int(page_size) if page_size is not None else 100
 
-    if sort_field not in ['relative_abundance', 'coverage', 'release_year']:
+    if sort_field not in ['relative_abundance', 'coverage', 'release_year', 'top1_order_fraction']:
         return False, jsonify({ 'error': 'invalid sort field' })
     if sort_direction not in ['asc', 'desc']:
         return False, jsonify({ 'error': 'invalid sort direction' })
@@ -691,6 +717,7 @@ def taxonomy_search_core(
                 ParsedSampleAttribute.smf_warning,
                 ParsedSampleAttribute.known_species_fraction,
                 ParsedSampleAttribute.globdb_known_species_fraction,
+                ParsedSampleAttribute.top1_order_fraction,
             ).where(CondensedProfileCtas1.run_id == NcbiMetadata.id
             ).where(ParsedSampleAttribute.run_id == NcbiMetadata.id)
         else:
@@ -700,8 +727,11 @@ def taxonomy_search_core(
                 CondensedProfileCtas1.filled_coverage,
                 NcbiMetadata.taxon_name,
                 NcbiMetadata.published,
+                ParsedSampleAttribute.top1_order_fraction,
+                ParsedSampleAttribute.low_complexity,
                 # TODO: Add experiment title here, not currently in DB
-            ).where(CondensedProfileCtas1.run_id == NcbiMetadata.id)
+            ).where(CondensedProfileCtas1.run_id == NcbiMetadata.id
+            ).where(ParsedSampleAttribute.run_id == NcbiMetadata.id)
 
         
         if sort_field == 'relative_abundance':
@@ -719,6 +749,11 @@ def taxonomy_search_core(
                 hits_query = stmt.order_by(NcbiMetadata.published.desc())
             else:
                 hits_query = stmt.order_by(NcbiMetadata.published.asc())
+        elif sort_field == 'top1_order_fraction':
+            if sort_direction == 'desc':
+                hits_query = stmt.order_by(ParsedSampleAttribute.top1_order_fraction.desc())
+            else:
+                hits_query = stmt.order_by(ParsedSampleAttribute.top1_order_fraction.asc())
 
         if not no_limit:
             hits_query = hits_query.limit(page_size).offset((page-1)*page_size)
@@ -802,6 +837,7 @@ def random_run():
     host = request.args.get('host') == 'true'
     ecological = request.args.get('ecological') == 'true'
     two_gbp = request.args.get('two_gbp') == 'true'
+    exclude_strict_low_complexity = request.args.get('exclude_strict_low_complexity') == 'true'
 
     stmt = select(NcbiMetadata.acc).order_by(func.random())
     if host==True and ecological==True:
@@ -820,6 +856,12 @@ def random_run():
 
     if two_gbp == True:
         stmt = stmt.where(NcbiMetadata.bases >= 2e9)
+
+    if exclude_strict_low_complexity:
+        stmt = stmt.where(NcbiMetadata.id == ParsedSampleAttribute.run_id).where(
+            (ParsedSampleAttribute.top1_order_fraction == None) |
+            (ParsedSampleAttribute.top1_order_fraction < 95.0)
+        )
 
     ran = db.session.execute(stmt).fetchone()
 
