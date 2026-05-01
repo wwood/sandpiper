@@ -35,6 +35,7 @@
         <b-switch v-model="random_choice_host">Eukaryote host-associated</b-switch>
         <b-switch v-model="random_choice_ecological">Ecological</b-switch>
         <b-switch v-model="random_choice_two_gbp">2+ Gbp</b-switch>
+        <b-switch v-model="random_exclude_strict_low_complexity">Exclude low complexity (≥95% one order)</b-switch>
       </b-field>
       <br /><b-button type="is-primary" @click="search_by_random">Search</b-button>
     </section>
@@ -61,7 +62,8 @@ export default {
 
       random_choice_host: false,
       random_choice_ecological: true,
-      random_choice_two_gbp: true
+      random_choice_two_gbp: true,
+      random_exclude_strict_low_complexity: true
     }
   },
 
@@ -125,10 +127,11 @@ export default {
     },
 
     search_by_random () {
-      this.$router.push({ name: 'RunRandom', query: { 
+      this.$router.push({ name: 'RunRandom', query: {
         host: this.random_choice_host,
         ecological: this.random_choice_ecological,
-        two_gbp: this.random_choice_two_gbp
+        two_gbp: this.random_choice_two_gbp,
+        exclude_strict_low_complexity: this.random_exclude_strict_low_complexity
       }})
     }
   }

@@ -39,7 +39,7 @@
               </span>
       <!-- {{ related_runs_short }}  -->
             <br />
-            SingleM prokaryotic fraction (SPF) <span style="smf_low">{{ metadata.metadata_parsed.smf }}%</span> | Known species fraction {{ known_species_fraction }}%
+            SingleM prokaryotic fraction (SPF) <span style="smf_low">{{ metadata.metadata_parsed.smf }}%</span> | Known species fraction {{ known_species_fraction }}% | Low complexity: {{ metadata.metadata_parsed.low_complexity ? 'Yes' : 'No' }}
             <br />
           </div>
 

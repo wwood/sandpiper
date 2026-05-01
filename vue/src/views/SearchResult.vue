@@ -115,6 +115,11 @@
         </h2>
         <b-button tag="a" type="is-info" :href="minimal_csv_link()">Download minimal CSV</b-button>&nbsp;
         <b-button tag="a" type="is-info" :href="csv_link()">Download CSV with extra columns</b-button>
+        <br /><br />
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <b-switch v-model="show_low_complexity_count">Low complexity</b-switch>
+          <strong v-if="show_low_complexity_count">{{ low_complexity_count }} / {{ total_num_results }} runs have ≥95% reads from one order (Low Complexity)</strong>
+        </div>
         <b-table
           :data="search_result['condensed_profiles']"
           :striped="true"
@@ -150,6 +155,7 @@
           <b-table-column field='coverage' label='Coverage' v-slot="props" centered sortable>
             {{ props.row.coverage }}
           </b-table-column>
+
         </b-table>
       </section>
     </div>
@@ -221,6 +227,7 @@ export default {
       lineage: [], // set to empty because otherwise there's a null pointer issue until filled
       sortIcon: 'arrow-up',
       total_num_results: null,
+      show_low_complexity_count: false,
       page: 1,
       pageSize: 100,
       sortField: 'relative_abundance',
@@ -247,6 +254,12 @@ export default {
     },
     disableGlobdb () {
       return this.taxonomy_type === 'gtdb' && this.other_taxon_available === false
+    },
+    low_complexity_count () {
+      if (!this.search_result) return 0
+      return this.search_result['condensed_profiles'].filter(
+        r => r.top1_order_fraction !== null && r.top1_order_fraction >= 95
+      ).length
     }
   },
   created () {

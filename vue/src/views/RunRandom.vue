@@ -26,11 +26,14 @@ export default {
     },
     two_gbp() {
       return this.$route.query.two_gbp
+    },
+    exclude_strict_low_complexity() {
+      return this.$route.query.exclude_strict_low_complexity
     }
   },
   methods: {
     fetchData () {
-      fetchRandomAccession(this.host, this.ecological, this.two_gbp)
+      fetchRandomAccession(this.host, this.ecological, this.two_gbp, this.exclude_strict_low_complexity)
         .then(response => {
           const acc = response.data.run
           this.$router.push({ name: 'Run', params: { accession: acc } })
