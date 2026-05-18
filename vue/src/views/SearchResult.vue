@@ -117,8 +117,10 @@
         <b-button tag="a" type="is-info" :href="csv_link()">Download CSV with extra columns</b-button>
         <br /><br />
         <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <b-switch v-model="show_low_complexity_count">Low complexity</b-switch>
-          <strong v-if="show_low_complexity_count">{{ low_complexity_count }} / {{ total_num_results }} runs have ≥95% reads from one order (Low Complexity)</strong>
+          <b-button tag="a" type="is-info" :href="minimal_csv_link()">Download minimal CSV</b-button>
+          <b-button tag="a" type="is-info" :href="csv_link()">Download CSV with extra columns</b-button>
+          <b-switch v-model="exclude_low_complexity">Exclude low complexity</b-switch>
+          <span v-if="!exclude_low_complexity" style="font-weight: bold; align-self: center; line-height: 1;">{{ low_complexity_count }} / {{ total_num_results }} runs have ≥95% reads from one order (Low Complexity)</span>
         </div>
         <b-table
           :data="search_result['condensed_profiles']"
@@ -132,7 +134,7 @@
           pagination-simple
           backend-pagination
           backend-sorting
-          :total="total_num_results"
+          :total="filtered_total !== null ? filtered_total : total_num_results"
           @page-change="onPageChange"
           @sort="onSort">
 
@@ -260,6 +262,13 @@ export default {
       return this.search_result['condensed_profiles'].filter(
         r => r.top1_order_fraction !== null && r.top1_order_fraction >= 95
       ).length
+    },
+    filtered_profiles () {
+      if (!this.search_result) return []
+      if (!this.exclude_low_complexity) return this.search_result['condensed_profiles']
+      return this.search_result['condensed_profiles'].filter(
+        r => r.top1_order_fraction === null || r.top1_order_fraction < 95
+      )
     }
   },
   created () {
@@ -359,9 +368,10 @@ export default {
       }
       this.search_result = null
 
-      fetchRunsByTaxonomy(this.taxonomy, this.taxonomy_type, this.page, this.sortField, this.sortDirection, this.pageSize)
+      fetchRunsByTaxonomy(this.taxonomy, this.taxonomy_type, this.page, this.sortField, this.sortDirection, this.pageSize, this.exclude_low_complexity)
         .then(response => {
           this.search_result = response.data.results
+          this.filtered_total = response.data.results.filtered_total ?? null
         })
     },
     onTaxonomyTypeChange (value) {
@@ -409,8 +419,17 @@ export default {
     }
   },
   watch: {
-    // call again the method if the route changes
-    $route: 'fetchGlobalData'
+    $route: 'fetchGlobalData',
+    exclude_low_complexity () {
+      const scrollY = window.scrollY
+      this.page = 1
+      fetchRunsByTaxonomy(this.taxonomy, this.taxonomy_type, this.page, this.sortField, this.sortDirection, this.pageSize, this.exclude_low_complexity)
+        .then(response => {
+          this.search_result = response.data.results
+          this.filtered_total = response.data.results.filtered_total ?? null
+          this.$nextTick(() => window.scrollTo(0, scrollY))
+        })
+    }
   }
 }
 </script>
