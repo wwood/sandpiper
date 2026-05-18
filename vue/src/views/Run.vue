@@ -80,10 +80,10 @@
           <h3 class="title">Taxonomic profile</h3>
           <b-field>
             <b-radio-button v-model="taxonomy_db" native-value="gtdb" @input="fetchCondensed" type="is-info">
-              GTDB
+              GTDB ({{ GTDB_VERSION }})
             </b-radio-button>
             <b-radio-button v-model="taxonomy_db" native-value="globdb" @input="fetchCondensed" type="is-warning">
-              GlobDB
+              GlobDB ({{ GLOBDB_VERSION }})
             </b-radio-button>
           </b-field>
           <div class="sunburst">
@@ -120,13 +120,13 @@
           <h3 class="title">Download</h3>
 
           <p>
-            The taxonomic profile of this sample can be downloaded in tab-separated "SingleM condensed with extras" format, generated with <a :href="profile_csv_with_extras_link_gtdb">GTDB</a> or <a :href="profile_csv_with_extras_link_globdb">GlobDB</a> taxonomy. This details the coverage assigned to each taxon at each taxonomic level, both <a href="https://wwood.github.io/singlem/Glossary">filled and unfilled</a>, plus the relative abundance of each taxon.</p>
+            The taxonomic profile of this sample can be downloaded in tab-separated "SingleM condensed with extras" format, generated with <a :href="profile_csv_with_extras_link_gtdb">GTDB ({{ GTDB_VERSION }})</a> or <a :href="profile_csv_with_extras_link_globdb">GlobDB ({{ GLOBDB_VERSION }})</a> taxonomy. This details the coverage assigned to each taxon at each taxonomic level, both <a href="https://wwood.github.io/singlem/Glossary">filled and unfilled</a>, plus the relative abundance of each taxon.</p>
           <br />
 
-          <p>Concise "SingleM condensed" format files with three columns sample name, coverage, and taxonomy are also available for download (<a :href="profile_csv_link_gtdb">GTDB</a> or <a :href="profile_csv_link_globdb">GlobDB</a>). In this format the coverage of each lineage is the coverage assigned to that taxon and not more specifically e.g. the coverage of a species is not included in the coverage shown for its genus. These taxonomic profiles can be converted to other forms (e.g. one that gives the relative abundance instead of the coverage) using the <a href="https://wwood.github.io/singlem/tools/summarise">SingleM summarise</a> tool.</p>
+          <p>Concise "SingleM condensed" format files with three columns sample name, coverage, and taxonomy are also available for download (<a :href="profile_csv_link_gtdb">GTDB ({{ GTDB_VERSION }})</a> or <a :href="profile_csv_link_globdb">GlobDB ({{ GLOBDB_VERSION }})</a>). In this format the coverage of each lineage is the coverage assigned to that taxon and not more specifically e.g. the coverage of a species is not included in the coverage shown for its genus. These taxonomic profiles can be converted to other forms (e.g. one that gives the relative abundance instead of the coverage) using the <a href="https://wwood.github.io/singlem/tools/summarise">SingleM summarise</a> tool.</p>
           <br />
 
-          <p>Unfortunately, for now, the <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> (GTDB annotated) tab-separated file containing information about each OTU from each marker cannot be downloaded directly from this website.</p>
+          <p>Unfortunately, for now, the <a :href="full_profile_link">full SingleM OTU table of {{ accession }}</a> (GTDB ({{ GTDB_VERSION }}) annotated) tab-separated file containing information about each OTU from each marker cannot be downloaded directly from this website.</p>
         </div>
       </section>
     </div>
@@ -160,6 +160,7 @@ import Sunburst3 from '@/components/Sunburst3.vue'
 import RunMetadata from '@/components/RunMetadata.vue'
 
 import { api_url, fetchRunMetadata, fetchRunCondensed } from '@/api'
+import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
 
 export default {
   name: 'Run',
@@ -168,6 +169,8 @@ export default {
   },
   data: function () {
     return {
+      GTDB_VERSION,
+      GLOBDB_VERSION,
       condensed_tree: null,
       condensed_cache: {},
       metadata: null,

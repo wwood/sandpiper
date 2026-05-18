@@ -18,20 +18,20 @@
               native-value="gtdb"
               :disabled="disableGtdb" type="is-info"
               @input="onTaxonomyTypeChange('gtdb')">
-              GTDB
+              GTDB ({{ GTDB_VERSION }})
             </b-radio-button>
             <b-radio-button
               v-model="taxonomy_type"
               native-value="globdb"
               :disabled="disableGlobdb" type="is-warning"
               @input="onTaxonomyTypeChange('globdb')">
-              GlobDB
+              GlobDB ({{ GLOBDB_VERSION }})
             </b-radio-button>
           </b-field>
-          <p class="help">Viewing {{ taxonomy_type === 'gtdb' ? 'GTDB' : 'GlobDB' }} entry.</p>
+          <p class="help">Viewing {{ taxonomy_type === 'gtdb' ? `GTDB (${GTDB_VERSION})` : `GlobDB (${GLOBDB_VERSION})` }} entry.</p>
           <p class="help" v-if="other_taxon_available === false">
-            <span v-if="taxonomy_type==='gtdb'">Taxon not available in GlobDB view.</span>
-            <span v-else>Taxon not available in GTDB view.</span>
+            <span v-if="taxonomy_type==='gtdb'">Taxon not available in GlobDB ({{ GLOBDB_VERSION }}) view.</span>
+            <span v-else>Taxon not available in GTDB ({{ GTDB_VERSION }}) view.</span>
           </p>
         </div>
       </section>
@@ -113,17 +113,15 @@
           <a class="bd-anchor-link" href="#matching-samples"># </a>
           <span class="bd-anchor-name">Matching samples</span>
         </h2>
-        <b-button tag="a" type="is-info" :href="minimal_csv_link()">Download minimal CSV</b-button>&nbsp;
-        <b-button tag="a" type="is-info" :href="csv_link()">Download CSV with extra columns</b-button>
-        <br /><br />
         <div style="display: flex; align-items: center; gap: 0.75rem;">
           <b-button tag="a" type="is-info" :href="minimal_csv_link()">Download minimal CSV</b-button>
           <b-button tag="a" type="is-info" :href="csv_link()">Download CSV with extra columns</b-button>
           <b-switch v-model="exclude_low_complexity">Exclude low complexity</b-switch>
           <span v-if="!exclude_low_complexity" style="font-weight: bold; align-self: center; line-height: 1;">{{ low_complexity_count }} / {{ total_num_results }} runs have ≥95% reads from one order (Low Complexity)</span>
         </div>
+        <br />
         <b-table
-          :data="search_result['condensed_profiles']"
+          :data="filtered_profiles"
           :striped="true"
           :sort-icon="'arrow-up'"
           :default-sort="this.sortField"
@@ -187,6 +185,7 @@
 
 <script>
 import { api_url, fetchGlobalDataByTaxonomy, fetchRunsByTaxonomy } from '@/api'
+import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
 
 // If you need to reference 'L', such as in 'L.icon', then be sure to
 // explicitly import 'leaflet' into your component
@@ -229,7 +228,10 @@ export default {
       lineage: [], // set to empty because otherwise there's a null pointer issue until filled
       sortIcon: 'arrow-up',
       total_num_results: null,
-      show_low_complexity_count: false,
+      GTDB_VERSION,
+      GLOBDB_VERSION,
+      exclude_low_complexity: true,
+      filtered_total: null,
       page: 1,
       pageSize: 100,
       sortField: 'relative_abundance',

@@ -14,8 +14,8 @@
         </b-autocomplete>
       </b-field>
       <p class="help">
-        Suggestions include <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a><span v-if="gtdb_version"> version {{ gtdb_version }}</span>
-        and <a href='http://globdb.org'>GlobDB</a> taxonomies.
+        Suggestions include <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> ({{ GTDB_VERSION }})
+        and <a href='http://globdb.org'>GlobDB</a> ({{ GLOBDB_VERSION }}) taxonomies.
       </p>
       <br /><b-button type="is-primary" @click="search_by_taxonomy">Search</b-button>
     </section>
@@ -45,6 +45,7 @@
 
 <script>
 import { fetchTaxonomySearchHints, fetchSandpiperStats } from '@/api'
+import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
 import debounce from 'lodash/debounce'
 
 export default {
@@ -52,6 +53,8 @@ export default {
   title: 'Search - Sandpiper',
   data () {
     return {
+      GTDB_VERSION,
+      GLOBDB_VERSION,
       gtdb_version: null,
 
       taxonomy: 'c__Bog-38',
