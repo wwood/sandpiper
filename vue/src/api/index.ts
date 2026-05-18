@@ -43,9 +43,10 @@ export function fetchRunsByTaxonomy (
   page: number,
   sortField: string,
   sortDirection: string,
-  pageSize: number
+  pageSize: number,
+  excludeLowComplexity: boolean = true
 ) {
-  return axios.get(`${API_URL}/taxonomy_search_run_data/${taxonomy}?taxonomy_type=${taxonomyType}&sort_field=${sortField}&sort_direction=${sortDirection}&page=${page}&page_size=${pageSize}`)
+  return axios.get(`${API_URL}/taxonomy_search_run_data/${taxonomy}?taxonomy_type=${taxonomyType}&sort_field=${sortField}&sort_direction=${sortDirection}&page=${page}&page_size=${pageSize}&exclude_low_complexity=${excludeLowComplexity}`)
 }
 
 export function fetchGlobalDataByTaxonomy (taxonomy: string, taxonomyType: string) {
