@@ -504,30 +504,34 @@ def taxonomy_search_global_data(taxon):
 # sort_field=${sortField}&sort_direction=${sortDirection}&page=${page
 @api.route('/taxonomy_search_run_data/<string:taxon>', methods=('GET',))
 def taxonomy_search_run_data(taxon):
-    worked, condensed_profile_hits = taxonomy_search_core(taxon, request.args)
+    exclude_low_complexity = request.args.get('exclude_low_complexity') == 'true'
+    worked, condensed_profile_hits, filtered_total = taxonomy_search_core(
+        taxon, request.args, exclude_low_complexity=exclude_low_complexity
+    )
 
     if worked:
         return jsonify({
             'results': {
-            'condensed_profiles': [{
-                'sample_acc': c.acc,
-                'relative_abundance': round(c.relative_abundance*100,2),
-                'coverage': round(c.filled_coverage, 2),
-                'organism': "unspecified" if c.taxon_name is None else c.taxon_name.replace(' metagenome',''),
-                'release_year': c.published.strftime('%Y'),
-                'top1_order_fraction': round(c.top1_order_fraction, 2) if c.top1_order_fraction is not None else None,}
-                for c in condensed_profile_hits],                
+                'condensed_profiles': [{
+                    'sample_acc': c.acc,
+                    'relative_abundance': round(c.relative_abundance*100,2),
+                    'coverage': round(c.filled_coverage, 2),
+                    'organism': "unspecified" if c.taxon_name is None else c.taxon_name.replace(' metagenome',''),
+                    'release_year': c.published.strftime('%Y'),
+                    'top1_order_fraction': round(c.top1_order_fraction, 2) if c.top1_order_fraction is not None else None,}
+                    for c in condensed_profile_hits],
+                'filtered_total': filtered_total,
             }
         })
     else:
-        return condensed_profile_hits # Really returning a JSON indicating the failure
+        return condensed_profile_hits
 
 @api.route('/taxonomy_search_csv/<string:taxon>', methods=('GET',))
 def taxonomy_search_csv(taxon):
     taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
     from datetime import datetime
     print('=== {}: running core'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-    worked, condensed_profile_hits = taxonomy_search_core(
+    worked, condensed_profile_hits, _ = taxonomy_search_core(
         taxon, request.args, no_limit=True, include_extras=True, return_open_cursor=True
     )
     print('=== {}: after core'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
@@ -540,7 +544,7 @@ def taxonomy_search_csv(taxon):
             'eukaryotic_host_association', 'num_reads', 'read_length_summary', 'sequencing_instrument', 'collection_year',
             'spf', 'spf_warning',
             'gtdb_known_species_fraction_percent', 'globdb_known_species_fraction_percent',
-            'latitude', 'longitude', 'top1_order_fraction_percent'
+            'latitude', 'longitude', 'top1_order_fraction_percent', 'low_complexity'
         ]
 
         def generate_csv_rows():
@@ -582,6 +586,7 @@ def taxonomy_search_csv(taxon):
                             c.latitude,
                             c.longitude,
                             f'{round(c.top1_order_fraction)}%' if c.top1_order_fraction is not None else None,
+                            c.low_complexity,
                         ])
                     yield buffer.getvalue()
                     buffer.seek(0)
@@ -600,7 +605,7 @@ def taxonomy_search_csv(taxon):
 @api.route('/taxonomy_search_csv_minimal/<string:taxon>', methods=('GET',))
 def taxonomy_search_csv_minimal(taxon):
     taxonomy_type = request.args.get('taxonomy_type', 'gtdb')
-    worked, condensed_profile_hits = taxonomy_search_core(
+    worked, condensed_profile_hits, _ = taxonomy_search_core(
         taxon, request.args, no_limit=True, include_extras=False, return_open_cursor=True
     )
 
@@ -666,7 +671,7 @@ class _OpenCursorWrapper:
 
 
 def taxonomy_search_core(
-    taxon, args, no_limit=False, include_extras=False, return_open_cursor=False
+    taxon, args, no_limit=False, include_extras=False, return_open_cursor=False, exclude_low_complexity=False
 ):
     '''Returns (bool, iterable|json) where bool is whether it worked (True)
     or not (False) and iterable is the data to render. json is the error if
@@ -718,6 +723,7 @@ def taxonomy_search_core(
                 ParsedSampleAttribute.known_species_fraction,
                 ParsedSampleAttribute.globdb_known_species_fraction,
                 ParsedSampleAttribute.top1_order_fraction,
+                ParsedSampleAttribute.low_complexity,
             ).where(CondensedProfileCtas1.run_id == NcbiMetadata.id
             ).where(ParsedSampleAttribute.run_id == NcbiMetadata.id)
         else:
@@ -755,21 +761,35 @@ def taxonomy_search_core(
             else:
                 hits_query = stmt.order_by(ParsedSampleAttribute.top1_order_fraction.asc())
 
+        hits_query = hits_query.where(CondensedProfileCtas1.taxonomy_id == taxonomy.id)
+
+        if exclude_low_complexity:
+            hits_query = hits_query.where(ParsedSampleAttribute.low_complexity != 'yes')
+            filtered_total = db.session.execute(
+                select(func.count()).select_from(
+                    CondensedProfileCtas1
+                ).join(NcbiMetadata, CondensedProfileCtas1.run_id == NcbiMetadata.id
+                ).join(ParsedSampleAttribute, ParsedSampleAttribute.run_id == NcbiMetadata.id
+                ).where(CondensedProfileCtas1.taxonomy_id == taxonomy.id
+                ).where(ParsedSampleAttribute.low_complexity != 'yes')
+            ).scalar()
+        else:
+            filtered_total = None
+
         if not no_limit:
             hits_query = hits_query.limit(page_size).offset((page-1)*page_size)
-            
-        hits_query = hits_query.where(CondensedProfileCtas1.taxonomy_id == taxonomy.id)
+
         if no_limit or return_open_cursor:
             hits_query = hits_query.execution_options(stream_results=True)
 
         if return_open_cursor:
             connection = db.engine.connect()
             condensed_profile_hits = connection.execute(hits_query)
-            return True, _OpenCursorWrapper(connection, condensed_profile_hits)
+            return True, _OpenCursorWrapper(connection, condensed_profile_hits), filtered_total
 
         condensed_profile_hits = db.session.execute(hits_query)
 
-        return True, condensed_profile_hits
+        return True, condensed_profile_hits, filtered_total
 
 
 @api.route('/taxonomy_search_hints/<string:taxon>', methods=('GET',))
