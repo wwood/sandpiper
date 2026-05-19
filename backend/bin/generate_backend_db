@@ -726,13 +726,16 @@ def add_host_predictions(db, run_accession_to_id, host_predictions_tsv):
 def add_smf(db, run_accession_to_id, smf_tsv):
     num_smf_predictions = 0
 
-    df = pd.read_csv(smf_tsv, sep='\t')
+    df = pd.read_csv(smf_tsv, sep=',')
 
     update_stmt = update(ParsedSampleAttribute).values(
         id=bindparam('id'),
         bacterial_archaeal_bases=bindparam('bacterial_archaeal_bases'),
         smf=bindparam('smf'),
         smf_warning=bindparam('smf_warning'),
+        low_complexity=bindparam('low_complexity'),
+        top1_order_fraction=bindparam('top1_order_fraction'),
+        top3_order_fraction=bindparam('top3_order_fraction'),
     )
 
     update_bindparams = []
@@ -760,9 +763,11 @@ def add_smf(db, run_accession_to_id, smf_tsv):
         update_bindparams.append({
             'id': run_id,
             'bacterial_archaeal_bases': row.bacterial_archaeal_bases,
-            'smf': float(row.read_fraction),
-            # Using isnan because if the input file has no warnings at all e.g. in test files maybe. Not well tested tho
-            'smf_warning': not str(row.warning) == 'nan' or row.warning == '',
+            'smf': float(row.singlem_prokaryotic_fraction),
+            'smf_warning': isinstance(row.warning, str) and row.warning != '',
+            'low_complexity': row.low_complexity == 'yes',
+            'top1_order_fraction': row.top1_order_fraction if str(row.top1_order_fraction) != 'nan' else None,
+            'top3_order_fraction': row.top3_order_fraction if str(row.top3_order_fraction) != 'nan' else None,
         })
 
         num_smf_predictions += 1
@@ -1224,7 +1229,7 @@ if __name__ == '__main__':
     parent_parser.add_argument('--parsed-metadata-table', help='parsed metadata table to read')
     parent_parser.add_argument('--otu-parquet-dir', help='directory for OTU parquet chunks')
 
-    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'taxonomy_upload', 'stage2', 'tags', 'otus_parquet', 'otus_load', 'parsed_metadata'], required=True)
+    parent_parser.add_argument('--stage', help='processing stage to run', choices=['start', 'taxonomy_upload', 'stage2', 'update_smf', 'tags', 'otus_parquet', 'otus_load', 'parsed_metadata'], required=True)
 
     parent_parser.add_argument('--gtdb-archaea-taxonomy', help='GTDB archaea taxonomy TSV (two columns: accession, taxonomy)')
     parent_parser.add_argument('--gtdb-bacteria-taxonomy', help='GTDB bacteria taxonomy TSV (two columns: accession, taxonomy)')
@@ -1389,6 +1394,12 @@ if __name__ == '__main__':
             add_host_prediction_counts_to_taxonomy(db, db_path)
 
             index_condensed_profiles_multi_column(db, db_path)
+
+        elif args.stage == 'update_smf':
+            if not args.smf_file:
+                raise Exception("smf-file must be specified for stage 'update_smf'")
+            run_accession_to_id = read_run_accession_to_id(db)
+            add_smf(db, run_accession_to_id, args.smf_file)
 
         elif args.stage == 'tags':
             add_enriched_community_tags(db, db_path)

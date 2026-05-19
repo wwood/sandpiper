@@ -1,5 +1,6 @@
 <script setup>
 import sandpiperLogo from "@/assets/sandpiper_logo.png";
+import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
 </script>
 
 <template>
@@ -38,7 +39,7 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
       <h1 class="title">How Sandpiper {{ version }} was built</h1>
       <p>The data underlying Sandpiper was generated using the <a href="https://github.com/wwood/singlem">SingleM</a> pipeline, applied to public metagenome datasets listed in the <a href="https://www.ncbi.nlm.nih.gov/sra">NCBI SRA</a> that were designated as metagenomic, or derived from "metagenomic" organisms such as "soil metagenome". This list of public metagenomes which was generated on {{ scrape_date }}. </p><br />
 
-      <p>The taxonomy from the community profiles was assigned using either the <a href="https://gtdb.ecogenomic.org/">Genome Taxonomy Database (GTDB)</a> {{ gtdb_version }}, or using <a href="https://globdb.org">GlobDB</a> {{ gtdb_version }}.</p><br />
+      <p>The taxonomy from the community profiles was assigned using either the <a href="https://gtdb.ecogenomic.org/">Genome Taxonomy Database (GTDB)</a> ({{ GTDB_VERSION }}), or using <a href="https://globdb.org">GlobDB</a> ({{ GLOBDB_VERSION }}).</p><br />
 
       <p>SingleM estimates lineage abundances directly from shotgun metagenome data without heavy reliance on reference sequence databases. It operates by scanning for reads that cover highly conserved regions of single copy marker genes (35 bacterial, 37 archaeal, 59 total) when translated into amino acids. Reads covering these conserved sections are clustered prior to taxonomy assignment, allowing detection of strain-level diversity and novel lineages.</p><br />
 
@@ -67,11 +68,29 @@ import sandpiperLogo from "@/assets/sandpiper_logo.png";
       repository</a>. Any corrections submitted there (or submitted directly upstream e.g. to
       NCBI) are appreciated.</p><br />
 
+      <h2 class="title is-5">Low Complexity</h2>
+      <p>Samples flagged as low complexity contain insufficient microbial signal for reliable profiling. These samples are typically dominated by host DNA, repetitive sequences, or a sparse community profile. Flagging was determined by the relative abundance of order-level taxonomic distribution. If a single order represents ≥95% of the community profile, the sample is flagged as low complexity.</p><br />
+
     </section>
 
     <section class="section is-small container has-text-justified">
       <h1 class="title">Changelog</h1>
       <p>Note that point releases (e.g. v1.0.x, v1.1.x) may not be listed here, and are only for minor bug/deployment fixes.</p><br />
+
+      <h2 class="title is-5">v2.0.*</h2>
+        <div class="columns has-text-left">
+          <div class="column content">
+            <ul>
+              <li>Integration of <a href="https://gtdb.ecogenomic.org/">GTDB</a> R232 community profiles.</li>
+              <li>Addition of low complexity flags to samples (True/False).</li>
+              <li>Random search now has the ability to exclude low complexity samples.</li>
+              <li>Within sequencing information, top order and top 3 order fraction values are now displayed on each sample's page.</li>
+              <li>Within taxonomy search, a new slider allows toggling the visibility of low complexity flagged samples. When active, the distribution of low complexity flagged entries is exluded from the table.</li>
+              <li>Additional public metagenomes analysed, total metagenomes screened: 913,755.</li>
+            </ul>
+          </div>
+        </div>
+
 
       <h2 class="title is-5">v1.1.*</h2>
         <div class="columns has-text-left"> 

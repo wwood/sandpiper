@@ -91,7 +91,7 @@ rule run_kingfisher_metadata:
         mem_mb=16000,
         runtime='6h'
     shell:
-        "pixi run -e kingfisher kingfisher annotate --debug -f tsv --all-columns --run-identifiers-list {input.chunk} -o {output.metadata} > {log} 2>&1"
+        "NCBI_API_KEY={config[NCBI_API_KEY]} pixi run -e kingfisher kingfisher annotate --debug -f tsv --all-columns --run-identifiers-list {input.chunk} -o {output.metadata} > {log} 2>&1"
 
 rule gather_kingfisher_metadata:
     input:
@@ -177,6 +177,7 @@ rule generate_backend_db_start:
         runtime='48h'
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
+        'export PYTHONNOUSERSITE=1 && ' \
         'cd ../backend && ' \
         'mkdir -p {config[SCRATCH_DIR]} && ' \
         'pixi run -e sandpiper ./bin/generate_backend_db --stage start --run-blacklist db/metagenome_assembly_acc_list.csv --metapackage-describe {params.describe} --condensed-otu-table {config[CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb --kingfisher-annotate-path-list $SNAKE_WORKING_DIR/{input.kingfisher_metadata_file_list} 2> $SNAKE_WORKING_DIR/{log} && ' \
@@ -204,6 +205,7 @@ rule generate_backend_db_taxonomy_upload:
         runtime='48h'
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
+        'export PYTHONNOUSERSITE=1 && ' \
         'cd ../backend && ' \
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_start {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
         'pixi run -e sandpiper ./bin/generate_backend_db --stage taxonomy_upload --gtdb-archaea-taxonomy {config[GTDB_ARCHAEA_TAXONOMY]} --gtdb-bacteria-taxonomy {config[GTDB_BACTERIA_TAXONOMY]} --globdb-taxonomy {config[GLOBDB_TAXONOMY]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb 2> $SNAKE_WORKING_DIR/{log} && ' \
@@ -245,6 +247,7 @@ rule generate_backend_db_stage2:
         runtime='48h'
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
+        'export PYTHONNOUSERSITE=1 && ' \
         'cd ../backend && ' \
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_taxonomy_upload {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
         'pixi run -e sandpiper ./bin/generate_backend_db --stage stage2 --run-blacklist db/metagenome_assembly_acc_list.csv --condensed-otu-table {config[CONDENSED_OTU_TABLE]} --globdb-condensed-otu-table {config[GLOBDB_CONDENSED_OTU_TABLE]} -o {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb --host-predictions-tsv {config[HOST_OR_NOT_PREDICTION]} --bioproject-associated-publications $SNAKE_WORKING_DIR/{input.bioproject_publications} --smf-file {config[SMF_FILE]} 2> $SNAKE_WORKING_DIR/{log} && ' \
@@ -265,6 +268,7 @@ rule add_tags_to_backend_db:
             version=config['SANDPIPER_VERSION'])
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
+        'export PYTHONNOUSERSITE=1 && ' \
         'cd ../backend && ' \
         # cp to remain idempotent, e.g. if this step fails
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_stage2 {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
@@ -379,6 +383,7 @@ rule add_parsed_metadata_from_kingfisher:
         parsed_metadata=lambda wildcards, input: os.path.abspath(input.parsed_metadata),
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
+        'export PYTHONNOUSERSITE=1 && ' \
         'cd ../backend && ' \
         # cp to remain idempotent, e.g. if this step fails
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.after_tags {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.add_parsed_metadata_from_kingfisher && ' \
@@ -409,6 +414,7 @@ rule precompute_api_cache:
             version=config['SANDPIPER_VERSION'])
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
+        'export PYTHONNOUSERSITE=1 && ' \
         'cd ../backend && ' \
         # cp to remain idempotent, e.g. if this step fails
         'cp {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb.add_parsed_metadata_from_kingfisher {config[SCRATCH_DIR]}/sandpiper_{config[SANDPIPER_VERSION]}.duckdb && ' \
@@ -436,5 +442,6 @@ rule create_taxonomies_name_lower_index:
         runtime='4h'
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \
+        'export PYTHONNOUSERSITE=1 && ' \
         'cd ../backend && ' \
-        'duckdb db/sandpiper_{config[SANDPIPER_VERSION]}.duckdb -c "DROP INDEX IF EXISTS taxonomies_name_lower_idx; CREATE INDEX taxonomies_name_lower_idx ON taxonomies (lower(name));" &> $SNAKE_WORKING_DIR/{log}'
+        'pixi run -e sandpiper python -c "import duckdb; con = duckdb.connect(\'db/sandpiper_{config[SANDPIPER_VERSION]}.duckdb\'); con.execute(\'DROP INDEX IF EXISTS taxonomies_name_lower_idx\'); con.execute(\'CREATE INDEX taxonomies_name_lower_idx ON taxonomies (lower(name))\'); con.close()" &> $SNAKE_WORKING_DIR/{log}'

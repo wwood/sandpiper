@@ -1,14 +1,13 @@
-sample	bacterial_archaeal_bases	metagenome_size	read_fraction	average_bacterial_archaeal_genome_size	warning
-ERR2000810	1591125661	4547553756.0	34.99	5894805	
-ERR4032157	189066508	213081559.0	88.73	3083779	
-ERR3191584	572300006	722370048.0	79.23	3226952	
-SRR7051324	5133919962	7411051914.0	69.27	3905815	
-ERR2193791	275981069	346637162.0	79.62	2359418	
-ERR575710	7974903726	11571315126.0	68.92	3905897	
-ERR1914274	746498034	741228768.0	100.00	3359124	
-ERR4131628	4492328060	5942702848.0	75.59	2851548	
-SRR3401492	2527556816	6146023345.0	41.13	4676244	
-SRR10875094	5848445	269427993.0	2.17	2142288	WARNING: The most abundant taxons not assigned to the species level account for a large fraction of the total estimated read fraction. This may mean that the read_fraction estimate is inaccurate.
-SRR7051350	6060640630	8915026712.0	67.98	3897042	
-ERR2194039	213199399	295511096.0	72.15	2673012	
-SRR9113719	2419233073	2871276414.0	84.26	2907977	
+sample,root_coverage,species_coverage,top1_order_fraction,top3_order_fraction,low_complexity,known_species_fraction,bacterial_archaeal_bases,metagenome_size,singlem_prokaryotic_fraction,average_bacterial_archaeal_genome_size,warning,prediction,host_or_not,organism
+ERR1914274,222.24,183.52,76.4,88.18,no,82.58,750219675,741228768.0,100.0,3375718,,host,host,bacterium
+SRR10875094,2.73,0.0,100.0,100.0,yes,0.0,5909108,269427993.0,2.19,2164508,WARNING: The most abundant taxons not assigned to the species level account for a large fraction of the total estimated read fraction. This may mean that the read_fraction estimate is inaccurate.,ecological,host,bird metagenome
+ERR3191584,177.37,41.61,88.48,95.87,no,23.46,575898718,722370048.0,79.72,3246878,,host,host,Arabidopsis thaliana
+ERR4131628,1575.06,1431.9,57.07,88.94,no,90.91,4485856376,5942702848.0,75.49,2848054,,host,host,mouse gut metagenome
+ERR4032157,61.31,33.82,43.27,84.31,no,55.16,188485095,213081559.0,88.46,3074296,,host,host,feces metagenome
+ERR2000810,269.93,122.46,41.4,71.38,no,45.37,1591251414,4547553756.0,34.99,5895052,,host,host,Homo sapiens neanderthalensis
+ERR2194039,79.66,29.7,32.32,69.96,no,37.28,211408106,295511096.0,71.54,2653880,,host,host,Gallus gallus
+ERR575710,2041.58,71.34,6.32,18.02,no,3.49,8388850777,11571315126.0,72.5,4108999,,ecological,ecological,sediment metagenome
+SRR3401492,540.82,183.51,28.81,53.6,no,33.93,2513271693,6146023345.0,40.89,4647150,,ecological,ecological,marine metagenome
+SRR7051324,1312.39,96.42,10.12,20.26,no,7.35,5267417929,7411051914.0,71.08,4013607,,ecological,ecological,freshwater sediment metagenome
+SRR9113719,831.78,561.6,41.61,56.82,no,67.52,2412984730,2871276414.0,84.04,2900989,,host,host,chicken gut metagenome
+SRR7051350,1552.18,129.07,11.16,19.4,no,8.32,6198057818,8915026712.0,69.52,3993131,,ecological,ecological,freshwater sediment metagenome

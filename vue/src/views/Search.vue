@@ -14,8 +14,8 @@
         </b-autocomplete>
       </b-field>
       <p class="help">
-        Suggestions include <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a><span v-if="gtdb_version"> version {{ gtdb_version }}</span>
-        and <a href='http://globdb.org'>GlobDB</a> taxonomies.
+        Suggestions include <a href='http://gtdb.ecogenomic.org'>Genome Taxonomy Database (GTDB)</a> ({{ GTDB_VERSION }})
+        and <a href='http://globdb.org'>GlobDB</a> ({{ GLOBDB_VERSION }}) taxonomies.
       </p>
       <br /><b-button type="is-primary" @click="search_by_taxonomy">Search</b-button>
     </section>
@@ -35,6 +35,7 @@
         <b-switch v-model="random_choice_host">Eukaryote host-associated</b-switch>
         <b-switch v-model="random_choice_ecological">Ecological</b-switch>
         <b-switch v-model="random_choice_two_gbp">2+ Gbp</b-switch>
+        <b-switch v-model="random_exclude_strict_low_complexity">Exclude low complexity (≥95% one order)</b-switch>
       </b-field>
       <br /><b-button type="is-primary" @click="search_by_random">Search</b-button>
     </section>
@@ -44,6 +45,7 @@
 
 <script>
 import { fetchTaxonomySearchHints, fetchSandpiperStats } from '@/api'
+import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
 import debounce from 'lodash/debounce'
 
 export default {
@@ -51,6 +53,8 @@ export default {
   title: 'Search - Sandpiper',
   data () {
     return {
+      GTDB_VERSION,
+      GLOBDB_VERSION,
       gtdb_version: null,
 
       taxonomy: 'c__Bog-38',
@@ -61,7 +65,8 @@ export default {
 
       random_choice_host: false,
       random_choice_ecological: true,
-      random_choice_two_gbp: true
+      random_choice_two_gbp: true,
+      random_exclude_strict_low_complexity: true
     }
   },
 
@@ -125,10 +130,11 @@ export default {
     },
 
     search_by_random () {
-      this.$router.push({ name: 'RunRandom', query: { 
+      this.$router.push({ name: 'RunRandom', query: {
         host: this.random_choice_host,
         ecological: this.random_choice_ecological,
-        two_gbp: this.random_choice_two_gbp
+        two_gbp: this.random_choice_two_gbp,
+        exclude_strict_low_complexity: this.random_exclude_strict_low_complexity
       }})
     }
   }

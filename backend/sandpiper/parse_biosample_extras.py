@@ -6,6 +6,7 @@ import logging
 import sys
 import os
 import json
+import csv
 import polars as pl
 from datetime import datetime
 
@@ -458,40 +459,40 @@ if __name__ == '__main__':
                 raise Exception("File %s does not exist" % path)
 
             # no casting of columns
-            df = pl.read_csv(path, separator='\t', has_header=True, infer_schema=False)
+            with open(path) as f:
+                reader = csv.DictReader(f, delimiter='\t')
+                for row in reader:
+                    j = {
+                        'acc': row['run'],
+                        'attributes': []
+                    }
+                    for col in reader.fieldnames:
+                        if col in ['run', 'Gbp']:
+                            continue
 
-            for row in df.rows(named=True):
-                j = {
-                    'acc': row['run'],
-                    'attributes': []
-                }
-                for col in df.columns:
-                    if col in ['run', 'Gbp']:
-                        continue
+                        if row[col] is None or row[col] in ACTUALLY_MISSING:
+                            continue
+                        j['attributes'].append({'k': col, 'v': row[col]})
 
-                    if row[col] is None or row[col] in ACTUALLY_MISSING:
-                        continue
-                    j['attributes'].append({'k': col, 'v': row[col]})
+                    j['attributes'] = prepare_attributes(j['attributes'])
 
-                j['attributes'] = prepare_attributes(j['attributes'])
-
-                lat_long_res = [j['acc']]
-                lat_lon = parse_lat_lons(j['acc'], parse_json_to_lat_lon_dict(j))
-                if lat_lon == [None, None]:
-                    lat_long_res.append('')
-                    lat_long_res.append('')
-                else:
-                    lat_long_res.extend(lat_lon)
-
-                for k in extra_attributes:
-                    if k in j:
-                        lat_long_res.append(j[k])
-                    else:
+                    lat_long_res = [j['acc']]
+                    lat_lon = parse_lat_lons(j['acc'], parse_json_to_lat_lon_dict(j))
+                    if lat_lon == [None, None]:
                         lat_long_res.append('')
+                        lat_long_res.append('')
+                    else:
+                        lat_long_res.extend(lat_lon)
 
-                lat_long_res.extend(parse_extra_sample_attributes(j, extra_sample_keys))
+                    for k in extra_attributes:
+                        if k in j:
+                            lat_long_res.append(j[k])
+                        else:
+                            lat_long_res.append('')
 
-                print('\t'.join([str(s) for s in lat_long_res]))
+                    lat_long_res.extend(parse_extra_sample_attributes(j, extra_sample_keys))
+
+                    print('\t'.join([str(s) for s in lat_long_res]))
 
 
 

@@ -43,9 +43,10 @@ export function fetchRunsByTaxonomy (
   page: number,
   sortField: string,
   sortDirection: string,
-  pageSize: number
+  pageSize: number,
+  excludeLowComplexity: boolean = true
 ) {
-  return axios.get(`${API_URL}/taxonomy_search_run_data/${taxonomy}?taxonomy_type=${taxonomyType}&sort_field=${sortField}&sort_direction=${sortDirection}&page=${page}&page_size=${pageSize}`)
+  return axios.get(`${API_URL}/taxonomy_search_run_data/${taxonomy}?taxonomy_type=${taxonomyType}&sort_field=${sortField}&sort_direction=${sortDirection}&page=${page}&page_size=${pageSize}&exclude_low_complexity=${excludeLowComplexity}`)
 }
 
 export function fetchGlobalDataByTaxonomy (taxonomy: string, taxonomyType: string) {
@@ -57,8 +58,8 @@ export function fetchTaxonomySearchHints (taxonomy: string, taxonomyType?: strin
   return axios.get(`${API_URL}/taxonomy_search_hints/${taxonomy}${taxonomyTypeParam}`)
 }
 
-export function fetchRandomAccession(host: boolean, ecological: boolean, two_gbp: boolean) {
-  return axios.get(`${API_URL}/random_run?host=${host}&ecological=${ecological}&two_gbp=${two_gbp}`)
+export function fetchRandomAccession(host: boolean, ecological: boolean, two_gbp: boolean, exclude_strict_low_complexity: boolean = true) {
+  return axios.get(`${API_URL}/random_run?host=${host}&ecological=${ecological}&two_gbp=${two_gbp}&exclude_strict_low_complexity=${exclude_strict_low_complexity}`)
 }
 
 export function fetchAccession(accession: string) {
