@@ -1,6 +1,6 @@
-SANDPIPER_VERSION: '21_test'
+SANDPIPER_VERSION: '38_test'
 
-KINGFISHER_METADATA_DATE: '20220627'
+KINGFISHER_METADATA_DATE: '20260514'
 
 METAPACKAGE_DESCRIBE: 'metapackage_describe.csv'
 
@@ -8,7 +8,7 @@ METAPACKAGE_DESCRIBE: 'metapackage_describe.csv'
 
 ACCESSIONS_FILE: '../test/data/more_runs/accessions'
 
-BIOPROJECT_METADATA_DATE: '20220711'
+BIOPROJECT_METADATA_DATE: '20260514'
 
 JSON_METADATA_FILES: '../test/data/more_runs/metadata_each_line.json'
 
@@ -23,5 +23,7 @@ GTDB_ARCHAEA_TAXONOMY: '../test/data/more_runs/gtdb_ar_example_taxonomies.tsv'
 GTDB_BACTERIA_TAXONOMY: '../test/data/more_runs/gtdb_bac_example_taxonomies.tsv'
 GLOBDB_TAXONOMY: '../test/data/more_runs/globdb_example_taxonomies.tsv'
 
+NCBI_API_KEY: 'b8110e58af25f2e3aec503694dda7d605308'
+
 TEST_OR_PROD: 'test'
-SCRATCH_DIR: '/scratch/microbiome/woodcrob/sandpiper_test'
+SCRATCH_DIR: '/scratch/microbiome/sandpiper2-gtdb-renew/final_database_test'

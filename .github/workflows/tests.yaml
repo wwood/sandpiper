@@ -21,6 +21,6 @@ jobs:
           curl -fsSL https://pixi.sh/install.sh | sh
           ln -s "$HOME/.pixi/bin/pixi" /usr/local/bin -v
           eval "$(pixi shell-hook -e sandpiper --frozen --manifest-path $GITHUB_WORKSPACE/pixi.toml)"
-          wget 'https://www.dropbox.com/scl/fi/hcxbpatci79c6j5jjsru2/sandpiper_21_test.duckdb.gz?rlkey=wkpnosp5o2qebzy7ojdmart9e&st=lw2eilku&dl=0' -O backend/db/sandpiper_21_test.duckdb.gz && gunzip backend/db/sandpiper_21_test.duckdb.gz
+          wget 'https://www.dropbox.com/scl/fi/hcxbpatci79c6j5jjsru2/sandpiper_38_test.duckdb.gz?rlkey=wkpnosp5o2qebzy7ojdmart9e&st=lw2eilku&dl=0' -O backend/db/sandpiper_38_test.duckdb.gz && gunzip backend/db/sandpiper_38_test.duckdb.gz
           cd vue && npm install && cd -
           pytest tests --capture=no -v
