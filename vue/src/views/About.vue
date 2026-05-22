@@ -15,7 +15,7 @@ import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
 
     <section class="section is-small container has-text-justified">
       <h1 class="title">Team</h1>
-      <p>This website, and SingleM itself, is the result of a collaboration between (in no particular order) <a href="https://research.qut.edu.au/cmr/team/ben-woodcroft/">Ben Woodcroft</a>, Rossen Zhao, Mitchell Cunningham, Joshua Mitchell, Samuel Aroney, Rizky Nurdiansyah, <a href="https://findanexpert.unimelb.edu.au/profile/753413-linda-blackall">Linda Blackall</a>, <a href="https://research.qut.edu.au/cmr/team/gene-tyson/">Gene Tyson</a>, <a href="https://www.alberdilab.dk/members">Raphael Eisenhofer</a> and <a href="https://www.alberdilab.dk/members">Antton Alberdi</a>.</p><br />
+      <p>This website, and SingleM itself, is the result of a collaboration between (in no particular order) <a href="https://research.qut.edu.au/cmr/team/ben-woodcroft/">Ben Woodcroft</a>, Rossen Zhao, Mitchell Cunningham, Joshua Mitchell, Samuel Aroney, Rizky Nurdiansyah, <a href="https://findanexpert.unimelb.edu.au/profile/753413-linda-blackall">Linda Blackall</a>, <a href="https://research.qut.edu.au/cmr/team/gene-tyson/">Gene Tyson</a>, <a href="https://www.alberdilab.dk/members">Raphael Eisenhofer</a>, <a href="https://www.alberdilab.dk/members">Antton Alberdi</a> and Stefan Herholdt.</p><br />
       <p>Most of us are at the <a href="https://research.qut.edu.au/cmr/">Centre for Microbiome Research</a>, School of Biomedical Sciences, Queensland University of Technology (<a href="qut.edu.au">QUT</a>), Translational Research Institute, Woolloongabba, Australia. Mitchell Cunningham and Linda Blackall are at the School of BioSciences, The University of Melbourne, Victoria, Australia. Raphael Eisenhofer and Antton Alberdi are at the Centre for Evolutionary Hologenomics, Globe Institute, University of Copenhagen, Denmark.</p>
     </section>
 
@@ -69,7 +69,9 @@ import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
       NCBI) are appreciated.</p><br />
 
       <h2 class="title is-5">Low Complexity</h2>
-      <p>Samples flagged as low complexity contain insufficient microbial signal for reliable profiling. These samples are typically dominated by host DNA, repetitive sequences, or a sparse community profile. Flagging was determined by the relative abundance of order-level taxonomic distribution. If a single order represents ≥95% of the community profile, the sample is flagged as low complexity.</p><br />
+      <p>Samples flagged as low complexity are much less likely than most metagenomes to be true microbial communities. For instance, they might be single amplified genomes (SAGs), negative controls, or isolate genomic data that was marked as metagenomic when the data was deposited by the authors. Since the primary interest of Sandpiper is in microbial communities, these samples are hidden by default in most places on Sandpiper.
+      <br></ br>
+      We define “low complexity” samples as those where 95% or more of the community was assigned to a single order by SingleM when using the GTDB reference database.</p><br />
 
     </section>
 
@@ -84,9 +86,11 @@ import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
               <li>Integration of <a href="https://gtdb.ecogenomic.org/">GTDB</a> R232 community profiles.</li>
               <li>Addition of low complexity flags to samples (True/False).</li>
               <li>Random search now has the ability to exclude low complexity samples.</li>
-              <li>Within sequencing information, top order and top 3 order fraction values are now displayed on each sample's page.</li>
+              <li>Within sequencing information, top order fraction is now displayed on each sample's page.</li>
               <li>Within taxonomy search, a new slider allows toggling the visibility of low complexity flagged samples. When active, the distribution of low complexity flagged entries is exluded from the table.</li>
-              <li>Additional public metagenomes analysed, total metagenomes screened: 913,755.</li>
+              <li>Additional public metagenomes analysed = 206,285, total metagenomes screened -> 913,755.</li>
+              <li>Metadata annotations procured using Kingfisher on 14th May, 2026. Raw metagenomes up to 3rd March, 2026 were screened.</li>
+              <li>Version numbers are now shown for all database references (e.g. GTDB R232, GlobDB R226).</li>
             </ul>
           </div>
         </div>
