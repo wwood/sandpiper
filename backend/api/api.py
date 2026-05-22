@@ -314,7 +314,6 @@ def fetch_metadata(sample_name):
         'smf_warning': metadata_dict['parsed_sample_attributes']['smf_warning'],
         'low_complexity': metadata_dict['parsed_sample_attributes']['low_complexity'],
         'top1_order_fraction': metadata_dict['parsed_sample_attributes']['top1_order_fraction'],
-        'top3_order_fraction': metadata_dict['parsed_sample_attributes']['top3_order_fraction'],
         'known_species_fraction': round(metadata_dict['parsed_sample_attributes']['known_species_fraction']*100),
         'globdb_known_species_fraction': (
             round(metadata_dict['parsed_sample_attributes']['globdb_known_species_fraction'] * 100)
@@ -406,20 +405,12 @@ def fetch_metadata(sample_name):
     if SEQUENCING_TYPE_METADATA not in d2:
         d2[SEQUENCING_TYPE_METADATA] = []
     top1 = metadata_dict['parsed_sample_attributes']['top1_order_fraction']
-    top3 = metadata_dict['parsed_sample_attributes']['top3_order_fraction']
     if top1 is not None:
         d2[SEQUENCING_TYPE_METADATA].append({
             'k': 'top order fraction',
             'v': f'{top1:.2f}%',
             'is_custom': False,
-            'description': 'Fraction of prokaryotic reads assigned to the single most abundant order. High values (≥0.95) indicate a low complexity sample dominated by one bacterial/archaeal order.'
-        })
-    if top3 is not None:
-        d2[SEQUENCING_TYPE_METADATA].append({
-            'k': 'top 3 orders fraction',
-            'v': f'{top3:.2f}%',
-            'is_custom': False,
-            'description': 'Fraction of prokaryotic reads assigned to the three most abundant orders. High values (≥0.95) indicate a low complexity sample dominated by a small number of bacterial/archaeal orders.'
+            'description': 'Fraction of prokaryotic reads assigned to the single most abundant order. Samples where ≥95% of the community is assigned to a single order are flagged as low complexity and are less likely to represent true microbial communities they may be SAGs, negative controls, or isolate genomic data mistakenly deposited as metagenomic.'
         })
 
     # Some are double e.g. https://sandpiper.qut.edu.au/run/SRR9224309 has 2 PubMed study_links

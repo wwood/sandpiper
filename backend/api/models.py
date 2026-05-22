@@ -133,7 +133,6 @@ class ParsedSampleAttribute(db.Model):
     low_complexity = db.Column(db.Boolean)
     top1_order_fraction = db.Column(db.Float)
     top3_order_fraction = db.Column(db.Float)
-
     def to_displayable_dict(self):
         return dict(
             collection_year=self.collection_year,
@@ -151,8 +150,7 @@ class ParsedSampleAttribute(db.Model):
             known_species_fraction=self.known_species_fraction,
             globdb_known_species_fraction=self.globdb_known_species_fraction,
             low_complexity=self.low_complexity,
-            top1_order_fraction=self.top1_order_fraction,
-            top3_order_fraction=self.top3_order_fraction)
+            top1_order_fraction=self.top1_order_fraction)
 
 
 class StudyLink(db.Model):
