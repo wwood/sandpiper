@@ -88,7 +88,7 @@ import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
               <li>Random search now has the ability to exclude low complexity samples.</li>
               <li>Within sequencing information, top order fraction is now displayed on each sample's page.</li>
               <li>Within taxonomy search, a new slider allows toggling the visibility of low complexity flagged samples. When active, the distribution of low complexity flagged entries is exluded from the table.</li>
-              <li>Additional public metagenomes analysed = 206,285, total metagenomes screened -> 913,755.</li>
+              <li>Additional public metagenomes analysed = 205,695, total metagenomes screened -> 913,165.</li>
               <li>Metadata annotations procured using Kingfisher on 14th May, 2026. Raw metagenomes up to 3rd March, 2026 were screened.</li>
               <li>Version numbers are now shown for all database references (e.g. GTDB R232, GlobDB R226).</li>
             </ul>
