@@ -82,8 +82,8 @@
             <b-radio-button v-model="taxonomy_db" native-value="gtdb" @input="fetchCondensed" type="is-info">
               GTDB ({{ GTDB_VERSION }})
             </b-radio-button>
-            <b-radio-button v-model="taxonomy_db" native-value="globdb" @input="fetchCondensed" type="is-warning">
-              GlobDB ({{ GLOBDB_VERSION }})
+            <b-radio-button v-model="taxonomy_db" native-value="globdb" @input="fetchCondensed" type="is-warning" :disabled="db_availability.globdb === false">
+              GlobDB ({{ GLOBDB_VERSION }})<span v-if="db_availability.globdb === false"> - unavailable</span>
             </b-radio-button>
           </b-field>
           <div class="sunburst">
@@ -173,6 +173,7 @@ export default {
       GLOBDB_VERSION,
       condensed_tree: null,
       condensed_cache: {},
+      db_availability: { gtdb: null, globdb: null },
       metadata: null,
       error_message: null,
       taxonomy_db: 'gtdb'
@@ -257,29 +258,44 @@ export default {
     this.fetchData()
   },
   methods: {
-    fetchCondensed () {
+    fetchCondensed (explicitTaxonomy) {
       const accession = this.accession
-      const taxonomy = this.taxonomy_db
+      const taxonomy = explicitTaxonomy || this.taxonomy_db
 
       if (this.condensed_cache[taxonomy] !== undefined) {
-        this.condensed_tree = this.condensed_cache[taxonomy]
+        if (taxonomy === this.taxonomy_db) {
+          this.condensed_tree = this.condensed_cache[taxonomy]
+        }
         return
       }
 
       fetchRunCondensed(accession, taxonomy)
         .then(response => {
-          this.condensed_tree = response.data
-          this.condensed_cache[taxonomy] = response.data
+          if (response.data.no_data) {
+            this.db_availability = { ...this.db_availability, [taxonomy]: false }
+            this.condensed_cache[taxonomy] = null
+            if (taxonomy === this.taxonomy_db) {
+              this.taxonomy_db = 'gtdb'
+              this.condensed_tree = this.condensed_cache['gtdb'] || null
+            }
+          } else {
+            this.db_availability = { ...this.db_availability, [taxonomy]: true }
+            this.condensed_cache[taxonomy] = response.data
+            if (taxonomy === this.taxonomy_db) {
+              this.condensed_tree = response.data
+            }
+          }
         })
     },
     fetchData () {
-      // const accession = this.$route.params.accession
       const accession = this.accession
 
       this.condensed_cache = {}
       this.condensed_tree = null
+      this.db_availability = { gtdb: null, globdb: null }
 
-      this.fetchCondensed()
+      this.fetchCondensed('gtdb')
+      this.fetchCondensed('globdb')
 
       fetchRunMetadata(accession)
         .then(response => {

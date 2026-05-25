@@ -148,9 +148,8 @@ def fetch_condensed(sample_name):
             .filter(CondensedProfile.taxonomy_id == Taxonomy.id)
             .filter(Taxonomy.taxonomy_type == taxonomy_type)
         ).fetchall()
-    if len(condensed) is None:
-        return jsonify({ sample_name: 'no condensed data found' })
-    # condensed = CondensedProfile.query.filter_by(run_id=run_id).options(joinedload(CondensedProfile.taxonomy)).all()
+    if len(condensed) == 0:
+        return jsonify({ 'no_data': True, 'sample_name': sample_name })
 
     for entry in condensed:
         taxons = entry.full_name.split('; ')
