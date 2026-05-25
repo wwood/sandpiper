@@ -91,6 +91,7 @@ import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
               <li>Additional public metagenomes analysed = 205,695, total metagenomes screened -> 913,165.</li>
               <li>Metadata annotations procured using Kingfisher on 14th May, 2026. Raw metagenomes up to 3rd March, 2026 were screened.</li>
               <li>Version numbers are now shown for all database references (e.g. GTDB R232, GlobDB R226).</li>
+              <li>Database buttons are now greyed out and marked as unavailable when a sample has no data in that database (e.g. sample available in newer R232 GTDB database but not older R226 GlobDB database). </li>
             </ul>
           </div>
         </div>
