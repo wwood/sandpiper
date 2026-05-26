@@ -26,7 +26,7 @@ import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
       <p>Ben J. Woodcroft, Samuel T. N. Aroney, Rossen Zhao, Mitchell Cunningham, Joshua A. M. Mitchell, Rizky Nurdiansyah, Linda Blackall & Gene W. Tyson. <i>Comprehensive taxonomic identification of microbial species in metagenomic data using SingleM and Sandpiper</i>. Nat Biotechnol (2025). <a>https://doi.org/10.1038/s41587-025-02738-1</a></p><br />
 
       <p>The prokaryotic fraction (SPF) mode of SingleM:</p><br />
-      <p>Eisenhofer, R., Alberdi, A., & Woodcroft, B. J. (2026). <i>Large-scale estimation of bacterial and archaeal DNA prevalence in metagenomes reveals biome-specific patterns. </i> mSystems, 11(4), e0106225. <a href=' https://doi.org/10.1128/msystems.01062-25'> https://doi.org/10.1128/msystems.01062-25</a></p><br />
+      <p>Eisenhofer, R., Alberdi, A., & Woodcroft, B. J. (2026). <i>Large-scale estimation of bacterial and archaeal DNA prevalence in metagenomes reveals biome-specific patterns</i>. mSystems, 11(4), e0106225. <a href="https://doi.org/10.1128/msystems.01062-25"> https://doi.org/10.1128/msystems.01062-25</a></p><br />
     </section>
 
     <section class="section is-small container has-text-justified">
