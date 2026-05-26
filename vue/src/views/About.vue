@@ -26,7 +26,7 @@ import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
       <p>Ben J. Woodcroft, Samuel T. N. Aroney, Rossen Zhao, Mitchell Cunningham, Joshua A. M. Mitchell, Rizky Nurdiansyah, Linda Blackall & Gene W. Tyson. <i>Comprehensive taxonomic identification of microbial species in metagenomic data using SingleM and Sandpiper</i>. Nat Biotechnol (2025). <a>https://doi.org/10.1038/s41587-025-02738-1</a></p><br />
 
       <p>The prokaryotic fraction (SPF) mode of SingleM:</p><br />
-      <p>Raphael Eisenhofer, Antton Alberdi, Ben J. Woodcroft. <i>Large-scale estimation of bacterial and archaeal DNA prevalence in metagenomes reveals biome-specific patterns</i>. mSystems 0:e01062-25. <a href="https://doi.org/10.1128/msystems.01062-25">https://doi.org/10.1128/msystems.01062-25</a>.</p><br />
+      <p>Eisenhofer, R., Alberdi, A., & Woodcroft, B. J. (2026). <i>Large-scale estimation of bacterial and archaeal DNA prevalence in metagenomes reveals biome-specific patterns</i>. mSystems, 11(4), e0106225. <a href="https://doi.org/10.1128/msystems.01062-25"> https://doi.org/10.1128/msystems.01062-25</a></p><br />
     </section>
 
     <section class="section is-small container has-text-justified">
@@ -69,9 +69,9 @@ import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
       NCBI) are appreciated.</p><br />
 
       <h2 class="title is-5">Low Complexity</h2>
-      <p>Samples flagged as low complexity are much less likely than most metagenomes to be true microbial communities. For instance, they might be single amplified genomes (SAGs), negative controls, or isolate genomic data that was marked as metagenomic when the data was deposited by the authors. Since the primary interest of Sandpiper is in microbial communities, these samples are hidden by default in most places on Sandpiper.
-      <br></ br>
-      We define “low complexity” samples as those where 95% or more of the community was assigned to a single order by SingleM when using the GTDB reference database.</p><br />
+      <p>Samples flagged as low complexity are much less likely than most metagenomes to be true microbial communities. For instance, they might be single amplified genomes (SAGs), negative controls, or isolate genomic data that was marked as metagenomic when the data was deposited by the authors. Since the primary interest of Sandpiper is in microbial communities, these samples are hidden by default in most places on Sandpiper.</p><br />
+
+      <p>We define “low complexity” samples as those where 95% or more of the community was assigned to a single order by SingleM when using the GTDB reference database.</p><br />
 
     </section>
 
