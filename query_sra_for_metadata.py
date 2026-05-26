@@ -120,6 +120,7 @@ SELECT
   organism,
   libraryselection,
   librarysource,
+  librarylayout,
   bioproject,
   sra_study,
   avgspotlen,
