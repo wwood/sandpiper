@@ -678,17 +678,17 @@ def taxonomy_search_core(
     page_size = int(page_size) if page_size is not None else 100
 
     if sort_field not in ['relative_abundance', 'coverage', 'release_year', 'top1_order_fraction']:
-        return False, jsonify({ 'error': 'invalid sort field' })
+        return False, jsonify({ 'error': 'invalid sort field' }), None
     if sort_direction not in ['asc', 'desc']:
-        return False, jsonify({ 'error': 'invalid sort direction' })
+        return False, jsonify({ 'error': 'invalid sort direction' }), None
 
     taxonomy = Taxonomy.query.filter_by(name=taxon, taxonomy_type=taxonomy_type).first()
     if taxonomy is None:
-        return False, taxonomy_not_found_response(taxon)
+        return False, taxonomy_not_found_response(taxon), None
     else:
         total_num_hits = CondensedProfileCtas1.query.filter_by(taxonomy_id=taxonomy.id).count()
         if total_num_hits == 0:
-            return False, taxonomy_not_found_response(taxon)
+            return False, taxonomy_not_found_response(taxon), None
         # Query for samples that contain this taxon
         if include_extras:
             stmt = select(

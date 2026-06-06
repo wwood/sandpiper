@@ -218,3 +218,49 @@ def test_taxonomy_search_csv_minimal_streams_download():
     header = lines[0].decode().split(",")
     assert "run" in header
     assert "coverage" in header
+
+
+# A taxon that does not exist in any taxonomy. The not-found path in
+# taxonomy_search_core used to return a 2-tuple while the success path and the
+# callers expect a 3-tuple, so these endpoints raised
+# "ValueError: not enough values to unpack (expected 3, got 2)" (HTTP 500)
+# whenever a non-existent taxon was searched.
+NOT_A_TAXON = "s__This_is_not_a_real_taxon_12345"
+
+
+def test_taxonomy_search_run_data_not_found():
+    session = requests.Session()
+    resp = session.get(
+        f"{BACKEND_URL}/api/taxonomy_search_run_data/{NOT_A_TAXON}?taxonomy_type=gtdb"
+    )
+    assert resp.status_code == 200, resp.text
+    assert "taxon" in resp.json()
+
+
+def test_taxonomy_search_run_data_invalid_sort_field():
+    # Exercises the other early-return error path in taxonomy_search_core.
+    session = requests.Session()
+    resp = session.get(
+        f"{BACKEND_URL}/api/taxonomy_search_run_data/d__Bacteria"
+        "?taxonomy_type=gtdb&sort_field=bogus"
+    )
+    assert resp.status_code == 200, resp.text
+    assert "error" in resp.json()
+
+
+def test_taxonomy_search_csv_not_found():
+    session = requests.Session()
+    resp = session.get(
+        f"{BACKEND_URL}/api/taxonomy_search_csv/{NOT_A_TAXON}?taxonomy_type=gtdb"
+    )
+    assert resp.status_code == 200, resp.text
+    assert "taxon" in resp.json()
+
+
+def test_taxonomy_search_csv_minimal_not_found():
+    session = requests.Session()
+    resp = session.get(
+        f"{BACKEND_URL}/api/taxonomy_search_csv_minimal/{NOT_A_TAXON}?taxonomy_type=gtdb"
+    )
+    assert resp.status_code == 200, resp.text
+    assert "taxon" in resp.json()
