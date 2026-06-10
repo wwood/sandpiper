@@ -3,10 +3,11 @@ application.py
 - creates a Flask app instance and registers the database object
 """
 
-from email.message import EmailMessage
-import smtplib
+import json
+import traceback
+import urllib.request
 
-from flask import Flask, got_request_exception
+from flask import Flask, got_request_exception, has_request_context, request
 from flask_cors import CORS
 
 import sys
@@ -14,20 +15,41 @@ import os
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')] + sys.path
 
+# Discord rejects messages longer than 2000 characters.
+_DISCORD_MAX_CONTENT = 2000
+
 
 def _notify_admin(exception):
-    address = ''.join(map(chr, [98, 46, 119, 111, 111, 100, 99, 114, 111, 102,
-                                116, 64, 113, 117, 116, 46, 101, 100, 117, 46,
-                                97, 117]))
-    msg = EmailMessage()
-    msg['Subject'] = 'Sandpiper error'
-    msg['From'] = 'errors@sandpiper'
-    msg['To'] = address
-    msg.set_content(str(exception))
+    # Errors are reported to a Discord channel via an incoming webhook. It is a
+    # no-op unless SANDPIPER_DISCORD_WEBHOOK_URL is set (e.g. in production), so
+    # local/dev runs are unaffected. The webhook URL is a secret: anyone holding
+    # it can post to the channel, so inject it at runtime, never commit it.
+    webhook_url = os.environ.get('SANDPIPER_DISCORD_WEBHOOK_URL')
+    if not webhook_url:
+        return
+
+    # The full traceback plus the request that triggered it.
+    tb = ''.join(
+        traceback.format_exception(type(exception), exception, exception.__traceback__)
+    )
+    header = 'Sandpiper error: {}'.format(type(exception).__name__)
+    if has_request_context():
+        header += '\n{} {}'.format(request.method, request.url)
+
+    # Keep the tail of the traceback (the actual error) if we'd exceed the limit.
+    message = '{}\n```\n{}\n```'.format(header, tb)
+    if len(message) > _DISCORD_MAX_CONTENT:
+        budget = _DISCORD_MAX_CONTENT - len(header) - len('\n```\n…\n\n```')
+        message = '{}\n```\n…\n{}\n```'.format(header, tb[-budget:])
+
+    data = json.dumps({'content': message}).encode('utf-8')
+    req = urllib.request.Request(
+        webhook_url, data=data, headers={'Content-Type': 'application/json'}
+    )
     try:
-        with smtplib.SMTP('localhost') as smtp:
-            smtp.send_message(msg)
+        urllib.request.urlopen(req, timeout=10)
     except Exception:
+        # Never let error reporting break request handling.
         pass
 
 
