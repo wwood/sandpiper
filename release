@@ -64,6 +64,12 @@ if __name__ == '__main__':
     if args.version.startswith('v'):
         raise Exception("--version shouldn't have a leading 'v'")
 
+    yes_no = input(
+        "Did you update the Open Graph preview image (og-preview.png) for the site? (y/n)\n\n"
+    )
+    if yes_no != "y":
+        raise Exception("Please update og-preview.png before releasing")
+
     logging.info("Checking for uncommitted code")
     try:
         extern.run('git diff --exit-code')

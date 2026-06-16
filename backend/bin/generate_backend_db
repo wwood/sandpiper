@@ -685,6 +685,51 @@ def add_metadata_from_kingfisher_annotate(db, run_accession_to_id, kingfisher_an
     logging.info("Wrote {} metadata and {} study link rows to DB".format(num_kingfisher_annotated, num_study_links))
 
 
+# Organism annotations whose recorded host/ecological label is unreliable.
+# NCBI files all viral/phage metagenomes under "organismal metagenomes", which
+# the upstream predictor equates with "host"; but a virome's host vs ecological
+# status should come from its actual microbial community, not the annotation.
+# Matched as substrings (lowercased) so new variants (e.g. "marine viral
+# metagenome") are handled automatically without maintaining an explicit list.
+HOST_LABEL_UNRELIABLE_ORGANISM_KEYWORDS = ('viral', 'phage', 'virome')
+
+
+def _is_host_label_unreliable(organism):
+    org = str(organism).lower()
+    return any(keyword in org for keyword in HOST_LABEL_UNRELIABLE_ORGANISM_KEYWORDS)
+
+
+# BioSample attribute keys that identify a genuine eukaryotic host for a sample.
+# Presence of any of these (with a real value) means a viral/phage metagenome is
+# host-associated (e.g. a sea lion or human virome) and must keep its recorded
+# "host" label rather than being reassigned by the model.
+HOST_EVIDENCE_ATTRIBUTE_KEYS = (
+    'host', 'host_sam', 'host_scientific_name_sam', 'host_taxid_sam',
+    'host_common_name_sam', 'specific_host_sam',
+    'host_scientific_name', 'host_common_name', 'host_taxid', 'specific_host',
+)
+
+# Attribute values that look populated but carry no real host information.
+HOST_VALUE_PLACEHOLDERS = frozenset({
+    '', 'na', 'n/a', 'none', 'null', 'nan', 'missing', 'not applicable',
+    'not collected', 'not provided', 'unknown', 'not determined',
+    'not available', 'restricted access',
+})
+
+
+def _run_ids_with_host_evidence(db):
+    """run_ids that have a real eukaryotic-host BioSample attribute."""
+    keys_lower = [k.lower() for k in HOST_EVIDENCE_ATTRIBUTE_KEYS]
+    rows = db.session.execute(
+        select(BiosampleAttribute.run_id, BiosampleAttribute.v)
+        .where(func.lower(BiosampleAttribute.k).in_(keys_lower))
+    ).all()
+    return {
+        run_id for run_id, value in rows
+        if str(value).strip().lower() not in HOST_VALUE_PLACEHOLDERS
+    }
+
+
 def add_host_predictions(db, run_accession_to_id, host_predictions_tsv):
     num_host_predicted = 0
 
@@ -693,6 +738,10 @@ def add_host_predictions(db, run_accession_to_id, host_predictions_tsv):
     # DRR001356       host    human metagenome        host
     # DRR001360       ecological      human metagenome        host
     # DRR001455       ecological      soil metagenome ecological
+
+    host_evidence_run_ids = _run_ids_with_host_evidence(db)
+    logging.info("Found {} runs with genuine host BioSample evidence".format(
+        len(host_evidence_run_ids)))
 
     update_bindparams = []
 
@@ -703,11 +752,24 @@ def add_host_predictions(db, run_accession_to_id, host_predictions_tsv):
             continue
         run_id = run_accession_to_id[row.acc]
 
+        # Defer to the model prediction when the recorded label is missing, or
+        # when the organism annotation has an unreliable host label (viral/phage
+        # metagenomes wrongly inherit "host" from NCBI's tree). The guard keeps
+        # the recorded "host" label for viral metagenomes that have genuine host
+        # BioSample evidence (e.g. a sea lion or human virome), since the model
+        # alone cannot be trusted to distinguish those from environmental ones.
+        if str(row.host_or_not) == 'nan':
+            host_or_not_mature = row.prediction
+        elif _is_host_label_unreliable(row.organism) and run_id not in host_evidence_run_ids:
+            host_or_not_mature = row.prediction
+        else:
+            host_or_not_mature = row.host_or_not
+
         update_bindparams.append({
             'id': run_id,
             'host_or_not_prediction': row.prediction,
             'host_or_not_recorded': row.host_or_not,
-            'host_or_not_mature': row.prediction if str(row.host_or_not) == 'nan' else row.host_or_not
+            'host_or_not_mature': host_or_not_mature
         })
 
         num_host_predicted += 1
