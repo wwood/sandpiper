@@ -14,7 +14,7 @@ if (import.meta.env.PROD) {
     API_URL = `${useHttps ? 'https' : 'http'}://${raw}/api`
   }
 } else {
-  API_URL = 'http://localhost:5000/api'
+  API_URL = 'http://localhost:8090/api'
 }
 
 export function api_url () {

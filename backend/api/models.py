@@ -133,6 +133,23 @@ class ParsedSampleAttribute(db.Model):
     low_complexity = db.Column(db.Boolean)
     top1_order_fraction = db.Column(db.Float)
     top3_order_fraction = db.Column(db.Float)
+    # Backend-only classification flags (not surfaced on the website; intentionally
+    # excluded from to_displayable_dict). Populated in the 'tags' stage by
+    # add_metagenome_classification_flags() in bin/generate_backend_db.
+    non_metagenome_organism_strict = db.Column(db.Boolean)
+    non_metagenome_organism_loose = db.Column(db.Boolean)
+    synthetic = db.Column(db.Boolean)
+    rna_or_non_dna_strict = db.Column(db.Boolean)
+    rna_or_non_dna_loose = db.Column(db.Boolean)
+    # Per-taxonomy "nothing assigned below domain-level" flags (backend-only,
+    # excluded from to_displayable_dict). Profile-derived, so they differ by
+    # taxonomy_type. domain_only_gtdb / domain_only_globdb are set during the
+    # stage2 condensed loads in fill_condensed_and_taxonomy_tables(); NULL means
+    # no profile was loaded for that sample under that taxonomy. domain_only_both
+    # = domain_only_gtdb AND domain_only_globdb, derived in the 'tags' stage.
+    domain_only_gtdb = db.Column(db.Boolean)
+    domain_only_globdb = db.Column(db.Boolean)
+    domain_only_both = db.Column(db.Boolean)
     def to_displayable_dict(self):
         return dict(
             collection_year=self.collection_year,

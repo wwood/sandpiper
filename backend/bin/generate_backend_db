@@ -85,8 +85,16 @@ def fill_condensed_and_taxonomy_tables(
         if taxonomy_type == 'gtdb'
         else 'globdb_known_species_fraction'
     )
+    # Per-taxonomy "nothing assigned below domain-level" flag. A sample is
+    # domain-only if none of its condensed rows resolve past domain (i.e. no
+    # entry deeper than "Root; d__X"). Written to the column matching this load;
+    # domain_only_both is derived from the pair in the 'tags' stage.
+    domain_only_field = (
+        'domain_only_gtdb' if taxonomy_type == 'gtdb' else 'domain_only_globdb'
+    )
     current_sample_species_coverage = 0.0
     current_sample_non_species_coverage = 0.0
+    current_sample_has_below_domain = False
     known_species_fractions = []
 
     with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8') as tf:
@@ -106,12 +114,14 @@ def fill_condensed_and_taxonomy_tables(
                         known_species_fractions.append({
                             'id': run_accession_to_id[current_sample],
                             known_species_field: current_sample_species_coverage / (
-                                current_sample_species_coverage + current_sample_non_species_coverage)})
+                                current_sample_species_coverage + current_sample_non_species_coverage),
+                            domain_only_field: not current_sample_has_below_domain})
                 current_sample = row[0]
                 current_sample_entries = []
                 sample_count += 1
                 current_sample_species_coverage = 0.0
                 current_sample_non_species_coverage = 0.0
+                current_sample_has_below_domain = False
                 if sample_count % 10000 == 0:
                     logging.info("Processed condensed profiles for {} samples".format(sample_count))
 
@@ -121,6 +131,9 @@ def fill_condensed_and_taxonomy_tables(
                     current_sample_species_coverage += float(row[1])
                 else:
                     current_sample_non_species_coverage += float(row[1])
+                # More than "Root; d__X" => this sample resolves below domain.
+                if len(row[2].split('; ')) > 2:
+                    current_sample_has_below_domain = True
 
         if current_sample is not None:
             (taxonomy_name_to_id, next_taxonomy_id,
@@ -131,7 +144,8 @@ def fill_condensed_and_taxonomy_tables(
                 known_species_fractions.append({
                     'id': run_accession_to_id[current_sample],  # We test that id == run_id in the add_smf function
                     known_species_field: current_sample_species_coverage / (
-                        current_sample_species_coverage + current_sample_non_species_coverage)})
+                        current_sample_species_coverage + current_sample_non_species_coverage),
+                    domain_only_field: not current_sample_has_below_domain})
 
         # Commit taxonomy entries
         logging.info("Committing taxonomy entries from condensed profiles ..")
@@ -1194,6 +1208,116 @@ def index_condensed_profiles_multi_column(db, db_path):
     logging.info("Indexed condensed profiles tax+relabund")
 
 
+def add_metagenome_classification_flags(db, db_path):
+    '''Populate backend-only boolean classification columns on parsed_sample_attributes.
+
+    These are not surfaced on the website (intentionally absent from
+    ParsedSampleAttribute.to_displayable_dict). Each is a strict T/F (never NULL).
+
+    Columns:
+      non_metagenome_organism_strict - named single organism (no "metagenome"),
+          excluding community-like terms AND generic/ambiguous terms (bacterium,
+          unidentified, etc.)
+      non_metagenome_organism_loose  - as strict, but INCLUDING the generic/ambiguous
+          terms (still excludes clear community terms)
+      synthetic                      - synthetic/simulated metagenome, synthetic
+          construct, or library_source = SYNTHETIC
+      rna_or_non_dna_strict          - RNA library strategies or
+          TRANSCRIPTOMIC/METATRANSCRIPTOMIC library_source
+      rna_or_non_dna_loose           - as strict, plus OTHER / SYNTHETIC library_source
+    '''
+    logging.info("Adding metagenome classification flags ..")
+    conn = db.session.connection().connection
+
+    # Community/environmental terms: genuine communities NCBI did not suffix with
+    # "metagenome". Excluded from both non-metagenome flags.
+    community_like = ['%uncultured%', '%environmental sample%', '%enrichment culture%',
+                      '%mixed culture%', '%microbial community%', '%consortium%', '%microbiome%']
+    community_clause = " OR ".join(
+        "lower(n.taxon_name) LIKE '{}'".format(t) for t in community_like)
+
+    # Generic/collective names too ambiguous to call a single organism; loose-only.
+    ambiguous = ['bacterium', 'unidentified', 'archaeon', 'prokaryote', 'eukaryote',
+                 'organism', 'microorganism', 'uncultured organism',
+                 'unidentified prokaryotic organism', 'mixed sample', 'blank sample',
+                 'prokaryote coculture', 'root', 'cellular organisms',
+                 'unclassified bacteria', 'metagenomes', 'unclassified sequences']
+    ambiguous_clause = ",".join("'{}'".format(a) for a in ambiguous)
+
+    # RNA-based library strategies (Synthetic-Long-Read is a sequencing tech, not RNA,
+    # and is deliberately excluded).
+    rna_strategies = ['RNA-Seq', 'miRNA-Seq', 'FL-cDNA', 'ssRNA-seq', 'ncRNA-Seq',
+                      'RIP-Seq', 'Ribo-seq', 'EST']
+    rna_strat_clause = ",".join("'{}'".format(s) for s in rna_strategies)
+
+    sql = """
+    UPDATE parsed_sample_attributes p
+    SET
+      non_metagenome_organism_loose = COALESCE((
+        n.taxon_name IS NOT NULL
+        AND lower(n.taxon_name) NOT LIKE '%metagenome%'
+        AND NOT ({community})
+      ), FALSE),
+      non_metagenome_organism_strict = COALESCE((
+        n.taxon_name IS NOT NULL
+        AND lower(n.taxon_name) NOT LIKE '%metagenome%'
+        AND NOT ({community})
+        AND lower(n.taxon_name) NOT IN ({ambiguous})
+      ), FALSE),
+      synthetic = COALESCE((
+        lower(n.taxon_name) LIKE '%synthetic%'
+        OR lower(n.taxon_name) LIKE '%simulat%'
+        OR EXISTS (SELECT 1 FROM biosample_attributes ba
+                   WHERE ba.run_id = n.id AND ba.k = 'library_source'
+                     AND upper(ba.v) = 'SYNTHETIC')
+      ), FALSE),
+      rna_or_non_dna_strict = COALESCE((
+        n.library_strategy IN ({rna})
+        OR EXISTS (SELECT 1 FROM biosample_attributes ba
+                   WHERE ba.run_id = n.id AND ba.k = 'library_source'
+                     AND upper(ba.v) IN ('METATRANSCRIPTOMIC','TRANSCRIPTOMIC SINGLE CELL','TRANSCRIPTOMIC'))
+      ), FALSE),
+      rna_or_non_dna_loose = COALESCE((
+        n.library_strategy IN ({rna})
+        OR EXISTS (SELECT 1 FROM biosample_attributes ba
+                   WHERE ba.run_id = n.id AND ba.k = 'library_source'
+                     AND upper(ba.v) IN ('METATRANSCRIPTOMIC','TRANSCRIPTOMIC SINGLE CELL','TRANSCRIPTOMIC','OTHER','SYNTHETIC'))
+      ), FALSE)
+    FROM ncbi_metadata n
+    WHERE p.run_id = n.id;
+    """.format(community=community_clause, ambiguous=ambiguous_clause, rna=rna_strat_clause)
+
+    conn.execute(sql)
+    conn.commit()
+
+    for col in ['non_metagenome_organism_strict', 'non_metagenome_organism_loose',
+                'synthetic', 'rna_or_non_dna_strict', 'rna_or_non_dna_loose']:
+        n_true = conn.execute(
+            "SELECT count(*) FROM parsed_sample_attributes WHERE {} = TRUE".format(col)).fetchone()[0]
+        logging.info("  {} = TRUE: {}".format(col, n_true))
+    logging.info("Added metagenome classification flags")
+
+
+def add_domain_only_below_flag(db, db_path):
+    # domain_only_both is TRUE only when the sample is domain-only under BOTH
+    # taxonomies. The per-taxonomy flags (domain_only_gtdb / domain_only_globdb)
+    # are set during the stage2 condensed loads; here we combine them. SQL
+    # three-valued logic gives the intended NULL semantics: if either side is
+    # NULL (no profile loaded for that sample under that taxonomy) the result is
+    # NULL, unless the other side is FALSE (resolves deeper => not both).
+    logging.info("Deriving domain_only_both from per-taxonomy domain-only flags ..")
+    conn = db.session.connection().connection
+    conn.execute(
+        "UPDATE parsed_sample_attributes "
+        "SET domain_only_both = domain_only_gtdb AND domain_only_globdb")
+    conn.commit()
+    for col in ['domain_only_gtdb', 'domain_only_globdb', 'domain_only_both']:
+        n_true = conn.execute(
+            "SELECT count(*) FROM parsed_sample_attributes WHERE {} = TRUE".format(col)).fetchone()[0]
+        logging.info("  {} = TRUE: {}".format(col, n_true))
+    logging.info("Derived domain_only_both")
+
+
 def add_enriched_community_tags(db, db_path):
     # Add enriched community TAG
     logging.info("Adding enriched community tag ..")
@@ -1276,6 +1400,9 @@ if __name__ == '__main__':
     parent_parser.add_argument(
         '--otu-table', help='OTU table of the singlem db')  # Commented out for now since unsure it will be used.
     parent_parser.add_argument('--condensed-otu-table', help='condensed OTU table input')
+    parent_parser.add_argument('--condensed-otu-table-taxonomy-type',
+                               help='taxonomy type for condensed OTU table (default: gtdb)',
+                               choices=['gtdb', 'globdb'], default='gtdb')
     parent_parser.add_argument('--globdb-condensed-otu-table',
                                help='condensed OTU table input built on globdb taxonomy')
     parent_parser.add_argument('-o', help='duckdb file to generate', required=True)
@@ -1438,10 +1565,11 @@ if __name__ == '__main__':
 
             add_smf(db, run_accession_to_id, args.smf_file)
 
+            condensed_taxonomy_type = args.condensed_otu_table_taxonomy_type
             taxonomy_name_to_id, next_taxonomy_id = fill_condensed_and_taxonomy_tables(
                 db, db_path, args.condensed_otu_table,
-                blacklist, run_accession_to_id, 'gtdb', taxonomy_name_to_id, next_taxonomy_id,
-                allow_new_taxa=False)
+                blacklist, run_accession_to_id, condensed_taxonomy_type, taxonomy_name_to_id, next_taxonomy_id,
+                allow_new_taxa=(condensed_taxonomy_type == 'globdb'))
 
             if args.globdb_condensed_otu_table:
                 taxonomy_name_to_id, next_taxonomy_id = fill_condensed_and_taxonomy_tables(
@@ -1465,6 +1593,8 @@ if __name__ == '__main__':
 
         elif args.stage == 'tags':
             add_enriched_community_tags(db, db_path)
+            add_metagenome_classification_flags(db, db_path)
+            add_domain_only_below_flag(db, db_path)
 
         elif args.stage == 'otus_parquet':
             if not args.otu_table or not args.otu_parquet_dir:
