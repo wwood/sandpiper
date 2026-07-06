@@ -1239,9 +1239,8 @@ def add_metagenome_classification_flags(db, db_path):
     # Generic/collective names too ambiguous to call a single organism; loose-only.
     ambiguous = ['bacterium', 'unidentified', 'archaeon', 'prokaryote', 'eukaryote',
                  'organism', 'microorganism', 'uncultured organism',
-                 'unidentified prokaryotic organism', 'mixed sample', 'blank sample',
-                 'prokaryote coculture', 'root', 'cellular organisms',
-                 'unclassified bacteria', 'metagenomes', 'unclassified sequences']
+                 'unidentified prokaryotic organism',
+                 'unclassified bacteria']
     ambiguous_clause = ",".join("'{}'".format(a) for a in ambiguous)
 
     # RNA-based library strategies (Synthetic-Long-Read is a sequencing tech, not RNA,

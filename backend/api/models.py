@@ -167,7 +167,15 @@ class ParsedSampleAttribute(db.Model):
             known_species_fraction=self.known_species_fraction,
             globdb_known_species_fraction=self.globdb_known_species_fraction,
             low_complexity=self.low_complexity,
-            top1_order_fraction=self.top1_order_fraction)
+            top1_order_fraction=self.top1_order_fraction,
+            non_metagenome_organism_strict=self.non_metagenome_organism_strict,
+            non_metagenome_organism_loose=self.non_metagenome_organism_loose,
+            synthetic=self.synthetic,
+            rna_or_non_dna_strict=self.rna_or_non_dna_strict,
+            rna_or_non_dna_loose=self.rna_or_non_dna_loose,
+            domain_only_gtdb=self.domain_only_gtdb,
+            domain_only_globdb=self.domain_only_globdb,
+            domain_only_both=self.domain_only_both)
 
 
 class StudyLink(db.Model):

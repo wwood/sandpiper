@@ -319,6 +319,14 @@ def fetch_metadata(sample_name):
             if metadata_dict['parsed_sample_attributes']['globdb_known_species_fraction'] is not None
             else None
         ),
+        'non_metagenome_organism_strict': metadata_dict['parsed_sample_attributes']['non_metagenome_organism_strict'],
+        'non_metagenome_organism_loose': metadata_dict['parsed_sample_attributes']['non_metagenome_organism_loose'],
+        'synthetic': metadata_dict['parsed_sample_attributes']['synthetic'],
+        'rna_or_non_dna_strict': metadata_dict['parsed_sample_attributes']['rna_or_non_dna_strict'],
+        'rna_or_non_dna_loose': metadata_dict['parsed_sample_attributes']['rna_or_non_dna_loose'],
+        'domain_only_gtdb': metadata_dict['parsed_sample_attributes']['domain_only_gtdb'],
+        'domain_only_globdb': metadata_dict['parsed_sample_attributes']['domain_only_globdb'],
+        'domain_only_both': metadata_dict['parsed_sample_attributes']['domain_only_both'],
         'sample_name': metadata_dict['sample_name'],
         'study_title': metadata_dict['study_title'],
         'bioproject': metadata_dict['bioproject'],
