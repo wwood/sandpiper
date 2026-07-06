@@ -18,3 +18,7 @@ backend/*.sqlite3
 **/__pycache__/
 sandpiper/snakemake_test/*
 sandpiper/snakemake/db.*
+snakemake_test/.snakemake/
+snakemake_test/kingfisher_metadata/
+snakemake/pixi.*
+snakemake_test/
