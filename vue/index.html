@@ -8,6 +8,21 @@
     <script defer src="https://use.fontawesome.com/releases/v5.0.8/js/all.js" integrity="sha384-SlE991lGASHoBfWbelyBPLsUlwY1GwNDJo3jSJO04KZ33K2bwfV9YBauFfnzvynJ" crossorigin="anonymous"></script>
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <title>sandpiper</title>
+
+    <!-- Open Graph / Twitter link-preview metadata. These MUST stay static in
+         this file (not set from within the Vue app) since social crawlers
+         (Twitter/X, Slack, etc.) read the raw HTML and never execute JS.
+         og-preview.png lives in vue/public/ and is regenerated per the
+         release script's checklist step. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Sandpiper" />
+    <meta property="og:description" content="Browse SingleM metagenome profiles from public sequencing data." />
+    <meta property="og:url" content="https://sandpiper.qut.edu.au/" />
+    <meta property="og:image" content="https://sandpiper.qut.edu.au/og-preview.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Sandpiper" />
+    <meta name="twitter:description" content="Browse SingleM metagenome profiles from public sequencing data." />
+    <meta name="twitter:image" content="https://sandpiper.qut.edu.au/og-preview.png" />
   </head>
   <body>
     <div id="app"></div>
