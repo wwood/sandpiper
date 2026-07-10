@@ -11,11 +11,11 @@ class BaseConfig:
     # Check if we're in testing mode
     if os.environ.get('SANDPIPER_TESTING'):
         print("Running in DB testing mode")
-        DB_NAME = 'sandpiper_38_test.duckdb'
+        DB_NAME = 'sandpiper_39_test.duckdb'
     else:
         print("Running in DB production mode")
         # Open read-only to avoid database lock issues.
-        DB_NAME = 'sandpiper_38.duckdb'
+        DB_NAME = 'sandpiper_39.duckdb'
     LYRA_DB_PATH = 'duckdb:///'+os.path.join(os.path.dirname(__file__), '../db/{}'.format(DB_NAME))
     # LYRA_DB_PATH = 'duckdb:////scratch/sandpiper/sandpiper_33.duckdb'
     # LYRA_DB_PATH = 'duckdb:////scratch/sandpiper/sandpiper_19_test.duckdb'

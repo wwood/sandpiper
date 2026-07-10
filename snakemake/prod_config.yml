@@ -1,4 +1,4 @@
-SANDPIPER_VERSION: '38'  # Updated from 37 
+SANDPIPER_VERSION: '39'  # Updated from 38 
 
 KINGFISHER_METADATA_DATE: '20260521'
 ACCESSIONS_FILE: /scratch/microbiome/sandpiper2-gtdb-renew/final_SRA_v2/accessions.txt
