@@ -11,7 +11,10 @@ class BaseConfig:
     # Check if we're in testing mode
     if os.environ.get('SANDPIPER_TESTING'):
         print("Running in DB testing mode")
-        DB_NAME = 'sandpiper_39_test.duckdb'
+        # Kept pinned to 38 intentionally so the CI fixture (downloaded from
+        # Dropbox in .github/workflows/tests.yaml) never needs updating when
+        # SANDPIPER_VERSION bumps in prod_config.yml.
+        DB_NAME = 'sandpiper_38_test.duckdb'
     else:
         print("Running in DB production mode")
         # Open read-only to avoid database lock issues.
