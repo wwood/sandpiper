@@ -77,7 +77,29 @@ import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
 
     <section class="section is-small container has-text-justified">
       <h1 class="title">Changelog</h1>
-      <p>Note that point releases (e.g. v1.0.x, v1.1.x) may not be listed here, and are only for minor bug/deployment fixes.</p><br />
+      <p>Note that point releases (e.g. v2.0.x, v2.1.x) may not be listed here, and are only for minor bug/deployment fixes.</p><br />
+
+      <h2 class="title is-5">2.1.*</h2>
+        <div class="columns has-text-left">
+          <div class="column content">
+            <ul>
+              <li>Integration of <a href="https://globdb.org/">GlobDB</a> R232 community profiles.</li>
+              <li>Updated GlobDB database reference R226 -> R232.</li>
+              <li>Fixed environmental viral metagenomes incorrectly labeled "host-associated" due to NCBI's labelling "Organismal".</li>
+              <li>Taxonomy page now has a Shuffle button, letting users randomise the order of sample results.</li>
+              <li>Total metagenomes screened -> 913,071. Down 94 due to redacted SRA data from NCBI (Error 404).</li>
+              <li>NPM update</li>
+              <li>New information present within each run page, under *Derived information*:</li>
+                <ul>
+                  <li>Non-metagenome organism (Strict/Loose): Samples flagged true when the recorded organism name references a single, specific species rather than a metagenome or a community. Loose additionally includes ambiguous placeholder names like 'bacterium', 'unidentified', etc.</li>
+                  <li>Synthetic: Samples flagged true when the organism name contains 'synthetic' or 'simulat' (simulated/simulation), or the BioSample library source is recorded as SYNTHETIC.</li>
+                  <li>RNA / non-DNA (Strict/Loose): Samples flagged true when the sequencing library strategy or BioSample library source indicate RNA or other non-DNA metadata related information.</li>
+                  <li>Domain-only (GTDB, GlobDB, or both): Derived from the condensed taxonomic profiles; samples flagged true where the condensed taxonomic profile did not resolve below domain-level classification.</li>
+                </ul>
+            
+            </ul>
+          </div>
+        </div>
 
       <h2 class="title is-5">v2.0.*</h2>
         <div class="columns has-text-left">

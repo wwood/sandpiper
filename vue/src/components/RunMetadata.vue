@@ -36,6 +36,14 @@
     &nbsp;
     <div class="container">
       <section>
+        <h3 class="title">Derived information</h3>
+        <RunMetadataTable :table_data="classification_metadata()" />
+      </section>
+    </div>
+
+    &nbsp;
+    <div class="container">
+      <section>
         <h3 class="title">Other identifiers</h3>
         <RunMetadataTable :table_data="this.mdata.identity_metadata"  />
       </section>
@@ -189,6 +197,32 @@ export default {
     },
     studyLinksColumns () {
       return [{ label: 'database', field: 'k' }, { label: 'id', field: 'value' }]
+    },
+    // Backend classification flags surfaced from parsed_sample_attributes.
+    // Booleans render Yes/No; the domain_only_* flags may be null (no profile
+    // loaded for that taxonomy) and render as Unknown.
+    classification_metadata () {
+      const p = this.mdata_parsed
+      const yesNo = (v) => (v === null || typeof v === 'undefined' ? 'Unknown' : (v ? 'Yes' : 'No'))
+      const rows = [
+        { k: 'Non-metagenome organism (strict)', flag: p.non_metagenome_organism_strict,
+          description: "True when the organism name recorded for the sample names a single, specific species rather than a metagenome or a community. Names containing the word 'metagenome' are excluded, as are community terms such as 'uncultured', 'environmental sample', 'enrichment culture', 'mixed culture', 'microbial community', 'consortium' and 'microbiome', and generic placeholder names such as 'bacterium', 'unidentified', 'archaeon', 'prokaryote', 'eukaryote', 'organism' and 'microorganism' that do not identify an actual species. What is left is samples named after a real organism, such as 'Escherichia coli' or 'Homo sapiens'." },
+        { k: 'Non-metagenome organism (loose)', flag: p.non_metagenome_organism_loose,
+          description: "True when the organism name recorded for the sample does not contain the word 'metagenome' and does not match a community term such as 'uncultured', 'environmental sample', 'enrichment culture', 'mixed culture', 'microbial community', 'consortium' or 'microbiome'. Generic placeholder names that do not identify an actual species, such as 'bacterium', 'unidentified', 'archaeon', 'prokaryote' or 'organism', are still counted true here." },
+        { k: 'Synthetic', flag: p.synthetic,
+          description: "True when the organism name recorded for the sample contains the word 'synthetic', or contains 'simulat', which catches 'simulate', 'simulated' and 'simulation', or when the sample's declared BioSample library source is recorded as 'SYNTHETIC'." },
+        { k: 'RNA / non-DNA (strict)', flag: p.rna_or_non_dna_strict,
+          description: "True when the sequencing library strategy recorded for the run is RNA-Seq, miRNA-Seq, FL-cDNA, ssRNA-seq, ncRNA-Seq, RIP-Seq, Ribo-seq or EST, or when the declared BioSample library source is METATRANSCRIPTOMIC, TRANSCRIPTOMIC or TRANSCRIPTOMIC SINGLE CELL." },
+        { k: 'RNA / non-DNA (loose)', flag: p.rna_or_non_dna_loose,
+          description: "True when the sequencing library strategy recorded for the run is RNA-Seq, miRNA-Seq, FL-cDNA, ssRNA-seq, ncRNA-Seq, RIP-Seq, Ribo-seq or EST, or when the declared BioSample library source is METATRANSCRIPTOMIC, TRANSCRIPTOMIC, TRANSCRIPTOMIC SINGLE CELL, OTHER or SYNTHETIC." },
+        { k: 'Domain-only (GTDB)', flag: p.domain_only_gtdb,
+          description: "True when every classification in the sample's condensed taxonomic profile under the GTDB scheme stops at the domain level, such as 'Bacteria' or 'Archaea', with none reaching phylum or deeper." },
+        { k: 'Domain-only (GlobDB)', flag: p.domain_only_globdb,
+          description: "True when every classification in the sample's condensed taxonomic profile under the GlobDB scheme stops at the domain level, such as 'Bacteria' or 'Archaea', with none reaching phylum or deeper." },
+        { k: 'Domain-only (both)', flag: p.domain_only_both,
+          description: "True when the sample's condensed taxonomic profile stops at the domain level under both the GTDB scheme and the GlobDB scheme, with no classification in either profile reaching phylum or deeper. It is left blank when one of the two profiles was never generated for the sample." }
+      ]
+      return rows.map(r => ({ k: r.k, v: yesNo(r.flag), is_custom: false, description: r.description }))
     },
     lat_lon () {
       const parsed_data = this.mdata_parsed

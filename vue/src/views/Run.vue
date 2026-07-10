@@ -39,7 +39,7 @@
               </span>
       <!-- {{ related_runs_short }}  -->
             <br />
-            SingleM prokaryotic fraction (SPF) <span style="smf_low">{{ metadata.metadata_parsed.smf }}%</span> | Known species fraction {{ known_species_fraction }}% | Low complexity: {{ metadata.metadata_parsed.low_complexity ? 'Yes' : 'No' }}
+            SingleM prokaryotic fraction (SPF) <span style="smf_low">{{ metadata.metadata_parsed.smf }}%</span> | Known species fraction {{ known_species_fraction }}% | Low complexity: {{ metadata.metadata_parsed.low_complexity ? 'Yes' : 'No' }} | Non-metagenome organism: {{ metadata.metadata_parsed.non_metagenome_organism_strict ? 'Yes' : 'No' }} | Synthetic: {{ metadata.metadata_parsed.synthetic ? 'Yes' : 'No' }} | RNA/non-DNA: {{ metadata.metadata_parsed.rna_or_non_dna_strict ? 'Yes' : 'No' }}
             <br />
           </div>
 

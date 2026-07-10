@@ -243,7 +243,7 @@ rule generate_backend_db_stage2:
             test_or_prod=config['TEST_OR_PROD'],
             version=config['SANDPIPER_VERSION'])
     resources:
-        mem_mb=64000,
+        mem_mb=128000,
         runtime='48h'
     shell:
         'export SNAKE_WORKING_DIR=`pwd` && ' \

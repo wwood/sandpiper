@@ -121,7 +121,7 @@
         </div>
         <br />
         <b-table
-          :data="filtered_profiles"
+          :data="display_profiles"
           :striped="true"
           :sort-icon="'arrow-up'"
           :default-sort="this.sortField"
@@ -136,8 +136,16 @@
           @page-change="onPageChange"
           @sort="onSort">
 
-          <b-table-column field='sample_name' label='Run' v-slot="props">
-            <a :href="'/run/' + props.row.sample_acc">{{ props.row.sample_acc }}</a>
+          <b-table-column field='sample_name' useSorted>
+            <template #header>
+              <span style="display: flex; align-items: center; gap: 0.4rem;">
+                Run
+                <b-button class="shuffle-btn" size="is-small" icon-left="shuffle-variant" @click.stop="shuffle_runs" title="Shuffle order" />
+              </span>
+            </template>
+            <template #default="props">
+              <a :href="'/run/' + props.row.sample_acc">{{ props.row.sample_acc }}</a>
+            </template>
           </b-table-column>
 
           <b-table-column field='organism' label='Environment' v-slot="props" sortable>
@@ -232,6 +240,7 @@ export default {
       GLOBDB_VERSION,
       exclude_low_complexity: true,
       filtered_total: null,
+      shuffled_profiles: null,
       page: 1,
       pageSize: 100,
       sortField: 'relative_abundance',
@@ -271,6 +280,9 @@ export default {
       return this.search_result['condensed_profiles'].filter(
         r => r.top1_order_fraction === null || r.top1_order_fraction < 95
       )
+    },
+    display_profiles () {
+      return this.shuffled_profiles ?? this.filtered_profiles
     }
   },
   created () {
@@ -418,10 +430,21 @@ export default {
     },
     minimal_csv_link () {
       return api_url() + '/taxonomy_search_csv_minimal/' + this.taxonomy + '?taxonomy_type=' + this.taxonomy_type
+    },
+    shuffle_runs () {
+      const arr = [...this.filtered_profiles]
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]]
+      }
+      this.shuffled_profiles = arr
     }
   },
   watch: {
     $route: 'fetchGlobalData',
+    filtered_profiles () {
+      this.shuffled_profiles = null
+    },
     exclude_low_complexity () {
       const scrollY = window.scrollY
       this.page = 1
@@ -435,3 +458,22 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.shuffle-btn {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #aaa;
+}
+.shuffle-btn:hover,
+.shuffle-btn:focus,
+.shuffle-btn:active,
+.shuffle-btn:focus:not(:active) {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #111;
+  outline: none;
+}
+</style>

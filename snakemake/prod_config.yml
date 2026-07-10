@@ -1,11 +1,11 @@
-SANDPIPER_VERSION: '38'  # Updated from 37 
+SANDPIPER_VERSION: '39'  # Updated from 38 
 
 KINGFISHER_METADATA_DATE: '20260521'
 ACCESSIONS_FILE: /scratch/microbiome/sandpiper2-gtdb-renew/final_SRA_v2/accessions.txt
 
 METAPACKAGE_DESCRIBE: 'metapackage_describe.csv'
 
-BIOPROJECT_METADATA_DATE: '20260521'
+BIOPROJECT_METADATA_DATE: '20260625'
 
 JSON_METADATA_FILES: '/work/microbiome/msingle/mess/225_sra_metadata_20260303/shotgun_sra_20260303/*' 
 
@@ -14,12 +14,12 @@ CONDENSED_OTU_TABLE: '/scratch/microbiome/sandpiper2-gtdb-renew/final_SRA_v2/con
 OTU_TABLE: '/scratch/microbiome/sandpiper2-gtdb-renew/final_SRA_v2/otu_table.csv.gz'
 HOST_OR_NOT_PREDICTION: '/scratch/microbiome/sandpiper2-gtdb-renew/final_SRA_v2/host_or_not_prediction/host_or_not_preds.csv'
 SMF_FILE: '/scratch/microbiome/sandpiper2-gtdb-renew/final_SRA_v2/per_acc_summary.csv'
-GLOBDB_CONDENSED_OTU_TABLE: '/work/microbiome/ibis/deep_ocean/results/renew/20250411/condensed.tsv.gz'
+GLOBDB_CONDENSED_OTU_TABLE: '/scratch/microbiome/sandpiper2-globdb-renew/final_SRA/condensed.csv.gz'
 GTDB_ARCHAEA_TAXONOMY: '/home/herholdt/Globdb_taxonomy/ar53_taxonomy_r232_reps.tsv'
 GTDB_BACTERIA_TAXONOMY: '/home/herholdt/Globdb_taxonomy/bac120_taxonomy_r232_reps.tsv'
 GLOBDB_TAXONOMY: '/home/herholdt/Globdb_taxonomy/combined_r232_taxonomy.tsv'
 
-NCBI_API_KEY: 'b8110e58af25f2e3aec503694dda7d605308'
+NCBI_API_KEY: 'YOUR_NCBI_API_KEY_HERE'
 
 TEST_OR_PROD: 'prod'
-SCRATCH_DIR: '/scratch/microbiome/sandpiper2-gtdb-renew/sandpiper_db_updated_v3'
+SCRATCH_DIR: '/scratch/microbiome/sandpiper2-globdb-renew/sandpiper_db_v2'
