@@ -5,12 +5,6 @@ server {
     location / {
         root   /usr/share/nginx/html;
         try_files $uri $uri/ /index.html;
-
-        # If Nginx decides to return a 304, explicitly strip the chunked header.
-        # This prevents the ALB from waiting for a body chunk that will never arrive.
-        if ($status = 304) {
-            chunked_transfer_encoding off;
-        }
     }
 
     error_page   500 502 503 504  /50x.html;

@@ -16,5 +16,8 @@ RUN npm run build
 FROM nginxinc/nginx-unprivileged:stable-alpine as website
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx_site /etc/nginx/conf.d/default.conf
+# Validate the runtime configuration while building so an invalid web image is
+# never pushed successfully and then rejected by the production deployment.
+RUN nginx -t
 CMD ["nginx", "-g", "daemon off;"]
 USER nginx
