@@ -70,10 +70,10 @@
 // If you need to reference 'L', such as in 'L.icon', then be sure to
 // explicitly import 'leaflet' into your component
 // import L from 'leaflet'
-import { LMap, LTileLayer, LMarker } from '@vue-leaflet/vue-leaflet'
+import { LMap, LTileLayer, LMarker } from '@maxel01/vue-leaflet'
 
 
-import { Icon, latLng } from 'leaflet'
+import L, { Icon } from 'leaflet'
 import RunMetadataTable from '@/components/RunMetadataTable.vue'
 
 // Import marker icon images as modules
@@ -107,7 +107,7 @@ export default {
       attribution:
         '&copy; <a target="_blank" href="http://osm.org/copyright">OpenStreetMap</a> contributors',
       zoom: default_zoom,
-      center: latLng(0, 0),
+      center: L.latLng(0, 0),
       bounds: null
     }
   },
@@ -130,14 +130,14 @@ export default {
       if (lat_lon !== null) {
         // Near the poles, the map is too small and so the marker can be hidden
         if (lat_lon[0] > 45) {
-          return latLng(45.0, lat_lon[1])
+          return L.latLng(45.0, lat_lon[1])
         } else if (lat_lon[0] < -45) {
-          return latLng(-45.0, lat_lon[1])
+          return L.latLng(-45.0, lat_lon[1])
         } else {
-          return latLng(0, lat_lon[1])
+          return L.latLng(0, lat_lon[1])
         }
       } else {
-        return latLng(0, 0)
+        return L.latLng(0, 0)
       }
     },
     reset_map: function () {
