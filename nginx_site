@@ -2,6 +2,9 @@ server {
     listen       3000;
     server_name  localhost;
 
+    # Do not put chunked_transfer_encoding inside an `if`: nginx does not allow
+    # that directive in an `if` context. If the old ALB/304 issue recurs, test
+    # `chunked_transfer_encoding off;` here at server scope (it affects all responses).
     location / {
         root   /usr/share/nginx/html;
         try_files $uri $uri/ /index.html;
