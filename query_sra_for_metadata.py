@@ -29,12 +29,37 @@ __status__ = "Development"
 
 import argparse
 import logging
+import subprocess
 import sys
 import os
 
 import extern
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
+
+def gcs_destination_exists(destination_path):
+    '''Return True if the GCS export destination (a path ending in '/*') already
+    contains any objects, since BigQuery EXPORT DATA fails rather than overwrite.'''
+    prefix = destination_path.rstrip('*')
+    result = subprocess.run(
+        ['gcloud', 'storage', 'ls', prefix],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode == 0:
+        return result.stdout.decode().strip() != ''
+    stderr = result.stderr.decode()
+    # A missing prefix is not an error condition, anything else is.
+    if 'not found' in stderr.lower() or 'matched no objects' in stderr.lower():
+        return False
+    raise Exception("Failed to list {}: {}".format(prefix, stderr))
+
+def export_data(destination_path, sql, description):
+    if gcs_destination_exists(destination_path):
+        logging.info("Skipping export of {} because {} already exists".format(
+            description, destination_path))
+        return
+    logging.info("Querying and writing {} results to {} ..".format(description, destination_path))
+    extern.run('bq query --use_legacy_sql=false', stdin=sql)
+    logging.info("Finished querying for {}".format(description))
 
 if __name__ == '__main__':
     parent_parser = argparse.ArgumentParser()
@@ -174,48 +199,40 @@ WHERE
     ##### SHOTGUN
     if args.target == 'shotgun':
       shotgun_destination_path = 'gs://{}/shotgun_sra_{}/*'.format(args.bucket_name, args.date)
-      logging.info("Querying and writing shotgun results to {} ..".format(shotgun_destination_path))
 
       sql1 = sql.replace(
          '__SQL_JSON_RESULTS_URI__',shotgun_destination_path).replace(
             '__SQL_PLATFORM__', 'ILLUMINA') + metagenome_specfic_sql
 
-      extern.run('bq query --use_legacy_sql=false', stdin=sql1)
-      logging.info("Finished querying for shotgun")
+      export_data(shotgun_destination_path, sql1, 'shotgun')
 
 
     #### SHOTGUN NANOPORE
     elif args.target == 'shotgun-nanopore':
       shotgun_destination_path = 'gs://{}/shotgun_nanopore_sra_{}/*'.format(args.bucket_name, args.date)
-      logging.info("Querying and writing shotgun nanopore results to {} ..".format(shotgun_destination_path))
 
       sql1 = sql.replace(
          '__SQL_JSON_RESULTS_URI__',shotgun_destination_path).replace(
             '__SQL_PLATFORM__', 'OXFORD_NANOPORE') + metagenome_specfic_sql
 
-      extern.run('bq query --use_legacy_sql=false', stdin=sql1)
-      logging.info("Finished querying for shotgun nanopore")
+      export_data(shotgun_destination_path, sql1, 'shotgun nanopore')
 
 
     ##### AMPLICON
     elif args.target == 'amplicon':
       amplicon_destination_path = 'gs://{}/amplicon_sra_{}/*'.format(args.bucket_name, args.date)
-      logging.info("Querying and writing amplicon results to {} ..".format(amplicon_destination_path))
 
       sql2 = sql.replace(
          '__SQL_JSON_RESULTS_URI__',amplicon_destination_path).replace(
             '__SQL_PLATFORM__', 'ILLUMINA') + amplicon_specific_sql
 
-      extern.run('bq query --use_legacy_sql=false', stdin=sql2)
-      logging.info("Finished querying for amplicon")
+      export_data(amplicon_destination_path, sql2, 'amplicon')
 
     else: raise ValueError("Unknown target: {}".format(args.target))
 
     # Now write the taxonomy table
     destination_path = 'gs://{}/sra_taxonomy_table_{}/*'.format(args.bucket_name, args.date)
-    logging.info("Querying and writing taxonomy table results to {} ..".format(destination_path))
 
     sql = "EXPORT DATA OPTIONS(uri='{}', format='JSON') AS select * from metadata.emp".format(destination_path)
 
-    extern.run('bq query --use_legacy_sql=false', stdin=sql)
-    logging.info("Finished querying for the taxonomy table")
+    export_data(destination_path, sql, 'taxonomy table')
