@@ -15,7 +15,7 @@
         <div v-if="lat_lon() !== null">
           <!-- I cannot get center.sync to reset when reset_map() is clicked, oh well -->
           <l-map :style="map_style" :zoom.sync="zoom" :center.sync="center">
-            <l-tile-layer :url="url" :attribution="attribution" />
+            <l-tile-layer :url="url" :attribution="attribution" :options="tile_layer_options" />
             <l-marker :lat-lng="lat_lon()" />
           </l-map>
           <div @click="reset_map()"><b-icon icon="refresh" size="is-small" /> reset zoom</div>
@@ -103,7 +103,17 @@ export default {
   data () {
     return {
       medata: this.mdata,
-      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      // Use the plain tile.openstreetmap.org host - the a/b/c subdomains are
+      // deprecated by the OSM operations working group and just cost extra TLS
+      // handshakes now that tiles are served over HTTP/2.
+      url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      // OSM's tile servers refuse requests that arrive without a Referer
+      // header, serving an "Access blocked" tile instead of the map. Some
+      // browsers (notably privacy-hardened mobile ones and in-app webviews)
+      // default to no-referrer, so set the policy explicitly on the tile
+      // images rather than relying on the browser default. 'origin' sends
+      // only https://sandpiper.qut.edu.au/, not the page being viewed.
+      tile_layer_options: { referrerPolicy: 'origin' },
       attribution:
         '&copy; <a target="_blank" href="http://osm.org/copyright">OpenStreetMap</a> contributors',
       zoom: default_zoom,

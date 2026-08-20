@@ -98,7 +98,7 @@
           <br /><p>{{ (total_num_results - num_lat_lon_runs).toLocaleString("en-US") }} other runs are not shown on this map.</p><br />
           
           <l-map style="height: 900px" :zoom.sync="zoom" :center.sync="center">
-            <l-tile-layer :url="url" :attribution="attribution" />
+            <l-tile-layer :url="url" :attribution="attribution" :options="tile_layer_options" />
             <l-marker v-for="markerLatLng in this.lat_lons" v-bind:key="markerLatLng[0]" :lat-lng="markerLatLng['lat_lon']">
               <l-popup :content="html_for_map_popup(markerLatLng)" :options="{ interactive: true }">
               </l-popup>
@@ -253,7 +253,17 @@ export default {
       lat_lons: null,
       lat_lons_min_relabund: null,
       num_lat_lon_runs: null,
-      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      // Use the plain tile.openstreetmap.org host - the a/b/c subdomains are
+      // deprecated by the OSM operations working group and just cost extra TLS
+      // handshakes now that tiles are served over HTTP/2.
+      url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      // OSM's tile servers refuse requests that arrive without a Referer
+      // header, serving an "Access blocked" tile instead of the map. Some
+      // browsers (notably privacy-hardened mobile ones and in-app webviews)
+      // default to no-referrer, so set the policy explicitly on the tile
+      // images rather than relying on the browser default. 'origin' sends
+      // only https://sandpiper.qut.edu.au/, not the page being viewed.
+      tile_layer_options: { referrerPolicy: 'origin' },
       attribution:
         '&copy; <a target="_blank" href="http://osm.org/copyright">OpenStreetMap</a> contributors',
       defaultCenter: latLng(0, 0),
