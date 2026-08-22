@@ -8,7 +8,7 @@ import { GTDB_VERSION, GLOBDB_VERSION } from '@/versions'
     <section class="section container is-small">
     <b-image
             :src="sandpiperLogo"
-            style="height: 230px; width: 400px; margin: auto"
+            style="max-width: 400px; margin: auto"
             alt="Sandpiper Logo"
             />
     </section>
