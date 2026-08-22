@@ -53,15 +53,30 @@
     opacity: 0.92;
     font-size: 25px;
   }
-  .sunburst {
+  .sunburst-block {
     width: 100%;
-    height: 900px;
-    position: relative;
+  }
+  .sunburst-search {
+    max-width: 30rem;
+  }
+  // Both SVGs have a square viewBox, so giving them a width and letting the
+  // height follow keeps them inside their column instead of overflowing onto
+  // the sections below, which is what a fixed pixel height did once the
+  // columns stacked on narrow screens.
+  .sunburst {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 900px;
+    margin: 0 auto;
     font-size: 10px;
   }
   .sunburst-annotation {
+    display: block;
     width: 100%;
-    position: relative;
+    height: auto;
+    max-width: 420px;
+    margin: 0 auto;
     font-size: 30px;
   }
   .svg-link {
@@ -70,11 +85,23 @@
 
   .sandpiperbackground {
     background-image: url("./assets/sandpiper.jpg");
-    background-size: 100%;
-    // height: 1000px
+    // `background-size: 100%` scales the image to the width of the element and
+    // leaves its height to the aspect ratio, so the image was tiled a second
+    // time down the page whenever the content was taller than that - which is
+    // always the case on a narrow (mobile) viewport.
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
   }
   .footer-image {
     height: 50%;
+  }
+
+  // Long unbreakable strings - URLs shown as text, metapackage file names -
+  // are wider than a phone screen and push the whole page sideways. Let them
+  // wrap rather than overflow.
+  p, li, td, th {
+    overflow-wrap: break-word;
   }
 }
 </style>

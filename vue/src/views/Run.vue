@@ -86,7 +86,7 @@
               GlobDB ({{ GLOBDB_VERSION }})<span v-if="db_availability.globdb === false"> - unavailable</span>
             </b-radio-button>
           </b-field>
-          <div class="sunburst">
+          <div>
             <template v-if="condensed_tree != null">
               <Sunburst3 :json_tree="sunburst_tree" :overall_coverage="10.3" :known_species_fraction="known_species_fraction" />
             </template>

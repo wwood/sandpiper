@@ -31,7 +31,7 @@
 
     <section class="section"  @keyup.enter="search_by_random">
       <p class="title is-4">Find a random run</p>
-      <b-field>
+      <b-field grouped group-multiline>
         <b-switch v-model="random_choice_host">Eukaryote host-associated</b-switch>
         <b-switch v-model="random_choice_ecological">Ecological</b-switch>
         <b-switch v-model="random_choice_two_gbp">2+ Gbp</b-switch>
