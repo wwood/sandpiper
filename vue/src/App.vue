@@ -1,5 +1,6 @@
 <template>
   <div id="app">
+    <div v-html="versionComment" aria-hidden="true" style="display: none;"></div>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@5.8.55/css/materialdesignicons.min.css">
     <b-navbar :centered="true" type="is-light">
         <template #start>
@@ -42,6 +43,19 @@
     </footer>
   </div>
 </template>
+
+<script>
+import { appVersion } from './version'
+
+export default {
+  name: 'App',
+  data () {
+    return {
+      versionComment: `<!-- Sandpiper version: ${appVersion} -->`
+    }
+  }
+}
+</script>
 
 <style lang="scss">
 #app {
