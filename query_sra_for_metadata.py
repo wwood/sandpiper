@@ -37,6 +37,39 @@ import extern
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 
+raise Exception("""AroneyS — 8:54 AM
+According to https://doi.org/10.1099/mgen.0.001853, there are many runs with >1x coverage of a microbe that are not in Sandpiper. According to AI there are ~6.2 million. Judging from a sample, most of them are single-cell, transcriptomes, non-illumina, weird seq or amplicon (~5.5 million). But there are 500k WGS that are marked eukaryotic/host genomic and have >1x coverage. But only ~4% have a "real community" with at least 4 species, so ~120k. These include things like dog saliva swabs, insect whole-organism...
+We can't filter them by NCBI metadata, but can use bigquery STAT to filter by things like % prokaryotic, N Gbp prokaryotic sequences, N species at >1x coverage, top species <80% of prok seq
+Metadata pre-filter:
+     
+public runs, platform Illumina, BGISEQ or DNBSEQ;
+librarysource is GENOMIC, GENOMIC SINGLE CELL or OTHER;
+assay_type is WGS, WGA or OTHER;
+1–200 Gbp;
+organism doesn't contain "metagenome", since those already go through the current Sandpiper query.
+Ben W — 8:56 AM
+we haven't established whether BGISEQ or DNBSEQ are singlem-compatible though
+we might have to relax that 200G max too, some are just legit that big now
+AroneyS — 8:57 AM
+Yeh, I assume ignore that and go Illumina only. Most of the extras are illumina
+The 120k number is from illumina only
+Ben W — 8:58 AM
+ok, thanks. Sounds like we should include these for next year though
+I'll put a croak in the query script to remind us.
+is that 4% known species?
+AroneyS — 9:00 AM
+No, 4% are likely not contamination
+Ben W — 9:00 AM
+another approach might be to include a larger set when we are running logan contig-singlem, and then only include ones that have enough diversity
+sorry I meant 4 species, not 4%
+AroneyS — 9:01 AM
+I think STAT only works with known?
+Ben W — 9:01 AM
+some kmers are indicative of higher level clades
+but not sure where the threshold lies
+annoying thing about logan is that it is out of date too. Maybe could design some threshold by running singlem on a random subset of the 500k
+"""
+
 def gcs_destination_exists(destination_path):
     '''Return True if the GCS export destination (a path ending in '/*') already
     contains any objects, since BigQuery EXPORT DATA fails rather than overwrite.'''
@@ -69,7 +102,7 @@ if __name__ == '__main__':
     parent_parser.add_argument('--debug', help='output debug information', action="store_true")
     #parent_parser.add_argument('--version', help='output version information and quit',  action='version', version=repeatm.__version__)
     parent_parser.add_argument('--quiet', help='only output errors', action="store_true")
-    parent_parser.add_argument('--target', help='amplicon or shotgun', choices=['amplicon','shotgun','shotgun-nanopore'], required=True)
+    parent_parser.add_argument('--target', help='amplicon or shotgun', choices=['amplicon','shotgun','shotgun-nanopore','shotgun-pacbio'], required=True)
     parent_parser.add_argument('--bucket-name', help='bucket name', default='singlem-sra-metadata-gathering')
 
     args = parent_parser.parse_args()
@@ -216,6 +249,19 @@ WHERE
             '__SQL_PLATFORM__', 'OXFORD_NANOPORE') + metagenome_specfic_sql
 
       export_data(shotgun_destination_path, sql1, 'shotgun nanopore')
+
+
+    #### SHOTGUN PACBIO
+    # PACBIO_SMRT is the only PacBio platform value - RS/RS II/Sequel/Revio/Onso
+    # are distinguished by the instrument column, not platform.
+    elif args.target == 'shotgun-pacbio':
+      shotgun_destination_path = 'gs://{}/shotgun_pacbio_sra_{}/*'.format(args.bucket_name, args.date)
+
+      sql1 = sql.replace(
+         '__SQL_JSON_RESULTS_URI__',shotgun_destination_path).replace(
+            '__SQL_PLATFORM__', 'PACBIO_SMRT') + metagenome_specfic_sql
+
+      export_data(shotgun_destination_path, sql1, 'shotgun pacbio')
 
 
     ##### AMPLICON
